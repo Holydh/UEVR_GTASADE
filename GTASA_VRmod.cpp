@@ -19,11 +19,16 @@ private:
     uintptr_t baseAddress = 0;
 
     //Camera Matrix addresses :
-    uintptr_t cameraMatrixAddresses[16] = {
-        0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C, 
-        0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C, 
-        0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
-        0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
+    //uintptr_t cameraMatrixAddresses[16] = {
+    //    0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C, 
+    //    0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C, 
+    //    0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
+    //    0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
+    //};
+
+    uintptr_t AimVectorAddresses[3]
+    {
+        0x53E2668, 0x53E266C, 0x53E2670
     };
 
     float cameraMatrixValues[12] = { 0.0f }; 
@@ -57,11 +62,11 @@ public:
         API::get()->log_info(baseAddressStr.c_str());
 
         // Adjust camera matrix addresses to account for base address
-        for (auto& address : cameraMatrixAddresses) {
+        for (auto& address : AimVectorAddresses) {
             address += baseAddress;
         }
 
-        oss << "Base address: 0x" << std::hex << cameraMatrixAddresses[10];
+        oss << "Base address: 0x" << std::hex << AimVectorAddresses[10];
         std::string cameraMatrix10AddressStr = oss.str();
 
         // Log the last address
@@ -78,31 +83,20 @@ public:
         // Get the transformation matrix for the HMD
         API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
 
-        // Convert quaternion to rotation matrix
-        float w = hmdRotation.w;
-        float x = hmdRotation.x;
-        float z = -hmdRotation.y;
-        float y = -hmdRotation.z;
+        // Calculate the forward vector
+        UEVR_Vector3f forwardVector;
+        forwardVector.x = 2.0f * (hmdRotation.x * hmdRotation.z + hmdRotation.w * hmdRotation.y);
+        forwardVector.y = 2.0f * (hmdRotation.y * hmdRotation.z - hmdRotation.w * hmdRotation.x);
+        forwardVector.z = 1.0f - 2.0f * (hmdRotation.x * hmdRotation.x + hmdRotation.y * hmdRotation.y);
 
-         // Compute the rotation matrix
-        cameraMatrixValues[0] = 1.0f - 2.0f * (y * y + z * z); // m_right.x
-        cameraMatrixValues[1] = 2.0f * (x * y - w * z);        // m_right.y
-        cameraMatrixValues[2] = 2.0f * (x * z + w * y);        // m_right.z
-
-        cameraMatrixValues[4] = 2.0f * (x * y + w * z);        // m_up.x
-        cameraMatrixValues[5] = 1.0f - 2.0f * (x * x + z * z); // m_up.y
-        cameraMatrixValues[6] = 2.0f * (y * z - w * x);        // m_up.z
-
-        cameraMatrixValues[8] = 2.0f * (x * z - w * y);        // m_forward.x
-        cameraMatrixValues[9] = 2.0f * (y * z + w * x);        // m_forward.y
-        cameraMatrixValues[10] = 1.0f - 2.0f * (x * x + y * y);// m_forward.z
-
-        // Leave position (cameraMatrix[12, 13, 14]) unchanged
+        *(reinterpret_cast<float*>(AimVectorAddresses[0])) = -forwardVector.x;
+        *(reinterpret_cast<float*>(AimVectorAddresses[1])) = forwardVector.z;
+        *(reinterpret_cast<float*>(AimVectorAddresses[2])) = -forwardVector.y;
 
         // Write rotation matrix to memory
-        for (int i = 0; i < 12; ++i) {
+ /*       for (int i = 0; i < 12; ++i) {
             *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-        }
+        }*/
 
         // Optional: Log some matrix values
 		API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
