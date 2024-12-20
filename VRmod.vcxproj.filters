@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{9e49bb0f-a8ea-43bb-b9b1-cddaf74001ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\uevr">
+      <UniqueIdentifier>{ad4be0d9-7f7c-46d8-a75c-7d9e2988e1ac}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\plugin\include\uevr\API.h">
+      <Filter>include\uevr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\plugin\include\uevr\API.hpp">
+      <Filter>include\uevr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\plugin\include\uevr\Plugin.hpp">
+      <Filter>include\uevr</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="GTASA_VRmod.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
