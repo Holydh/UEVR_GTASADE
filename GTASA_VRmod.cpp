@@ -30,7 +30,7 @@ private:
 
 public:
     GTASA_VRmod() = default;
-
+     
     void on_dllmain() override {}
 
     void on_initialize() override {
