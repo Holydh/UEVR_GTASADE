@@ -26,21 +26,6 @@ private:
         0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
     };
 
- /*   uintptr_t cameraMatrix0Address = 0x58014B0; 
-    uintptr_t cameraMatrix1Address = 0x58014B4; 
-    uintptr_t cameraMatrix2Address = 0x58014B8; 
-    uintptr_t cameraMatrix3Address = 0x58014BC; 
-
-    uintptr_t cameraMatrix4Address = 0x58014C0; 
-    uintptr_t cameraMatrix5Address = 0x58014C4; 
-    uintptr_t cameraMatrix6Address = 0x58014C8; 
-    uintptr_t cameraMatrix7Address = 0x58014CC; 
-
-    uintptr_t cameraMatrix8Address = 0x58014D0; 
-    uintptr_t cameraMatrix9Address = 0x58014D4; 
-    uintptr_t cameraMatrix10Address = 0x58014D8;
-    uintptr_t cameraMatrix11Address = 0x58014DC;*/
-
     float cameraMatrixValues[12] = { 0.0f }; 
 
 public:
@@ -114,29 +99,13 @@ public:
 
         // Leave position (cameraMatrix[12, 13, 14]) unchanged
 
-        //// Write matrix to memory
-        //*(reinterpret_cast<float*>(cameraMatrix0Address)) = cameraMatrixValues[0]; // z
-        //*(reinterpret_cast<float*>(cameraMatrix1Address)) = cameraMatrixValues[1]; //
-        //*(reinterpret_cast<float*>(cameraMatrix2Address)) = cameraMatrixValues[2]; // x
-        //                                                 
-        //*(reinterpret_cast<float*>(cameraMatrix4Address)) = cameraMatrixValues[4]; // z
-        //*(reinterpret_cast<float*>(cameraMatrix5Address)) = cameraMatrixValues[5]; //
-        //*(reinterpret_cast<float*>(cameraMatrix6Address)) = cameraMatrixValues[6]; // x
-        //                                                  
-        //*(reinterpret_cast<float*>(cameraMatrix8Address)) = cameraMatrixValues[7]; // z
-        //*(reinterpret_cast<float*>(cameraMatrix9Address)) = cameraMatrixValues[8]; //
-        //*(reinterpret_cast<float*>(cameraMatrix10Address)) = cameraMatrixValues[9]; // x
-
         // Write rotation matrix to memory
-        //for (int i = 0; i < 12; ++i) {
-        //    *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-        //}
+        for (int i = 0; i < 12; ++i) {
+            *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
+        }
 
         // Optional: Log some matrix values
 		API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
-		//API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[4], cameraMatrixValues[5], cameraMatrixValues[6]);
-		//API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[8], cameraMatrixValues[9], cameraMatrixValues[10]);
-
     }
 
     void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
