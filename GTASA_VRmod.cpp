@@ -3,6 +3,7 @@
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
+
 DWORD PID;
 
 using namespace uevr;
@@ -19,12 +20,12 @@ private:
     uintptr_t baseAddress = 0;
 
     //Camera Matrix addresses :
-    //uintptr_t cameraMatrixAddresses[16] = {
-    //    0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C, 
-    //    0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C, 
-    //    0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
-    //    0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
-    //};
+    uintptr_t cameraMatrixAddresses[16] = {
+        0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C, 
+        0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C, 
+        0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
+        0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
+    };
 
     uintptr_t AimVectorAddresses[3]
     {
@@ -62,11 +63,15 @@ public:
         API::get()->log_info(baseAddressStr.c_str());
 
         // Adjust camera matrix addresses to account for base address
+        for (auto& address : cameraMatrixAddresses) {
+            address += baseAddress;
+        }
+
         for (auto& address : AimVectorAddresses) {
             address += baseAddress;
         }
 
-        oss << "Base address: 0x" << std::hex << AimVectorAddresses[10];
+        oss << "Base address: 0x" << std::hex << AimVectorAddresses[2];
         std::string cameraMatrix10AddressStr = oss.str();
 
         // Log the last address
@@ -77,29 +82,67 @@ public:
         PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
         
         // Allocate the transformation matrix
-        UEVR_Vector3f hmdPosition{};
-        UEVR_Quaternionf hmdRotation{};
+        UEVR_Vector3f controllerPosition{};
+        UEVR_Quaternionf controllerRotation{};
+        UEVR_Vector2f rightJoystick{};
 
         // Get the transformation matrix for the HMD
-        API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
+        API::get()->param()->vr->get_aim_pose(API::get()->param()->vr->get_right_controller_index(), &controllerPosition, &controllerRotation);
+        API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
-        // Calculate the forward vector
-        UEVR_Vector3f forwardVector;
-        forwardVector.x = 2.0f * (hmdRotation.x * hmdRotation.z + hmdRotation.w * hmdRotation.y);
-        forwardVector.y = 2.0f * (hmdRotation.y * hmdRotation.z - hmdRotation.w * hmdRotation.x);
-        forwardVector.z = 1.0f - 2.0f * (hmdRotation.x * hmdRotation.x + hmdRotation.y * hmdRotation.y);
+    // Define an offset (e.g., slight rotation along the Yaw axis)
+    float yawOffsetDegrees = 12.0f; // Adjust as needed
+    float yawOffsetRadians = yawOffsetDegrees * 0.0174533f / 2.0f; // Convert to radians and divide by 2
+
+    float pitchOffsetDegrees = -20.0f; // 
+    float pitchOffsetRadians = pitchOffsetDegrees * 0.0174533f / 2.0f;
+
+     // Construct yaw offset quaternion
+    UEVR_Quaternionf yawOffset;
+    yawOffset.w = std::cos(yawOffsetRadians);
+    yawOffset.x = 0.0f;
+    yawOffset.y = std::sin(yawOffsetRadians);
+    yawOffset.z = 0.0f;
+
+    // Construct pitch offset quaternion
+    UEVR_Quaternionf pitchOffset;
+    pitchOffset.w = std::cos(pitchOffsetRadians);
+    pitchOffset.x = std::sin(pitchOffsetRadians);
+    pitchOffset.y = 0.0f;
+    pitchOffset.z = 0.0f;
+
+       // Combine yaw and pitch offsets
+    UEVR_Quaternionf combinedOffset;
+    combinedOffset.w = yawOffset.w * pitchOffset.w - yawOffset.x * pitchOffset.x - yawOffset.y * pitchOffset.y - yawOffset.z * pitchOffset.z;
+    combinedOffset.x = yawOffset.w * pitchOffset.x + yawOffset.x * pitchOffset.w + yawOffset.y * pitchOffset.z - yawOffset.z * pitchOffset.y;
+    combinedOffset.y = yawOffset.w * pitchOffset.y - yawOffset.x * pitchOffset.z + yawOffset.y * pitchOffset.w + yawOffset.z * pitchOffset.x;
+    combinedOffset.z = yawOffset.w * pitchOffset.z + yawOffset.x * pitchOffset.y - yawOffset.y * pitchOffset.x + yawOffset.z * pitchOffset.w;
+
+    // Apply combined offset to controller rotation
+    UEVR_Quaternionf finalRotation;
+    finalRotation.w = controllerRotation.w * combinedOffset.w - controllerRotation.x * combinedOffset.x - controllerRotation.y * combinedOffset.y - controllerRotation.z * combinedOffset.z;
+    finalRotation.x = controllerRotation.w * combinedOffset.x + controllerRotation.x * combinedOffset.w + controllerRotation.y * combinedOffset.z - controllerRotation.z * combinedOffset.y;
+    finalRotation.y = controllerRotation.w * combinedOffset.y - controllerRotation.x * combinedOffset.z + controllerRotation.y * combinedOffset.w + controllerRotation.z * combinedOffset.x;
+    finalRotation.z = controllerRotation.w * combinedOffset.z + controllerRotation.x * combinedOffset.y - controllerRotation.y * combinedOffset.x + controllerRotation.z * combinedOffset.w;
+
+    // Calculate the forward vector
+    UEVR_Vector3f forwardVector;
+    forwardVector.x = 2.0f * (finalRotation.x * finalRotation.z + finalRotation.w * finalRotation.y);
+    forwardVector.y = 2.0f * (finalRotation.y * finalRotation.z - finalRotation.w * finalRotation.x);
+    forwardVector.z = 1.0f - 2.0f * (finalRotation.x * finalRotation.x + finalRotation.y * finalRotation.y);
+
 
         *(reinterpret_cast<float*>(AimVectorAddresses[0])) = -forwardVector.x;
         *(reinterpret_cast<float*>(AimVectorAddresses[1])) = forwardVector.z;
         *(reinterpret_cast<float*>(AimVectorAddresses[2])) = -forwardVector.y;
 
         // Write rotation matrix to memory
- /*       for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 12; ++i) {
             *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-        }*/
+        }
 
         // Optional: Log some matrix values
-		API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
+		//API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
     }
 
     void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
