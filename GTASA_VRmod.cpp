@@ -100,39 +100,56 @@ public:
         yawOffsetDegrees -= rightJoystick.x; // Adjust as needed
         float yawOffsetRadians = yawOffsetDegrees * 0.0174533f / 2.0f; // Convert to radians and divide by 2
 
-        // Offset quaternion for a small yaw rotation
-        UEVR_Quaternionf offsetRotation{
-            .w = cos(yawOffsetRadians),
-            .x = 0.0f,
-            .y = sin(yawOffsetRadians), // Rotation around Y-axis
-            .z = 0.0f
-        };
+        //// Offset quaternion for a small yaw rotation
+        //UEVR_Quaternionf offsetRotation{
+        //    .w = cos(yawOffsetRadians),
+        //    .x = 0.0f,
+        //    .y = sin(yawOffsetRadians), // Rotation around Y-axis
+        //    .z = 0.0f
+        //};
 
-        // Combine controllerRotation with offsetRotation (quaternion multiplication)
-        UEVR_Quaternionf adjustedRotation{
-            .w = hmdRotation.w * offsetRotation.w - hmdRotation.x * offsetRotation.x - hmdRotation.y * offsetRotation.y - hmdRotation.z * offsetRotation.z,
-            .x = hmdRotation.w * offsetRotation.x + hmdRotation.x * offsetRotation.w + hmdRotation.y * offsetRotation.z - hmdRotation.z * offsetRotation.y,
-            .y = hmdRotation.w * offsetRotation.y - hmdRotation.x * offsetRotation.z + hmdRotation.y * offsetRotation.w + hmdRotation.z * offsetRotation.x,
-            .z = hmdRotation.w * offsetRotation.z + hmdRotation.x * offsetRotation.y - hmdRotation.y * offsetRotation.x + hmdRotation.z * offsetRotation.w
-        };
+        //// Combine controllerRotation with offsetRotation (quaternion multiplication)
+        //UEVR_Quaternionf adjustedRotation{
+        //    .w = hmdRotation.w * offsetRotation.w - hmdRotation.x * offsetRotation.x - hmdRotation.y * offsetRotation.y - hmdRotation.z * offsetRotation.z,
+        //    .x = hmdRotation.w * offsetRotation.x + hmdRotation.x * offsetRotation.w + hmdRotation.y * offsetRotation.z - hmdRotation.z * offsetRotation.y,
+        //    .y = hmdRotation.w * offsetRotation.y - hmdRotation.x * offsetRotation.z + hmdRotation.y * offsetRotation.w + hmdRotation.z * offsetRotation.x,
+        //    .z = hmdRotation.w * offsetRotation.z + hmdRotation.x * offsetRotation.y - hmdRotation.y * offsetRotation.x + hmdRotation.z * offsetRotation.w
+        //};
 
         // Calculate the forward vector using the adjusted rotation
-        UEVR_Vector3f forwardVector;
+       /* UEVR_Vector3f forwardVector;
         forwardVector.x = 2.0f * (adjustedRotation.x * adjustedRotation.z + adjustedRotation.w * adjustedRotation.y);
         forwardVector.y = 2.0f * (adjustedRotation.y * adjustedRotation.z - adjustedRotation.w * adjustedRotation.x);
-        forwardVector.z = 1.0f - 2.0f * (adjustedRotation.x * adjustedRotation.x + adjustedRotation.y * adjustedRotation.y);
+        forwardVector.z = 1.0f - 2.0f * (adjustedRotation.x * adjustedRotation.x + adjustedRotation.y * adjustedRotation.y);*/
 
         // Write the modified forward vector to the aim vector memory
-        *(reinterpret_cast<float*>(AimVectorAddresses[0])) = -forwardVector.x;
+       /* *(reinterpret_cast<float*>(AimVectorAddresses[0])) = -forwardVector.x;
         *(reinterpret_cast<float*>(AimVectorAddresses[1])) = forwardVector.z;
-        *(reinterpret_cast<float*>(AimVectorAddresses[2])) = -forwardVector.y;
+        *(reinterpret_cast<float*>(AimVectorAddresses[2])) = -forwardVector.y;*/
 
+        // Convert quaternion to rotation matrix
+        float w = hmdRotation.w;
+        float x = hmdRotation.x;
+        float z = -hmdRotation.y;
+        float y = -hmdRotation.z;
 
+         // Compute the rotation matrix
+        cameraMatrixValues[0] = 1.0f - 2.0f * (y * y + z * z); // m_right.x
+        cameraMatrixValues[1] = 2.0f * (x * y - w * z);        // m_right.y
+        cameraMatrixValues[2] = 2.0f * (x * z + w * y);        // m_right.z
+
+        cameraMatrixValues[4] = 2.0f * (x * y + w * z);        // m_up.x
+        cameraMatrixValues[5] = 1.0f - 2.0f * (x * x + z * z); // m_up.y
+        cameraMatrixValues[6] = 2.0f * (y * z - w * x);        // m_up.z
+
+        cameraMatrixValues[8] = 2.0f * (x * z - w * y);        // m_forward.x
+        cameraMatrixValues[9] = 2.0f * (y * z + w * x);        // m_forward.y
+        cameraMatrixValues[10] = 1.0f - 2.0f * (x * x + y * y);// m_forward.z
 
         // Write rotation matrix to memory
-  /*      for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 12; ++i) {
             *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-        }*/
+        }
 
         // Optional: Log some matrix values
 		//API::get()->log_info("Hmd rotations values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
