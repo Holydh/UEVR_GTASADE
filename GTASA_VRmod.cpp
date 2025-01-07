@@ -35,6 +35,8 @@ private:
 	float cameraMatrixValues[16] = { 0.0f };
 	float yawOffsetDegrees = 0.0f;
 
+	float xAxisSensitivity = 125.0f;
+
 public:
 	GTASA_VRmod() = default;
 
@@ -109,8 +111,10 @@ public:
 
 		const float DEADZONE = 0.1f;
 		if (abs(rightJoystick.x) > DEADZONE) {
-			yawOffsetDegrees = rightJoystick.x * delta;
+			yawOffsetDegrees = rightJoystick.x * delta * xAxisSensitivity;
 		}
+		else
+			yawOffsetDegrees = 0.0f;
 
 		float yawOffsetRadians = yawOffsetDegrees * 0.0174533f;
 		float cosYaw = std::cos(yawOffsetRadians);
