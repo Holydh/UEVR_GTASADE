@@ -19,7 +19,6 @@ class GTASA_VRmod : public uevr::Plugin {
 private:
 	uintptr_t baseAddress = 0;
 
-	//Camera Matrix addresses :
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -27,10 +26,20 @@ private:
 		0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
 	};
 
-	uintptr_t AimVectorAddresses[3]
+	uintptr_t aimVectorAddresses[3]
 	{
 		0x53E2668, 0x53E266C, 0x53E2670
 	};
+
+	uintptr_t baseGunFlashSocketRotationAddress = 0x5415348;
+	std::vector<unsigned int> gunFlashSocketOffsets = { 0x30, 0x700, 0x1A0, 0x10, 0x190 };
+
+	uintptr_t gunFlashSocketPositionAddresses[3] = {
+	};
+	uintptr_t gunFlashSocketRotationAddresses[3] = {
+		
+	};
+
 
 	float cameraMatrixValues[16] = { 0.0f };
 	float yawOffsetDegrees = 0.0f;
@@ -70,15 +79,33 @@ public:
 			address += baseAddress;
 		}
 
-		for (auto& address : AimVectorAddresses) {
+		for (auto& address : aimVectorAddresses) {
 			address += baseAddress;
 		}
 
-		oss << "Base address: 0x" << std::hex << AimVectorAddresses[2];
-		std::string cameraMatrix10AddressStr = oss.str();
+		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
+		std::string aimVectorAddresseAddressStr = oss.str();
 
 		// Log the last address
-		API::get()->log_info(cameraMatrix10AddressStr.c_str());
+		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
+
+
+
+		//get the flashgun addresses
+
+		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddress + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
+		gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
+		gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
+
+		gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
+		gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
+		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
+
+		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
+		std::string gunFlashSocketRotationAddressesStr = oss.str();
+
+		// Log the base address
+		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -89,25 +116,24 @@ public:
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
 
+		//UEVR_Vector3f hmdPosition{};
+		//UEVR_Quaternionf hmdRotation{};
+		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
+
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
 			originalMatrix[i] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
 			cameraMatrixValues[i] = originalMatrix[i];
 		}
 
-		API::get()->log_info("Original Matrix:\n");
-		printMatrix(originalMatrix);
+	/*	API::get()->log_info("Original Matrix:\n");
+		printMatrix(originalMatrix);*/
 
-		// Allocate the transformation matrix
-		UEVR_Vector3f hmdPosition{};
-		UEVR_Quaternionf hmdRotation{};
+		// Camera Matrix Yaw movements :
 		UEVR_Vector2f rightJoystick{};
-
-		// Get the transformation matrix for the HMD
-		API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
-		API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
+		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
 
 		const float DEADZONE = 0.1f;
 		if (abs(rightJoystick.x) > DEADZONE) {
@@ -144,18 +170,41 @@ public:
 			cameraMatrixValues[i] = modifiedMatrix[i];
 		}
 
-		API::get()->log_info("Modified Matrix:\n");
-		printMatrix(cameraMatrixValues);
+		//API::get()->log_info("Modified Matrix:\n");
+		//printMatrix(cameraMatrixValues);
 
+		// To uncomment to reapply matrix
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
+		
+
+		//End of camera matrix yaw movements
+
+		
 	}
 
-	void printMatrix(float* matrix) {
+	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
+    uintptr_t addr = baseAddress;
+
+    for (size_t i = 0; i < offsets.size(); ++i) {
+        if (addr == 0) {
+            // If at any point the address is invalid, return 0
+            return 0;
+        }
+        // Dereference the pointer
+        addr = *reinterpret_cast<uintptr_t*>(addr);
+
+        // Add the offset
+        addr += offsets[i];
+    }
+    return addr;
+}
+
+	void printMatrix(UEVR_Matrix4x4f matrix) {
 		for (int i = 0; i < 4; ++i) {
 			for (int j = 0; j < 4; ++j) {
-				API::get()->log_info("%f ", matrix[i * 4 + j]);
+				API::get()->log_info("%f ", matrix.m[i * 4 + j]);
 			}
 			API::get()->log_info("\n");
 		}
