@@ -31,6 +31,11 @@ private:
 		0x53E2668, 0x53E266C, 0x53E2670
 	};
 
+	uintptr_t cameraPositionAddresses[3]
+	{
+		0x53E2674, 0x53E2678, 0x53E267C
+	};
+
 	uintptr_t baseGunFlashSocketRotationAddress = 0x5415348;
 	std::vector<unsigned int> gunFlashSocketOffsets = { 0x30, 0x700, 0x1A0, 0x10, 0x190 };
 
@@ -83,6 +88,10 @@ public:
 			address += baseAddress;
 		}
 
+		for (auto& address : cameraPositionAddresses) {
+			address += baseAddress;
+		}
+
 		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
 		std::string aimVectorAddresseAddressStr = oss.str();
 
@@ -111,12 +120,7 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 
-	}
-
-	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
-		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-
-		//UEVR_Vector3f hmdPosition{};
+				//UEVR_Vector3f hmdPosition{};
 		//UEVR_Quaternionf hmdRotation{};
 		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
 
@@ -180,8 +184,69 @@ public:
 		
 
 		//End of camera matrix yaw movements
-
 		
+		//Place ingame camera at shoot position
+		for (int i = 0; i < 3; ++i) {
+			float newPos = *(reinterpret_cast<float*>(gunFlashSocketPositionAddresses[i])) * 0.01f;
+			API::get()->log_info("cameraPositions : %f", newPos);
+			if (i == 1)
+				*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = -newPos;
+			else
+				*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newPos;
+		}
+		
+		//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = 2497.5f;
+		//*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -1708.590942f;
+		//*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = 1015.262451;
+
+
+	/*	for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[0]));
+		}*/
+
+	}
+
+	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
+		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
+
+
+	}
+
+	
+
+	struct Vec3 {
+		float x, y, z;
+
+		// Normalize the vector
+		void normalize() {
+			float magnitude = std::sqrt(x * x + y * y + z * z);
+			if (magnitude > 0.0f) {
+				x /= magnitude;
+				y /= magnitude;
+				z /= magnitude;
+			}
+		}
+	};
+
+	Vec3 CalculateAimingVector(uintptr_t gunFlashSocketRotationAddresses[3]) {
+		// Fetch Euler angles (assuming they're stored as floats)
+		float pitch = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[0]));
+		float yaw = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[1]));
+
+		// Convert from degrees to radians
+		pitch *= 3.14159265359f / 180.0f;
+		yaw *= 3.14159265359f / 180.0f;
+
+		// Compute forward vector
+		Vec3 forwardVector;
+		forwardVector.x = std::cos(pitch) * std::sin(yaw);
+		forwardVector.y = std::sin(pitch);
+		forwardVector.z = std::cos(pitch) * std::cos(yaw);
+
+		// Normalize the vector
+		forwardVector.normalize();
+
+		return forwardVector;
 	}
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
