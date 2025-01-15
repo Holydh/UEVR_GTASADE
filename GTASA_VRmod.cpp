@@ -45,6 +45,8 @@ private:
 
 	};
 
+	uintptr_t equippedWeaponAddress = 0x53DACC6;
+
 
 	float cameraMatrixValues[16] = { 0.0f };
 	float yawOffsetDegrees = 0.0f;
@@ -55,6 +57,8 @@ private:
 
 	float newAimingVector[3] = { 0.0f, 0.0f, 0.0f };
 	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
+
+	int equippedWeaponIndex = 0;
 
 public:
 	GTASA_VRmod() = default;
@@ -104,20 +108,15 @@ public:
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
 
 		//get the flashgun addresses
-
-		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddress + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
-		gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
-		gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
-
-		gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
-		gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
-		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
+		ResolveGunFlashSocketMemoryAddresses();
 
 		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
 		std::string gunFlashSocketRotationAddressesStr = oss.str();
 
 		// Log the base address
 		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
+
+		equippedWeaponAddress = baseAddress + equippedWeaponAddress;
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -199,6 +198,14 @@ public:
 			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
 		}
 
+		//Weapon logic
+		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
+		{
+			ResolveGunFlashSocketMemoryAddresses();
+			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+		}
+
+		API::get()->log_info("equipped Weapon index : %d", equippedWeaponIndex);
 
 		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
 		newAimingVector[0] = aimingVector.x;
@@ -209,24 +216,34 @@ public:
 		for (int i = 0; i < 3; ++i) {
 			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
 		}
-		//*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
-		//*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
-		//*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		////Apply new Camera Pos values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		//}
-		////Apply new Aim Vector values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		//}
 	}
 
 
+
+	// Optional: Log some matrix values
+ // API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
+	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
+		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
+	}
+
+	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
+		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void ResolveGunFlashSocketMemoryAddresses()
+	{
+		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddress + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
+		gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
+		gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
+
+		gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
+		gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
+		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
+	}
 
 	struct Vec3 {
 		float x, y, z;
@@ -249,8 +266,23 @@ public:
 		float yaw = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[1]));
 
 		// Adjust angles based on game's forward vector calibration
-		pitch += 5.0f;  // Compensating for default pitch offset
-		yaw += 95.0f;   // Compensating for default yaw offset
+		switch (equippedWeaponIndex)
+		{
+			case 22: //Pistol
+				pitch += 4.0f;
+				yaw += 82.0f;
+				API::get()->log_info("yaw Offset 1: %f", yaw);
+				break;
+			case 33: //Rifle
+				pitch += 5.0f;
+				yaw += 95.0f;
+				API::get()->log_info("yaw Offset 2: %f", yaw);
+				break;
+
+			default:
+				break;
+		}
+		API::get()->log_info("total Offset : %f", yaw);
 
 		// Convert from degrees to radians
 		pitch *= degreesToRadians;
@@ -292,32 +324,6 @@ public:
 			}
 			API::get()->log_info("\n");
 		}
-	}
-
-	// Optional: Log some matrix values
- // API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
-	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
-		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
-		////Apply new Camera Pos values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		//}
-		////Apply new Aim Vector values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		//}
-	}
-
-	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
-		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-		////Apply new Camera Pos values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		//}
-		////Apply new Aim Vector values to memory
-		//for (int i = 0; i < 3; ++i) {
-		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		//}
 	}
 };
 
