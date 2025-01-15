@@ -271,18 +271,18 @@ public:
 			case 22: //Pistol
 				pitch += 4.0f;
 				yaw += 82.0f;
-				API::get()->log_info("yaw Offset 1: %f", yaw);
+				
 				break;
 			case 33: //Rifle
 				pitch += 5.0f;
 				yaw += 95.0f;
-				API::get()->log_info("yaw Offset 2: %f", yaw);
 				break;
 
 			default:
+				pitch += 4.0f;
+				yaw += 82.0f;
 				break;
 		}
-		API::get()->log_info("total Offset : %f", yaw);
 
 		// Convert from degrees to radians
 		pitch *= degreesToRadians;
