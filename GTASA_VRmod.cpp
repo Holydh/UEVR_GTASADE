@@ -36,13 +36,13 @@ private:
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
 
-	uintptr_t baseGunFlashSocketRotationAddress = 0x5415348;
-	std::vector<unsigned int> gunFlashSocketOffsets = { 0x30, 0x700, 0x1A0, 0x10, 0x190 };
+	uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
+	std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
 
 	uintptr_t gunFlashSocketPositionAddresses[3] = {
 	};
 	uintptr_t gunFlashSocketRotationAddresses[3] = {
-		
+
 	};
 
 
@@ -52,6 +52,9 @@ private:
 	float xAxisSensitivity = 125.0f;
 
 	float degreesToRadians = 3.14159265359f / 180.0f;
+
+	float newAimingVector[3] = { 0.0f, 0.0f, 0.0f };
+	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
 
 public:
 	GTASA_VRmod() = default;
@@ -100,8 +103,6 @@ public:
 		// Log the last address
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
 
-
-
 		//get the flashgun addresses
 
 		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddress + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
@@ -121,10 +122,9 @@ public:
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-
-				//UEVR_Vector3f hmdPosition{};
-		//UEVR_Quaternionf hmdRotation{};
-		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
+		//UEVR_Vector3f hmdPosition{};
+//UEVR_Quaternionf hmdRotation{};
+//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
 
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
@@ -132,10 +132,10 @@ public:
 			cameraMatrixValues[i] = originalMatrix[i];
 		}
 
-	/*	API::get()->log_info("Original Matrix:\n");
-		printMatrix(originalMatrix);*/
+		/*	API::get()->log_info("Original Matrix:\n");
+			printMatrix(originalMatrix);*/
 
-		// Camera Matrix Yaw movements :
+			// Camera Matrix Yaw movements :
 		UEVR_Vector2f rightJoystick{};
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
@@ -183,34 +183,50 @@ public:
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
-		
+
 
 		//End of camera matrix yaw movements
-		
+
 		//Place ingame camera at shoot position
 		for (int i = 0; i < 3; ++i) {
 			float newPos = *(reinterpret_cast<float*>(gunFlashSocketPositionAddresses[i])) * 0.01f;
-			API::get()->log_info("cameraPositions : %f", newPos);
-			if (i == 1)
-				*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = -newPos;
-			else
-				*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newPos;
+			//API::get()->log_info("cameraPositions : %f", newPos);
+			newCameraPositionVector[i] = i == 1 ? -newPos : newPos;
+		}
+
+		//Apply new values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
 		}
 
 
 		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
-		*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
-		*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
-		*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;
+		newAimingVector[0] = aimingVector.x;
+		newAimingVector[1] = aimingVector.y;
+		newAimingVector[2] = aimingVector.z;
+
+		//Apply new values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		}
+		//*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
+		//*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
+		//*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-
-
+		//Apply new Camera Pos values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		}
+		//Apply new Aim Vector values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		}
 	}
 
-	
+
 
 	struct Vec3 {
 		float x, y, z;
@@ -253,21 +269,21 @@ public:
 	}
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
-    uintptr_t addr = baseAddress;
+		uintptr_t addr = baseAddress;
 
-    for (size_t i = 0; i < offsets.size(); ++i) {
-        if (addr == 0) {
-            // If at any point the address is invalid, return 0
-            return 0;
-        }
-        // Dereference the pointer
-        addr = *reinterpret_cast<uintptr_t*>(addr);
+		for (size_t i = 0; i < offsets.size(); ++i) {
+			if (addr == 0) {
+				// If at any point the address is invalid, return 0
+				return 0;
+			}
+			// Dereference the pointer
+			addr = *reinterpret_cast<uintptr_t*>(addr);
 
-        // Add the offset
-        addr += offsets[i];
-    }
-    return addr;
-}
+			// Add the offset
+			addr += offsets[i];
+		}
+		return addr;
+	}
 
 	void printMatrix(UEVR_Matrix4x4f matrix) {
 		for (int i = 0; i < 4; ++i) {
@@ -282,12 +298,26 @@ public:
  // API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
-
+		//Apply new Camera Pos values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		}
+		//Apply new Aim Vector values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		}
 	}
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-
+		//Apply new Camera Pos values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		}
+		//Apply new Aim Vector values to memory
+		for (int i = 0; i < 3; ++i) {
+			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		}
 	}
 };
 
