@@ -46,9 +46,14 @@ private:
 	};
 
 	uintptr_t equippedWeaponAddress = 0x53DACC6;
+	uintptr_t characterHeadingAddress = 0x53DACCA;
+	uintptr_t characterIsInCarAddress = 0x53DACCE;
 
 
 	float cameraMatrixValues[16] = { 0.0f };
+	float characterHeading = 0.0f;
+	bool characterIsInCar = false;
+
 	float yawOffsetDegrees = 0.0f;
 
 	float xAxisSensitivity = 125.0f;
@@ -117,6 +122,8 @@ public:
 		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 
 		equippedWeaponAddress = baseAddress + equippedWeaponAddress;
+		characterHeadingAddress += baseAddress;
+		characterIsInCarAddress += baseAddress;
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -139,18 +146,21 @@ public:
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
+		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0 ? true : false;
+		characterHeading = characterIsInCar ? *(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
+
 
 		const float DEADZONE = 0.1f;
 		if (abs(rightJoystick.x) > DEADZONE) {
-			yawOffsetDegrees = rightJoystick.x * delta * xAxisSensitivity;
+			yawOffsetDegrees = rightJoystick.x * delta * xAxisSensitivity + characterHeading;
 		}
 		else
-			yawOffsetDegrees = 0.0f;
+			yawOffsetDegrees = 0.0f + characterHeading;
 
 		float yawOffsetRadians = yawOffsetDegrees * 0.0174533f;
 		float cosYaw = std::cos(yawOffsetRadians);
 		float sinYaw = std::sin(yawOffsetRadians);
-
+		
 		// Create a yaw rotation matrix
 		float yawRotationMatrix[16] = {
 			cosYaw, -sinYaw, 0.0f, 0.0f,
