@@ -216,14 +216,14 @@ public:
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		//Apply new Camera Pos values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		}
-		//Apply new Aim Vector values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		}
+		////Apply new Camera Pos values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		//}
+		////Apply new Aim Vector values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		//}
 	}
 
 
@@ -249,8 +249,8 @@ public:
 		float yaw = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[1]));
 
 		// Adjust angles based on game's forward vector calibration
-		pitch += 4.0f;  // Compensating for default pitch offset
-		yaw += 82.0f;   // Compensating for default yaw offset
+		pitch += 5.0f;  // Compensating for default pitch offset
+		yaw += 95.0f;   // Compensating for default yaw offset
 
 		// Convert from degrees to radians
 		pitch *= degreesToRadians;
@@ -298,26 +298,26 @@ public:
  // API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
-		//Apply new Camera Pos values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		}
-		//Apply new Aim Vector values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		}
+		////Apply new Camera Pos values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		//}
+		////Apply new Aim Vector values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		//}
 	}
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-		//Apply new Camera Pos values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		}
-		//Apply new Aim Vector values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		}
+		////Apply new Camera Pos values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
+		//}
+		////Apply new Aim Vector values to memory
+		//for (int i = 0; i < 3; ++i) {
+		//	*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
+		//}
 	}
 };
 
