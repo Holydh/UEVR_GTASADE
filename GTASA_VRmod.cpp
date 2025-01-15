@@ -3,6 +3,8 @@
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 DWORD PID;
 
@@ -52,6 +54,9 @@ private:
 
 	float cameraMatrixValues[16] = { 0.0f };
 	float characterHeading = 0.0f;
+	float characterHeadingOffset = 0.0f;
+	float previousHeading = 0.0f;
+
 	bool characterIsInCar = false;
 
 	float yawOffsetDegrees = 0.0f;
@@ -146,22 +151,33 @@ public:
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
-		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0 ? true : false;
-		characterHeading = characterIsInCar ? *(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
+		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
+		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
 
+		   // Calculate heading delta (handles wrap-around at 360 degrees)
+		float headingDelta = 0.0f;
+		if (characterIsInCar) {
+			headingDelta = currentHeading - previousHeading;
+			// Handle wrap-around cases
+			if (headingDelta > 180.0f) headingDelta -= 360.0f;
+			if (headingDelta < -180.0f) headingDelta += 360.0f;
+		}
+		previousHeading = currentHeading;
 
 		const float DEADZONE = 0.1f;
+		float joystickYaw = 0.0f;
 		if (abs(rightJoystick.x) > DEADZONE) {
-			yawOffsetDegrees = rightJoystick.x * delta * xAxisSensitivity + characterHeading;
+			joystickYaw = rightJoystick.x * delta * xAxisSensitivity;
 		}
-		else
-			yawOffsetDegrees = 0.0f + characterHeading;
 
-		float yawOffsetRadians = yawOffsetDegrees * 0.0174533f;
-		float cosYaw = std::cos(yawOffsetRadians);
-		float sinYaw = std::sin(yawOffsetRadians);
+		    // Combine joystick and heading changes
+		float totalYawDegrees = joystickYaw + headingDelta;
+		float yawRadians = totalYawDegrees * (M_PI / 180.0f); // More precise than 0.0174533
+
 		
 		// Create a yaw rotation matrix
+		float cosYaw = std::cos(yawRadians);
+		float sinYaw = std::sin(yawRadians);
 		float yawRotationMatrix[16] = {
 			cosYaw, -sinYaw, 0.0f, 0.0f,
 			sinYaw,   cosYaw, 0.0f,   0.0f,
