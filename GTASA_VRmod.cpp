@@ -6,6 +6,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+
 DWORD PID;
 
 using namespace uevr;
@@ -19,7 +20,8 @@ using namespace uevr;
 
 class GTASA_VRmod : public uevr::Plugin {
 private:
-	uintptr_t baseAddress = 0;
+	uintptr_t baseAddressGameEXE = 0;
+	uintptr_t baseAddressUEVR = 0;
 
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
@@ -38,10 +40,6 @@ private:
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
 
-	uintptr_t characterPositionAddresses[3]
-	{
-		0x5067948, 0x506794C, 0x5067950
-	};
 
 	uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
 	std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
@@ -52,10 +50,21 @@ private:
 
 	};
 
+	uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
+	std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
+	uintptr_t cameraYoffsetAddressUEVR = 0;
+
 	uintptr_t equippedWeaponAddress = 0x53DACC6;
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
+	uintptr_t characterIsCrouchingAddress = 0x53DACD2;
 
+	float initialCameraYoffset = 0.0f;
+	float currentDuckOffset = 0.0f;
+	float lastWrittenOffset = 0.0f; 
+	float maxDuckOffset = 45.0f;  // Maximum offset when crouching
+	float duckSpeed = 2.5f;     // Speed per frame adjustment
+	bool wasDucking = false;
 
 	float cameraMatrixValues[16] = { 0.0f };
 	float characterHeading = 0.0f;
@@ -87,38 +96,34 @@ public:
 		API::get()->log_info("%s %s", "Hello", "info");
 
 		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
-
 		if (hModule == nullptr) {
 			API::get()->log_info("Failed to get the base address of the game executable.");
 			return;
 		}
-
-		baseAddress = reinterpret_cast<uintptr_t>(hModule);
-
+		baseAddressGameEXE = reinterpret_cast<uintptr_t>(hModule);
 		// Convert the base address to a hexadecimal string
 		std::ostringstream oss;
-		oss << "Base address: 0x" << std::hex << baseAddress;
+		oss << "Base address: 0x" << std::hex << baseAddressGameEXE;
 		std::string baseAddressStr = oss.str();
-
 		// Log the base address
 		API::get()->log_info(baseAddressStr.c_str());
 
+        hModule = GetModuleHandle(TEXT("UEVRBackend.dll"));
+		baseAddressUEVR = reinterpret_cast<uintptr_t>(hModule);
+
+		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
+
 		// Adjust camera matrix addresses to account for base address
 		for (auto& address : cameraMatrixAddresses) {
-			address += baseAddress;
+			address += baseAddressGameEXE;
 		}
-
 		for (auto& address : aimVectorAddresses) {
-			address += baseAddress;
+			address += baseAddressGameEXE;
 		}
-
 		for (auto& address : cameraPositionAddresses) {
-			address += baseAddress;
+			address += baseAddressGameEXE;
 		}
 
-		for (auto& address : characterPositionAddresses) {
-			address += baseAddress;
-		}
 
 		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
 		std::string aimVectorAddresseAddressStr = oss.str();
@@ -135,9 +140,10 @@ public:
 		// Log the base address
 		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 
-		equippedWeaponAddress = baseAddress + equippedWeaponAddress;
-		characterHeadingAddress += baseAddress;
-		characterIsInCarAddress += baseAddress;
+		equippedWeaponAddress += baseAddressGameEXE;
+		characterHeadingAddress += baseAddressGameEXE;
+		characterIsInCarAddress += baseAddressGameEXE;
+		characterIsCrouchingAddress += baseAddressGameEXE;
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -217,11 +223,8 @@ public:
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
-
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = *(reinterpret_cast<float*>(characterPositionAddresses[0]));
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = *(reinterpret_cast<float*>(characterPositionAddresses[1]));
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = *(reinterpret_cast<float*>(characterPositionAddresses[2]));
-
+				// Optional: Log some matrix values
+		// API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 
 		//End of camera matrix yaw movements
 
@@ -244,7 +247,7 @@ public:
 			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		}
 
-		API::get()->log_info("equipped Weapon index : %d", equippedWeaponIndex);
+		//API::get()->log_info("equipped Weapon index : %d", equippedWeaponIndex);
 
 		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
 		newAimingVector[0] = aimingVector.x;
@@ -255,6 +258,49 @@ public:
 		for (int i = 0; i < 3; ++i) {
 			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
 		}
+
+
+
+		//Ducking
+		// Check if the player is crouching
+		bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
+
+		// Log the current crouch state for debugging
+		API::get()->log_info("Is Crouching: %d", isDucking);
+
+		if (isDucking && !wasDucking) {
+			// Player just started crouching, capture the initial camera offset
+			currentDuckOffset = initialCameraYoffset = *(reinterpret_cast<float*>(cameraYoffsetAddressUEVR));
+		}
+
+		// Update the current offset
+		if (isDucking) {
+			// Smoothly increase the offset toward -maxDuckOffset
+			if (currentDuckOffset > initialCameraYoffset -maxDuckOffset) {
+				currentDuckOffset -= duckSpeed;
+			}
+			else {
+				currentDuckOffset = initialCameraYoffset - maxDuckOffset;
+			}
+		}
+		else {
+			// Smoothly reset the offset back to 0
+			if (currentDuckOffset < initialCameraYoffset) {
+				currentDuckOffset += duckSpeed;
+			}
+			else {
+				currentDuckOffset = initialCameraYoffset; // Ensure it doesn't overshoot
+			}
+		}
+
+		if (currentDuckOffset != lastWrittenOffset) {
+			*(reinterpret_cast<float*>(cameraYoffsetAddressUEVR)) = currentDuckOffset;
+			lastWrittenOffset = currentDuckOffset;
+		}
+
+		// Update the previous crouch state
+		wasDucking = isDucking;
+
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -262,10 +308,6 @@ public:
 		// Matrix camera position
 	}
 
-
-
-	// Optional: Log some matrix values
- // API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
 	}
@@ -276,7 +318,7 @@ public:
 
 	void ResolveGunFlashSocketMemoryAddresses()
 	{
-		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddress + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
+		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddressGameEXE + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
 		gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
 		gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
 
