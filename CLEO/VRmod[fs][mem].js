@@ -4,7 +4,7 @@ import { KeyCode } from './.config/enums';
 
 var player = new Player(0);
 
-const configPath = 'CLEO/FPScontrols.ini';
+const configPath = 'CLEO/VRmod.ini';
 const configSection = 'CONFIG';
 
 var char = player.getChar();
@@ -240,16 +240,16 @@ while (true) {
     };
 
    
-    if (firstPersonCamEnabled)
-    {
-    //     //log(playerCoords);
-    //     //writing camera matrix position to player coordinates.
-    //     // Memory.WriteFloat(0x53E2C30, playerCoords.x + actualOffsetX, true, true);
-    //     // Memory.WriteFloat(0x53E2C34, playerCoords.y + actualOffsetY, true, true);
-        Memory.WriteFloat(0x53E2C38, Memory.ReadFloat(0x58013E0, true, true) , true, true); 
-    //     //Memory.ReadFloat(0x58013E0, true, true)  + actualOffsetZ
+    // if (firstPersonCamEnabled)
+    // {
+    // //     //log(playerCoords);
+    // //     //writing camera matrix position to player coordinates.
+    // //     // Memory.WriteFloat(0x53E2C30, playerCoords.x + actualOffsetX, true, true);
+    // //     // Memory.WriteFloat(0x53E2C34, playerCoords.y + actualOffsetY, true, true);
+    //     Memory.WriteFloat(0x53E2C38, Memory.ReadFloat(0x58013E0, true, true) , true, true); 
+    // //     //Memory.ReadFloat(0x58013E0, true, true)  + actualOffsetZ
         
-    }
+    // }
 
 
     if (firstPersonCamEnabled && !firstPersonCamInitialized) {
