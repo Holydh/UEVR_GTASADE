@@ -38,6 +38,11 @@ private:
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
 
+	uintptr_t characterPositionAddresses[3]
+	{
+		0x5067948, 0x506794C, 0x5067950
+	};
+
 	uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
 	std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
 
@@ -108,6 +113,10 @@ public:
 		}
 
 		for (auto& address : cameraPositionAddresses) {
+			address += baseAddress;
+		}
+
+		for (auto& address : characterPositionAddresses) {
 			address += baseAddress;
 		}
 
@@ -209,6 +218,10 @@ public:
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
 
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = *(reinterpret_cast<float*>(characterPositionAddresses[0]));
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = *(reinterpret_cast<float*>(characterPositionAddresses[1]));
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = *(reinterpret_cast<float*>(characterPositionAddresses[2]));
+
 
 		//End of camera matrix yaw movements
 
@@ -246,6 +259,7 @@ public:
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
+		// Matrix camera position
 	}
 
 
