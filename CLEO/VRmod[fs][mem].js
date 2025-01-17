@@ -41,7 +41,7 @@ let heading = 0;
 while (true) {
     wait(0);
 
-    if (Pad.IsKeyPressed(KeyCode.End) && !memorySetup && player.isPlaying()) {
+    if (!memorySetup && player.isPlaying()) {
         //log(Camera.GetActiveCoordinates());
         // log(char.getCoordinates());
 

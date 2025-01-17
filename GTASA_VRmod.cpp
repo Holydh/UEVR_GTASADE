@@ -266,7 +266,7 @@ public:
 		bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
 
 		// Log the current crouch state for debugging
-		API::get()->log_info("Is Crouching: %d", isDucking);
+		//API::get()->log_info("Is Crouching: %d", isDucking);
 
 		if (isDucking && !wasDucking) {
 			// Player just started crouching, capture the initial camera offset
