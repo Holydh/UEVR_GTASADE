@@ -71,7 +71,8 @@ private:
 
 	bool characterIsInCar = false;
 	int equippedWeaponIndex = 0;
-
+	uevr::API::UObject* playerController;
+	uevr::API::UObject* weapon;
 
 
 public:
@@ -82,31 +83,9 @@ public:
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
 
-		const auto playerController = API::get()->get_player_controller(0);
-		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		const auto weapon = children.data[4]->get_property<API::UObject*>(L"WeaponMesh");
-		//const auto weaponMeshRotation = weapon->get_property<API::UObject*>(L"RelativeRotation");
-		API::get()->log_info("%ls", weapon->get_full_name().c_str());
-
+		playerController = API::get()->get_player_controller(0);
+		UpdateActualWeaponMesh();
 		
-
-		if (weapon != nullptr) {
-			struct {
-				glm::fvec3 location;
-			} location_params;
-
-			struct {
-				glm::fvec3 forwardVector;
-			} forward_params;
-
-			weapon->call_function(L"K2_GetComponentLocation", &location_params);
-			weapon->call_function(L"GetForwardVector", &forward_params);
-			API::get()->log_info("%f, %f, %f", location_params.location.x, location_params.location.y, location_params.location.z);
-			API::get()->log_info("%f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
-		}
-		
-
-		//API::get()->log_info("%ls", weaponMeshRotation->get_property_data(L"RelativeRotation").c_str());
 
 		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
 		if (hModule == nullptr) {
@@ -140,16 +119,16 @@ public:
 		std::string aimVectorAddresseAddressStr = oss.str();
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
 		
-		////get the flashgun final addresses
-		//ResolveGunFlashSocketMemoryAddresses();
-		//oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
-		//std::string gunFlashSocketRotationAddressesStr = oss.str();
-		//API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
+		//get the flashgun final addresses
+		ResolveGunFlashSocketMemoryAddresses();
+		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
+		std::string gunFlashSocketRotationAddressesStr = oss.str();
+		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 
-		//equippedWeaponAddress += baseAddressGameEXE;
-		//characterHeadingAddress += baseAddressGameEXE;
-		//characterIsInCarAddress += baseAddressGameEXE;
-		//characterIsCrouchingAddress += baseAddressGameEXE;
+		equippedWeaponAddress += baseAddressGameEXE;
+		characterHeadingAddress += baseAddressGameEXE;
+		characterIsInCarAddress += baseAddressGameEXE;
+		characterIsCrouchingAddress += baseAddressGameEXE;
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -157,7 +136,7 @@ public:
 		//UEVR_Vector3f hmdPosition{};
 		//UEVR_Quaternionf hmdRotation{};
 		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
-		return;
+
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
 			originalMatrix[i] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
@@ -229,6 +208,14 @@ public:
 		//End of camera matrix yaw movements --------------------------------------------------
 
 		//Place ingame camera at gunflash position
+				//Resolve new gunflash sockets address on weapon change
+		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
+		{
+			UpdateActualWeaponMesh();
+			ResolveGunFlashSocketMemoryAddresses();
+			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+		}
+
 		for (int i = 0; i < 3; ++i) {
 			float newPos = *(reinterpret_cast<float*>(gunFlashSocketPositionAddresses[i])) * 0.01f;
 			//API::get()->log_info("cameraPositions : %f", newPos);
@@ -239,26 +226,38 @@ public:
 			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
 		}
 
-		//Resolve new gunflash sockets address on weapon change
-		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
-		{
-			ResolveGunFlashSocketMemoryAddresses();
-			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+		if (weapon != nullptr) {
+			struct {
+				glm::fvec3 location;
+			} location_params;
+
+			struct {
+				glm::fvec3 forwardVector;
+			} forward_params;
+
+			weapon->call_function(L"K2_GetComponentLocation", &location_params);
+			weapon->call_function(L"GetForwardVector", &forward_params);
+			API::get()->log_info("new position vector : %f, %f, %f", location_params.location.x, location_params.location.y, location_params.location.z);
+			//API::get()->log_info("%f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
+
+			//Apply new values to memory
+			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = location_params.location.x * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -location_params.location.y * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = location_params.location.z * 0.01f;
+
+			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = forward_params.forwardVector.x;
+			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -forward_params.forwardVector.y;
+			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = forward_params.forwardVector.z;
+			API::get()->log_info("new aiming vector : %f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
 		}
-		//API::get()->log_info("equipped Weapon index : %d", equippedWeaponIndex);
 
 		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
 		newAimingVector[0] = aimingVector.x;
 		newAimingVector[1] = aimingVector.y;
 		newAimingVector[2] = aimingVector.z;
-
-		//Apply new values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(aimVectorAddresses[i])) = newAimingVector[i];
-		}
-
-
-
+		
+		API::get()->log_info("old position vector : %f, %f, %f", newCameraPositionVector[0], newCameraPositionVector[1], newCameraPositionVector[2]);
+		API::get()->log_info("old aiming vector x : %f, y: %f, z: %f", newAimingVector[0], newAimingVector[1], newAimingVector[2]);
 		//Ducking -----------------------------
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
@@ -312,6 +311,13 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void UpdateActualWeaponMesh()
+	{
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		weapon = children.data[4]->get_property<API::UObject*>(L"WeaponMesh");
+		API::get()->log_info("%ls", weapon->get_full_name().c_str());
 	}
 
 	void ResolveGunFlashSocketMemoryAddresses()
