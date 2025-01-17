@@ -20,45 +20,37 @@ using namespace uevr;
 
 class GTASA_VRmod : public uevr::Plugin {
 private:
+
+	//Addresses & offsets
 	uintptr_t baseAddressGameEXE = 0;
 	uintptr_t baseAddressUEVR = 0;
-
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
 		0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
 		0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
 	};
-
 	uintptr_t aimVectorAddresses[3]
 	{
 		0x53E2668, 0x53E266C, 0x53E2670
 	};
-
 	uintptr_t cameraPositionAddresses[3]
 	{
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
-
-
 	uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
 	std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
-
-	uintptr_t gunFlashSocketPositionAddresses[3] = {
-	};
-	uintptr_t gunFlashSocketRotationAddresses[3] = {
-
-	};
-
+	uintptr_t gunFlashSocketPositionAddresses[3] = {};
+	uintptr_t gunFlashSocketRotationAddresses[3] = {};
 	uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
 	std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
 	uintptr_t cameraYoffsetAddressUEVR = 0;
-
 	uintptr_t equippedWeaponAddress = 0x53DACC6;
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
 	uintptr_t characterIsCrouchingAddress = 0x53DACD2;
 
+	//variables
 	float initialCameraYoffset = 0.0f;
 	float currentDuckOffset = 0.0f;
 	float lastWrittenOffset = 0.0f; 
@@ -67,21 +59,16 @@ private:
 	bool wasDucking = false;
 
 	float cameraMatrixValues[16] = { 0.0f };
+	float newAimingVector[3] = { 0.0f, 0.0f, 0.0f };
+	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
+	float yawOffsetDegrees = 0.0f;
+	float xAxisSensitivity = 125.0f;
+	float degreesToRadians = 3.14159265359f / 180.0f;
 	float characterHeading = 0.0f;
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
 
 	bool characterIsInCar = false;
-
-	float yawOffsetDegrees = 0.0f;
-
-	float xAxisSensitivity = 125.0f;
-
-	float degreesToRadians = 3.14159265359f / 180.0f;
-
-	float newAimingVector[3] = { 0.0f, 0.0f, 0.0f };
-	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
-
 	int equippedWeaponIndex = 0;
 
 public:
@@ -90,10 +77,7 @@ public:
 	void on_dllmain() override {}
 
 	void on_initialize() override {
-		// Logs to the appdata UnrealVRMod log.txt file
-		API::get()->log_error("%s %s", "Hello", "error");
-		API::get()->log_warn("%s %s", "Hello", "warning");
-		API::get()->log_info("%s %s", "Hello", "info");
+		API::get()->log_error("%s", "VR cpp mod initializing");
 
 		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
 		if (hModule == nullptr) {
@@ -110,7 +94,6 @@ public:
 
         hModule = GetModuleHandle(TEXT("UEVRBackend.dll"));
 		baseAddressUEVR = reinterpret_cast<uintptr_t>(hModule);
-
 		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 
 		// Adjust camera matrix addresses to account for base address
@@ -124,20 +107,14 @@ public:
 			address += baseAddressGameEXE;
 		}
 
-
 		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
 		std::string aimVectorAddresseAddressStr = oss.str();
-
-		// Log the last address
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
-
-		//get the flashgun addresses
+		
+		//get the flashgun final addresses
 		ResolveGunFlashSocketMemoryAddresses();
-
 		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
 		std::string gunFlashSocketRotationAddressesStr = oss.str();
-
-		// Log the base address
 		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 
 		equippedWeaponAddress += baseAddressGameEXE;
@@ -149,8 +126,8 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		//UEVR_Vector3f hmdPosition{};
-//UEVR_Quaternionf hmdRotation{};
-//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
+		//UEVR_Quaternionf hmdRotation{};
+		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
 
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
@@ -161,15 +138,13 @@ public:
 		/*	API::get()->log_info("Original Matrix:\n");
 			printMatrix(originalMatrix);*/
 
-			// Camera Matrix Yaw movements :
+		// Camera Matrix Yaw movements ---------------------------------------------------
 		UEVR_Vector2f rightJoystick{};
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
-
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
 		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
-
-		   // Calculate heading delta (handles wrap-around at 360 degrees)
+		// Calculate heading delta (handles wrap-around at 360 degrees)
 		float headingDelta = 0.0f;
 		if (characterIsInCar) {
 			headingDelta = currentHeading - previousHeading;
@@ -184,11 +159,9 @@ public:
 		if (abs(rightJoystick.x) > DEADZONE) {
 			joystickYaw = rightJoystick.x * delta * xAxisSensitivity;
 		}
-
-		    // Combine joystick and heading changes
+		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
 		float yawRadians = totalYawDegrees * (M_PI / 180.0f); // More precise than 0.0174533
-
 		
 		// Create a yaw rotation matrix
 		float cosYaw = std::cos(yawRadians);
@@ -215,38 +188,34 @@ public:
 		for (int i = 0; i < 16; ++i) {
 			cameraMatrixValues[i] = modifiedMatrix[i];
 		}
-
 		//API::get()->log_info("Modified Matrix:\n");
 		//printMatrix(cameraMatrixValues);
-
-		// To uncomment to reapply matrix
+		
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
-				// Optional: Log some matrix values
+		// Log some matrix values
 		// API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 
-		//End of camera matrix yaw movements
+		//End of camera matrix yaw movements --------------------------------------------------
 
-		//Place ingame camera at shoot position
+		//Place ingame camera at gunflash position
 		for (int i = 0; i < 3; ++i) {
 			float newPos = *(reinterpret_cast<float*>(gunFlashSocketPositionAddresses[i])) * 0.01f;
 			//API::get()->log_info("cameraPositions : %f", newPos);
 			newCameraPositionVector[i] = i == 1 ? -newPos : newPos;
 		}
-
 		//Apply new values to memory
 		for (int i = 0; i < 3; ++i) {
 			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
 		}
 
-		//Weapon logic
+		//Resolve new gunflash sockets address on weapon change
 		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
 		{
 			ResolveGunFlashSocketMemoryAddresses();
 			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		}
-
 		//API::get()->log_info("equipped Weapon index : %d", equippedWeaponIndex);
 
 		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
@@ -261,7 +230,7 @@ public:
 
 
 
-		//Ducking
+		//Ducking -----------------------------
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
 
