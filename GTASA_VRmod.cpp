@@ -1,5 +1,6 @@
 #include <memory>
 
+#include "glm/glm.hpp"
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
@@ -71,13 +72,41 @@ private:
 	bool characterIsInCar = false;
 	int equippedWeaponIndex = 0;
 
+
+
 public:
 	GTASA_VRmod() = default;
 
 	void on_dllmain() override {}
 
 	void on_initialize() override {
-		API::get()->log_error("%s", "VR cpp mod initializing");
+		API::get()->log_info("%s", "VR cpp mod initializing");
+
+		const auto playerController = API::get()->get_player_controller(0);
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		const auto weapon = children.data[4]->get_property<API::UObject*>(L"WeaponMesh");
+		//const auto weaponMeshRotation = weapon->get_property<API::UObject*>(L"RelativeRotation");
+		API::get()->log_info("%ls", weapon->get_full_name().c_str());
+
+		
+
+		if (weapon != nullptr) {
+			struct {
+				glm::fvec3 location;
+			} location_params;
+
+			struct {
+				glm::fvec3 forwardVector;
+			} forward_params;
+
+			weapon->call_function(L"K2_GetComponentLocation", &location_params);
+			weapon->call_function(L"GetForwardVector", &forward_params);
+			API::get()->log_info("%f, %f, %f", location_params.location.x, location_params.location.y, location_params.location.z);
+			API::get()->log_info("%f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
+		}
+		
+
+		//API::get()->log_info("%ls", weaponMeshRotation->get_property_data(L"RelativeRotation").c_str());
 
 		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
 		if (hModule == nullptr) {
@@ -111,16 +140,16 @@ public:
 		std::string aimVectorAddresseAddressStr = oss.str();
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
 		
-		//get the flashgun final addresses
-		ResolveGunFlashSocketMemoryAddresses();
-		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
-		std::string gunFlashSocketRotationAddressesStr = oss.str();
-		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
+		////get the flashgun final addresses
+		//ResolveGunFlashSocketMemoryAddresses();
+		//oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
+		//std::string gunFlashSocketRotationAddressesStr = oss.str();
+		//API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
 
-		equippedWeaponAddress += baseAddressGameEXE;
-		characterHeadingAddress += baseAddressGameEXE;
-		characterIsInCarAddress += baseAddressGameEXE;
-		characterIsCrouchingAddress += baseAddressGameEXE;
+		//equippedWeaponAddress += baseAddressGameEXE;
+		//characterHeadingAddress += baseAddressGameEXE;
+		//characterIsInCarAddress += baseAddressGameEXE;
+		//characterIsCrouchingAddress += baseAddressGameEXE;
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -128,7 +157,7 @@ public:
 		//UEVR_Vector3f hmdPosition{};
 		//UEVR_Quaternionf hmdRotation{};
 		//API::get()->param()->vr->get_pose(API::get()->param()->vr->get_hmd_index(), &hmdPosition, &hmdRotation);
-
+		return;
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
 			originalMatrix[i] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
@@ -357,6 +386,7 @@ public:
 		for (size_t i = 0; i < offsets.size(); ++i) {
 			if (addr == 0) {
 				// If at any point the address is invalid, return 0
+				API::get()->log_error("%s", "Cant find gunflash socket address");
 				return 0;
 			}
 			// Dereference the pointer
