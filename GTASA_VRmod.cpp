@@ -55,7 +55,7 @@ private:
 	//variables
 	float initialCameraYoffset = 0.0f;
 	float currentDuckOffset = 0.0f;
-	float lastWrittenOffset = 0.0f; 
+	float lastWrittenOffset = 0.0f;
 	float maxDuckOffset = 45.0f;  // Maximum offset when crouching
 	float duckSpeed = 2.5f;     // Speed per frame adjustment
 	bool wasDucking = false;
@@ -73,6 +73,7 @@ private:
 	int equippedWeaponIndex = 0;
 	uevr::API::UObject* playerController;
 	uevr::API::UObject* weapon;
+	uevr::API::UObject* fQuatStruct;
 
 
 public:
@@ -84,8 +85,10 @@ public:
 		API::get()->log_info("%s", "VR cpp mod initializing");
 
 		playerController = API::get()->get_player_controller(0);
+		fQuatStruct = API::get()->find_uobject(L"ScriptStruct /Script/CoreUObject.Quat");
+
 		UpdateActualWeaponMesh();
-		
+
 
 		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
 		if (hModule == nullptr) {
@@ -100,7 +103,7 @@ public:
 		// Log the base address
 		API::get()->log_info(baseAddressStr.c_str());
 
-        hModule = GetModuleHandle(TEXT("UEVRBackend.dll"));
+		hModule = GetModuleHandle(TEXT("UEVRBackend.dll"));
 		baseAddressUEVR = reinterpret_cast<uintptr_t>(hModule);
 		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 
@@ -118,7 +121,7 @@ public:
 		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
 		std::string aimVectorAddresseAddressStr = oss.str();
 		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
-		
+
 		//get the flashgun final addresses
 		ResolveGunFlashSocketMemoryAddresses();
 		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
@@ -146,7 +149,7 @@ public:
 		/*	API::get()->log_info("Original Matrix:\n");
 			printMatrix(originalMatrix);*/
 
-		// Camera Matrix Yaw movements ---------------------------------------------------
+			// Camera Matrix Yaw movements ---------------------------------------------------
 		UEVR_Vector2f rightJoystick{};
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
@@ -170,7 +173,7 @@ public:
 		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
 		float yawRadians = totalYawDegrees * (M_PI / 180.0f); // More precise than 0.0174533
-		
+
 		// Create a yaw rotation matrix
 		float cosYaw = std::cos(yawRadians);
 		float sinYaw = std::sin(yawRadians);
@@ -198,7 +201,7 @@ public:
 		}
 		//API::get()->log_info("Modified Matrix:\n");
 		//printMatrix(cameraMatrixValues);
-		
+
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
@@ -215,6 +218,7 @@ public:
 			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		}
 
+		
 
 		if (weapon != nullptr) {
 			struct {
@@ -222,34 +226,32 @@ public:
 				glm::fvec3 location;
 			} location_params;
 
-			struct {
-				const struct API::FName& InSocketName = API::FName(L"gunflash");
-				glm::fvec3 rotation;
-			} rotation_params;
+			SceneComponent_GetSocketQuaternion rotation_params{}; //needs a specific type of parameter with padding or else the game crash. cf sdk dump for padding
+			rotation_params.InSocketName = API::FName(L"gunflash"); // Set the socket name
 
 			weapon->call_function(L"GetSocketLocation", &location_params);
-			weapon->call_function(L"GetSocketRotation", &rotation_params);
-			
+			weapon->call_function(L"GetSocketQuaternion", &rotation_params);
+
 
 			//API::get()->log_info("new position : %f, %f, %f",
 			//	location_params.location.x, location_params.location.y, location_params.location.z);
-			//API::get()->log_info("new rotation : %f, %f, %f", 
-			//	rotation_params.rotation.x, rotation_params.rotation.y, rotation_params.rotation.z);
+			API::get()->log_info("new quaternion : %lf, %lf, %lf, %lf", 
+				rotation_params.ReturnValue.w, rotation_params.ReturnValue.x, rotation_params.ReturnValue.y, rotation_params.ReturnValue.z);
 
 
-			glm::fvec3 aimingVector = CalculateAimingVector(rotation_params.rotation);
+			glm::fvec3 aimingVector = CalculateAimingVector(rotation_params.ReturnValue);
 
 			// Apply new values to memory
 			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = location_params.location.x * 0.01f;
 			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -location_params.location.y * 0.01f;
 			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = location_params.location.z * 0.01f;
 
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;
+			/*		*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
+					*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
+					*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;*/
 
-			API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(cameraPositionAddresses[0])), *(reinterpret_cast<float*>(cameraPositionAddresses[1])), *(reinterpret_cast<float*>(cameraPositionAddresses[2])));
-			API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(aimVectorAddresses[0])), *(reinterpret_cast<float*>(aimVectorAddresses[1])), *(reinterpret_cast<float*>(aimVectorAddresses[2])));
+					//API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(cameraPositionAddresses[0])), *(reinterpret_cast<float*>(cameraPositionAddresses[1])), *(reinterpret_cast<float*>(cameraPositionAddresses[2])));
+					//API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(aimVectorAddresses[0])), *(reinterpret_cast<float*>(aimVectorAddresses[1])), *(reinterpret_cast<float*>(aimVectorAddresses[2])));
 		}
 		//Ducking -----------------------------
 		// Check if the player is crouching
@@ -266,7 +268,7 @@ public:
 		// Update the current offset
 		if (isDucking) {
 			// Smoothly increase the offset toward -maxDuckOffset
-			if (currentDuckOffset > initialCameraYoffset -maxDuckOffset) {
+			if (currentDuckOffset > initialCameraYoffset - maxDuckOffset) {
 				currentDuckOffset -= duckSpeed;
 			}
 			else {
@@ -358,19 +360,43 @@ public:
 		return aimingVector;
 	}
 
-	//struct Vec3 {
-	//	float x, y, z;
 
-	//	// Normalize the vector
-	//	void normalize() {
-	//		float magnitude = std::sqrt(x * x + y * y + z * z);
-	//		if (magnitude > 0.0f) {
-	//			x /= magnitude;
-	//			y /= magnitude;
-	//			z /= magnitude;
-	//		}
-	//	}
+
+	//struct FQuat {
+ //   double W;
+ //   double X;
+ //   double Y;
+ //   double Z;
 	//};
+
+	struct FVector {
+		float x, y, z;
+
+		//// Normalize the vector
+		//void normalize() {
+		//	float magnitude = std::sqrt(x * x + y * y + z * z);
+		//	if (magnitude > 0.0f) {
+		//		x /= magnitude;
+		//		y /= magnitude;
+		//		z /= magnitude;
+		//	}
+		//}
+	};
+	//	struct FTransform
+	//{
+	//	struct FQuat Rotation;
+	//	struct FVector Translation;
+	//	struct FVector Scale3D;
+	//};
+
+#pragma pack(push, 1) // Disable padding
+		struct SceneComponent_GetSocketQuaternion {
+			API::FName InSocketName;    // Offset 0x0, 8 bytes
+			uint8_t Padding[8];              // Offset 0x8, 8 bytes
+			glm::fquat ReturnValue;          // Offset 0x10, 16 bytes
+		};
+#pragma pack(pop)
+
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
 		uintptr_t addr = baseAddress;
