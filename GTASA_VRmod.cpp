@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "glm/glm.hpp"
+#include <glm/gtc/quaternion.hpp>
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
@@ -64,7 +65,6 @@ private:
 	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
 	float yawOffsetDegrees = 0.0f;
 	float xAxisSensitivity = 125.0f;
-	float degreesToRadians = 3.14159265359f / 180.0f;
 	float characterHeading = 0.0f;
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
@@ -212,52 +212,45 @@ public:
 		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
 		{
 			UpdateActualWeaponMesh();
-			ResolveGunFlashSocketMemoryAddresses();
 			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		}
 
-		for (int i = 0; i < 3; ++i) {
-			float newPos = *(reinterpret_cast<float*>(gunFlashSocketPositionAddresses[i])) * 0.01f;
-			//API::get()->log_info("cameraPositions : %f", newPos);
-			newCameraPositionVector[i] = i == 1 ? -newPos : newPos;
-		}
-		//Apply new values to memory
-		for (int i = 0; i < 3; ++i) {
-			*(reinterpret_cast<float*>(cameraPositionAddresses[i])) = newCameraPositionVector[i];
-		}
 
 		if (weapon != nullptr) {
 			struct {
+				const struct API::FName& InSocketName = API::FName(L"gunflash");
 				glm::fvec3 location;
 			} location_params;
 
 			struct {
-				glm::fvec3 forwardVector;
-			} forward_params;
+				const struct API::FName& InSocketName = API::FName(L"gunflash");
+				glm::fvec3 rotation;
+			} rotation_params;
 
-			weapon->call_function(L"K2_GetComponentLocation", &location_params);
-			weapon->call_function(L"GetForwardVector", &forward_params);
-			API::get()->log_info("new position vector : %f, %f, %f", location_params.location.x, location_params.location.y, location_params.location.z);
-			//API::get()->log_info("%f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
+			weapon->call_function(L"GetSocketLocation", &location_params);
+			weapon->call_function(L"GetSocketRotation", &rotation_params);
+			
 
-			//Apply new values to memory
+			//API::get()->log_info("new position : %f, %f, %f",
+			//	location_params.location.x, location_params.location.y, location_params.location.z);
+			//API::get()->log_info("new rotation : %f, %f, %f", 
+			//	rotation_params.rotation.x, rotation_params.rotation.y, rotation_params.rotation.z);
+
+
+			glm::fvec3 aimingVector = CalculateAimingVector(rotation_params.rotation);
+
+			// Apply new values to memory
 			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = location_params.location.x * 0.01f;
 			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -location_params.location.y * 0.01f;
 			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = location_params.location.z * 0.01f;
 
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = forward_params.forwardVector.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -forward_params.forwardVector.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = forward_params.forwardVector.z;
-			API::get()->log_info("new aiming vector : %f, %f, %f", forward_params.forwardVector.x, forward_params.forwardVector.y, forward_params.forwardVector.z);
-		}
+			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingVector.x;
+			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = aimingVector.y;
+			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingVector.z;
 
-		Vec3 aimingVector = CalculateAimingVector(gunFlashSocketRotationAddresses);
-		newAimingVector[0] = aimingVector.x;
-		newAimingVector[1] = aimingVector.y;
-		newAimingVector[2] = aimingVector.z;
-		
-		API::get()->log_info("old position vector : %f, %f, %f", newCameraPositionVector[0], newCameraPositionVector[1], newCameraPositionVector[2]);
-		API::get()->log_info("old aiming vector x : %f, y: %f, z: %f", newAimingVector[0], newAimingVector[1], newAimingVector[2]);
+			API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(cameraPositionAddresses[0])), *(reinterpret_cast<float*>(cameraPositionAddresses[1])), *(reinterpret_cast<float*>(cameraPositionAddresses[2])));
+			API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(aimVectorAddresses[0])), *(reinterpret_cast<float*>(aimVectorAddresses[1])), *(reinterpret_cast<float*>(aimVectorAddresses[2])));
+		}
 		//Ducking -----------------------------
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
@@ -331,60 +324,55 @@ public:
 		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
 	}
 
-	struct Vec3 {
-		float x, y, z;
+	glm::fvec3 CalculateAimingVector(glm::fvec3 gunflashSocketRotation)
+	{
+		float pitch = gunflashSocketRotation.x;
+		float yaw = gunflashSocketRotation.y;
 
-		// Normalize the vector
-		void normalize() {
-			float magnitude = std::sqrt(x * x + y * y + z * z);
-			if (magnitude > 0.0f) {
-				x /= magnitude;
-				y /= magnitude;
-				z /= magnitude;
-			}
-		}
-	};
-
-
-	Vec3 CalculateAimingVector(uintptr_t gunFlashSocketRotationAddresses[3]) {
-		// Fetch Euler angles (assuming they're stored as floats)
-		float pitch = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[0]));
-		float yaw = *(reinterpret_cast<float*>(gunFlashSocketRotationAddresses[1]));
-
-		// Adjust angles based on game's forward vector calibration
-		switch (equippedWeaponIndex)
+		switch (equippedWeaponIndex) //aim offsets per weapons
 		{
-			case 22: //Pistol
-				pitch += 4.0f;
-				yaw += 82.0f;
-				
-				break;
-			case 33: //Rifle
-				pitch += 5.0f;
-				yaw += 95.0f;
-				break;
+		case 22: //Pistol
+			pitch += 4.0f;
+			yaw += 82.0f;
 
-			default:
-				pitch += 4.0f;
-				yaw += 82.0f;
-				break;
+			break;
+		case 33: //Rifle
+			pitch += 5.0f;
+			yaw += 95.0f;
+			break;
+
+		default:
+			pitch += 5.0f;
+			yaw += 95.0f;
+			break;
 		}
 
-		// Convert from degrees to radians
-		pitch *= degreesToRadians;
-		yaw *= degreesToRadians;
+		pitch *= glm::radians(pitch);
+		yaw *= glm::radians(yaw);;
 
-		// Compute aiming vector
-		Vec3 aimingVector;
+		// Compute forward vector
+		glm::fvec3 aimingVector;
 		aimingVector.x = std::cos(pitch) * std::sin(yaw); // Left/Right
 		aimingVector.y = std::cos(pitch) * std::cos(yaw); // Forward/Backward
 		aimingVector.z = std::sin(pitch);                // Up/Down
 
-		// Normalize the vector
-		aimingVector.normalize();
-
+		aimingVector = glm::normalize(aimingVector);
 		return aimingVector;
 	}
+
+	//struct Vec3 {
+	//	float x, y, z;
+
+	//	// Normalize the vector
+	//	void normalize() {
+	//		float magnitude = std::sqrt(x * x + y * y + z * z);
+	//		if (magnitude > 0.0f) {
+	//			x /= magnitude;
+	//			y /= magnitude;
+	//			z /= magnitude;
+	//		}
+	//	}
+	//};
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
 		uintptr_t addr = baseAddress;
