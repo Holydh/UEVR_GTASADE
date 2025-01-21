@@ -334,21 +334,19 @@ public:
 		case 22: //Pistol
 			pitch += 4.0f;
 			yaw += 82.0f;
-
 			break;
 		case 33: //Rifle
 			pitch += 5.0f;
 			yaw += 95.0f;
 			break;
-
 		default:
 			pitch += 5.0f;
 			yaw += 95.0f;
 			break;
 		}
 
-		pitch *= glm::radians(pitch);
-		yaw *= glm::radians(yaw);;
+		pitch = glm::radians(pitch);
+		yaw = glm::radians(yaw);;
 
 		// Compute forward vector
 		glm::fvec3 aimingVector;
