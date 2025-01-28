@@ -83,66 +83,180 @@ private:
 	float upOffset = 0.0f;
 	float rightOffset = 0.0f;
 
+	glm::fvec3 crosshairOffset = {0.0f, -1.0f, 2.0f};
+
 public:
 	GTASA_VRmod() = default;
 
 	void on_dllmain() override {}
 
 	void on_initialize() override {
-		API::get()->log_info("%s", "VR cpp mod initializing");
+        API::get()->log_info("%s", "VR cpp mod initializing");
 
-		playerController = API::get()->get_player_controller(0);
+        playerController = API::get()->get_player_controller(0);
+        UpdateActualWeaponMesh();
 
-		UpdateActualWeaponMesh();
+        baseAddressGameEXE = GetModuleBaseAddress(nullptr);
+        baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
+        cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 
-
-		HMODULE hModule = GetModuleHandle(nullptr); // nullptr gets the base module (the game EXE)
-		if (hModule == nullptr) {
-			API::get()->log_info("Failed to get the base address of the game executable.");
-			return;
-		}
-		baseAddressGameEXE = reinterpret_cast<uintptr_t>(hModule);
-		// Convert the base address to a hexadecimal string
-		std::ostringstream oss;
-		oss << "Base address: 0x" << std::hex << baseAddressGameEXE;
-		std::string baseAddressStr = oss.str();
-		// Log the base address
-		API::get()->log_info(baseAddressStr.c_str());
-
-		hModule = GetModuleHandle(TEXT("UEVRBackend.dll"));
-		baseAddressUEVR = reinterpret_cast<uintptr_t>(hModule);
-		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
-
-		// Adjust camera matrix addresses to account for base address
-		for (auto& address : cameraMatrixAddresses) {
-			address += baseAddressGameEXE;
-		}
-		for (auto& address : aimVectorAddresses) {
-			address += baseAddressGameEXE;
-		}
-		for (auto& address : cameraPositionAddresses) {
-			address += baseAddressGameEXE;
-		}
-
-		oss << "aimVectorAddresse : 0x" << std::hex << aimVectorAddresses[2];
-		std::string aimVectorAddresseAddressStr = oss.str();
-		API::get()->log_info(aimVectorAddresseAddressStr.c_str());
-
-		//get the flashgun final addresses
-		ResolveGunFlashSocketMemoryAddresses();
-		oss << "gunFlashSocketRotationAddresses: 0x" << std::hex << gunFlashSocketRotationAddresses[0];
-		std::string gunFlashSocketRotationAddressesStr = oss.str();
-		API::get()->log_info(gunFlashSocketRotationAddressesStr.c_str());
-
-		equippedWeaponAddress += baseAddressGameEXE;
-		characterHeadingAddress += baseAddressGameEXE;
-		characterIsInCarAddress += baseAddressGameEXE;
-		characterIsCrouchingAddress += baseAddressGameEXE;
+        AdjustAddresses();
+        ResolveGunFlashSocketMemoryAddresses();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 
+		UpdateCameraMatrix(delta);
+		UpdateWeaponMeshOnChange();
+		UpdateAimingVectors();
+	}
+
+	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
+		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
+		// Matrix camera position
+	}
+
+	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
+		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
+	}
+
+	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
+		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void UpdateAimingVectors()
+	{
+		if (weaponMesh != nullptr) {
+
+			struct {
+				const struct API::FName& InSocketName = API::FName(L"gunflash");
+				glm::fvec3 Location;
+			} socketLocation_params;
+
+			struct {
+				glm::fvec3 ForwardVector;
+			} forwardVector_params;
+
+			struct {
+				glm::fvec3 UpVector;
+			} upVector_params;
+
+			struct {
+				glm::fvec3 RightVector;
+			} rightVector_params;
+
+
+			weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
+			weaponMesh->call_function(L"GetUpVector", &upVector_params);
+			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
+			weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
+
+			glm::fvec3 point1Offsets = { 0.0f, 0.0f, 0.0f };
+			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
+
+			//select weapon offsets
+			switch (equippedWeaponIndex)
+			{
+			case 22: //Pistol
+				point1Offsets = {2.82819, -2.52103, 9.92684};
+				point2Offsets = {21.7272, -3.89487, 12.9088};
+				break;
+			case 30: //AK47
+				point1Offsets = {2.82819, -2.52103, 9.92684};
+				point2Offsets = {21.7272, -3.89487, 12.9088};
+				break;
+
+			default:
+				point1Offsets = {2.82819, -2.52103, 9.92684};
+				point2Offsets = {21.7272, -3.89487, 12.9088};
+				break;
+			}
+
+			glm::fvec3 point1Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
+			glm::fvec3 point2Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+
+			glm::fvec3 aimingDirection = glm::normalize(point2Position - point1Position);
+
+
+			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
+			// Safeguard: Normalize projectedToFloorVector only if valid
+			if (glm::length(projectedToFloorVector) > 0.0f) {
+				projectedToFloorVector = glm::normalize(projectedToFloorVector);
+			}
+			else {
+				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+			}
+
+
+			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
+			if (glm::length(yawRight) > 0.0f) {
+				yawRight = glm::normalize(yawRight);
+			}
+			else {
+				yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
+			}
+
+
+			glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
+			if (glm::length(yawUp) > 0.0f) {
+				yawUp = glm::normalize(yawUp);
+			}
+			else {
+				yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
+			}
+
+			point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
+
+			// Safeguard: Recalculate aiming direction and normalize
+			aimingDirection = point2Position - point1Position;
+			if (glm::length(aimingDirection) > 0.0f) {
+				aimingDirection = glm::normalize(aimingDirection);
+			}
+			else {
+				aimingDirection = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+			}
+
+
+			// Apply new values to memory
+			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
+
+			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
+			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
+			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
+		}
+	}
+
+	void UpdateWeaponMeshOnChange() {
+        if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress))) {
+            UpdateActualWeaponMesh();
+            equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+        }
+    }
+
+	void UpdateActualWeaponMesh()
+	{
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		weapon = children.data[4];
+		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+	}
+
+	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
+	{
+		// Apply the offsets along the local axes
+		glm::fvec3 offset = (forwardVector * offsets.x) + (rightVector * offsets.y) + (upVector * offsets.z);
+
+		// Calculate the new position
+		glm::fvec3 pointWorldPosition = worldPosition + offset;
+
+		return pointWorldPosition;
+	}
+
+	void UpdateCameraMatrix(float delta)
+	{
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
 			originalMatrix[i] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
@@ -212,160 +326,27 @@ public:
 		// API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 
 		//End of camera matrix yaw movements --------------------------------------------------
-
-
-		//Resolve new gunflash sockets address on weapon change
-		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
-		{
-			UpdateActualWeaponMesh();
-			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
-		}
-
-
-
-		if (weaponMesh != nullptr) {
-
-			struct {
-				FTransform Transform;
-			} weaponTransform_params;
-
-			struct {
-				glm::fvec3 ForwardVector;
-			} forwardVector_params;
-
-			struct {
-				glm::fvec3 UpVector;
-			} upVector_params;
-
-			struct {
-				glm::fvec3 RightVector;
-			} rightVector_params;
-
-
-			weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
-			weaponMesh->call_function(L"GetUpVector", &upVector_params);
-			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
-			weapon->call_function(L"GetTransform", &weaponTransform_params);
-			
-			glm::fvec3 point1Position = CalculateAimingReferencePoints(weaponTransform_params.Transform.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, 2.82819, -2.52103, 9.92684);
-			glm::fvec3 point2Position = CalculateAimingReferencePoints(weaponTransform_params.Transform.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, 21.7272, -3.89487, 12.9088);
-
-
-			glm::fvec3 aimingDirection = glm::normalize(point2Position - point1Position);
-
-
-			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
-			// Safeguard: Normalize projectedToFloorVector only if valid
-			if (glm::length(projectedToFloorVector) > 0.0f) {
-				projectedToFloorVector = glm::normalize(projectedToFloorVector);
-			} else {
-				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
-			}
-
-			
-			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
-			if (glm::length(yawRight) > 0.0f) {
-				yawRight = glm::normalize(yawRight);
-			}
-			else {
-				yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
-			}
-
-			
-			
-			glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
-			if (glm::length(yawUp) > 0.0f) {
-				yawUp = glm::normalize(yawUp);
-			}
-			else {
-				yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
-			}
-
-			point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, 0.0, -1.0, 2.0);
-
-			// Safeguard: Recalculate aiming direction and normalize
-			aimingDirection = point2Position - point1Position;
-			if (glm::length(aimingDirection) > 0.0f) {
-				aimingDirection = glm::normalize(aimingDirection);
-			}
-			else {
-				aimingDirection = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
-			}
-
-
-			// Apply new values to memory
-			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
-
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
-
-		}
-		
-		//Ducking -----------------------------
-		// Check if the player is crouching
-		//bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
-		// 
-		//// Log the current crouch state for debugging
-		////API::get()->log_info("Is Crouching: %d", isDucking);
-
-		//if (isDucking && !wasDucking) {
-		//	// Player just started crouching, capture the initial camera offset
-		//	currentDuckOffset = initialCameraYoffset = *(reinterpret_cast<float*>(cameraYoffsetAddressUEVR));
-		//}
-
-		//// Update the current offset
-		//if (isDucking) {
-		//	// Smoothly increase the offset toward -maxDuckOffset
-		//	if (currentDuckOffset > initialCameraYoffset - maxDuckOffset) {
-		//		currentDuckOffset -= duckSpeed;
-		//	}
-		//	else {
-		//		currentDuckOffset = initialCameraYoffset - maxDuckOffset;
-		//	}
-		//}
-		//else {
-		//	// Smoothly reset the offset back to 0
-		//	if (currentDuckOffset < initialCameraYoffset) {
-		//		currentDuckOffset += duckSpeed;
-		//	}
-		//	else {
-		//		currentDuckOffset = initialCameraYoffset; // Ensure it doesn't overshoot
-		//	}
-		//}
-
-		//if (currentDuckOffset != lastWrittenOffset) {
-		//	*(reinterpret_cast<float*>(cameraYoffsetAddressUEVR)) = currentDuckOffset;
-		//	lastWrittenOffset = currentDuckOffset;
-		//}
-
-		//// Update the previous crouch state
-		//wasDucking = isDucking;
-
 	}
 
-	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
-		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		// Matrix camera position
-	}
+	 uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
+        HMODULE hModule = GetModuleHandle(moduleName);
+        if (hModule == nullptr) {
+            API::get()->log_info("Failed to get the base address of the module.");
+            return 0;
+        }
+        return reinterpret_cast<uintptr_t>(hModule);
+    }
 
-	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
-		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
-	}
+    void AdjustAddresses() {
+        for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
+        for (auto& address : aimVectorAddresses) address += baseAddressGameEXE;
+        for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 
-	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
-		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-	}
-
-	void UpdateActualWeaponMesh()
-	{
-		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		weapon = children.data[4];
-		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
-	}
+        equippedWeaponAddress += baseAddressGameEXE;
+        characterHeadingAddress += baseAddressGameEXE;
+        characterIsInCarAddress += baseAddressGameEXE;
+        characterIsCrouchingAddress += baseAddressGameEXE;
+    }
 
 	void ResolveGunFlashSocketMemoryAddresses()
 	{
@@ -376,18 +357,6 @@ public:
 		gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
 		gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
 		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
-	}
-
-
-	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, float offsetForward, float offsetRight, float offsetUp)
-	{
-		// Apply the offsets along the local axes
-		glm::fvec3 offset = (forwardVector * offsetForward) + (rightVector * offsetRight) + (upVector * offsetUp);
-
-		// Calculate the new position
-		glm::fvec3 pointWorldPosition = worldPosition + offset;
-
-		return pointWorldPosition;
 	}
 
 	struct FQuat {

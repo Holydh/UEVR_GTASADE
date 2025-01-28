@@ -220,11 +220,11 @@ while (true) {
     let playerCoords = char.getCoordinates();
     actualWeapon = char.getCurrentWeapon().valueOf();
 
+    // Object spawner for debug
     // let x = Memory.ReadFloat(0x53E2674, true, true);
     // let y = Memory.ReadFloat(0x53E2678, true, true);
     // let z = Memory.ReadFloat(0x53E267C, true, true);
 
-    // Object spawner for debug
     // if (object1 == null && player.isPlaying())
     // {
     //     let modelID = 3027;
