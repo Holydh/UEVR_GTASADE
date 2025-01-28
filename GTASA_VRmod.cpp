@@ -74,9 +74,14 @@ private:
 	int equippedWeaponIndex = 0;
 	uevr::API::UObject* playerController;
 	uevr::API::UObject* weapon;
+	uevr::API::UObject* weaponMesh;
 
-	float rollOffset = 0.0f;
+	float pitchOffset = 0.0f;
+	float yawOffset = 0.0f;
 
+	float forwardOffset = 0.0f;
+	float upOffset = 0.0f;
+	float rightOffset = 0.0f;
 
 public:
 	GTASA_VRmod() = default;
@@ -216,80 +221,147 @@ public:
 		if (equippedWeaponIndex != *(reinterpret_cast<int*>(equippedWeaponAddress)))
 		{
 			UpdateActualWeaponMesh();
+
+			//struct {
+			//bool absoluteLocation = true;
+			//bool absoluteRotation = true;
+			//bool absoluteScale = true;
+			//} setAbsolute_params;
+
+			//weapon->call_function(L"SetAbsolute", &setAbsolute_params);
+
 			equippedWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		}
 
 
 
-		if (weapon != nullptr) {
-
-			
-			//SceneComponent_GetSocketQuaternion rotation_params{}; //needs a specific type of parameter with padding or else the game crash. cf sdk dump for padding
-			//rotation_params.InSocketName = API::FName(L"gunflash"); // Set the socket name
-
-			SceneComponent_GetSocketTransform socketTransformParams{};
+		if (weaponMesh != nullptr) {
+	/*		SceneComponent_GetSocketTransform socketTransformParams{};
 			socketTransformParams.InSocketName = API::FName(L"gunflash");
 			socketTransformParams.ERelativeTransformSpace = 0;
+			weapon->call_function(L"GetSocketTransform", &socketTransformParams);*/
 
 			struct {
-				struct FTransform Transform;
-			} relativeTransformParams;
-
-			weapon->call_function(L"GetSocketTransform", &socketTransformParams);
-	
-			
-
-			struct {
-				//const struct API::FName& InSocketName = API::FName(L"gunflash");
-				glm::fvec3 location;
-			} location_params;
+				FTransform Transform;
+			} weaponTransform_params;
 
 			struct {
 				glm::fvec3 ForwardVector;
 			} forwardVector_params;
 
 			struct {
-				glm::fvec3 RightVector;
-			} rightVector_params;
-
-			struct {
 				glm::fvec3 UpVector;
 			} upVector_params;
 
+			struct {
+				glm::fvec3 RightVector;
+			} rightVector_params;
+
+			//SceneComponent_GetSocketQuaternion rotation_params{}; //needs a specific type of parameter with padding or else the game crash. cf sdk dump for padding
+			//rotation_params.InSocketName = API::FName(L"gunflash"); // Set the socket name
+
+			//struct {
+			//	API::FName InSocketName = API::FName(L"gunflash");
+			//	glm::fvec3 Location;
+			//} location_params;
+
+			weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
+			weaponMesh->call_function(L"GetUpVector", &upVector_params);
+			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
+			weapon->call_function(L"GetTransform", &weaponTransform_params);
+			//weaponMesh->call_function(L"GetSocketLocation", &location_params);
+			//weaponMesh->call_function(L"GetSocketQuaternion", &rotation_params);
+
+			//API::get()->log_info("socket Position : x = %f, y = %f, z = %f", location_params.Location.x, location_params.Location.y, location_params.Location.z);
+			//API::get()->log_info("socket Quaternion : x = %f, y = %f, z = %f, w = %f", rotation_params.Rotation.x, rotation_params.Rotation.y, rotation_params.Rotation.z, rotation_params.Rotation.w);
+			//glm::vec3 currentsocketRotation = glm::eulerAngles(rotation_params.Rotation);
+			//API::get()->log_info("socket Rotation : x = %f, y = %f, z = %f", currentsocketRotation.x, currentsocketRotation.y, currentsocketRotation.z);
+
+
+			//API::get()->log_info("relative weapon Position : x = %f, y = %f, z = %f", weaponTransform_params.Transform.Location.x, weaponTransform_params.Transform.Location.y, weaponTransform_params.Transform.Location.z);
+			//API::get()->log_info("relative weapon Quaternion : x = %f, y = %f, z = %f, w = %f", weaponTransform_params.Transform.Rotation.x, weaponTransform_params.Transform.Rotation.y, weaponTransform_params.Transform.Rotation.z, weaponTransform_params.Transform.Rotation.w);
+			//glm::vec3 currentWeaponRotation = glm::eulerAngles(weaponTransform_params.Transform.Rotation);
+			//API::get()->log_info("relative weapon Rotation : x = %f, y = %f, z = %f", currentWeaponRotation.x, currentWeaponRotation.y, currentWeaponRotation.z);
+
+			////	API::get()->log_info("new position : %f, %f, %f", location_params.Location.x, location_params.Location.y, location_params.Location.z);
+			////API::get()->log_info("new aiming vector : %f, %f, %f, %f", rotation_params.Rotation.x, rotation_params.Rotation.y, rotation_params.Rotation.z, rotation_params.Rotation.w);
+			//API::get()->log_info("mesh Forward Vector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
+
+
+			//glm::fvec3 aimingVector = CalculateAimingVector(rotation_params.Rotation);
 			
-			//weapon->call_function(L"K2_GetComponentLocation", &location_params);
-			weapon->call_function(L"GetForwardVector", &forwardVector_params);
-			weapon->call_function(L"GetRightVector", &rightVector_params);
-			weapon->call_function(L"GetUpVector", &upVector_params);
-
-			//API::get()->log_info("new position : %f, %f, %f",
-			//	location_params.location.x, location_params.location.y, location_params.location.z);
-			//API::get()->log_info("Gun forward Vector: %lf, %lf, %lf, %lf",
-			//	socketTransformParams.Transform.Rotation.x,
-			//	socketTransformParams.Transform.Rotation.y,
-			//	socketTransformParams.Transform.Rotation.z,
-			//	socketTransformParams.Transform.Rotation.w);
+			glm::fvec3 point1Position = CalculateAimingReferencePoints(weaponTransform_params.Transform.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, 2.82819, -2.52103, 9.92684);
+			glm::fvec3 point2Position = CalculateAimingReferencePoints(weaponTransform_params.Transform.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, 21.7272, -3.89487, 12.9088);
 
 
-			//glm::fvec3 aimingVector = CalculateAimingVector(rotation);
+			glm::fvec3 aimingDirection = glm::normalize(point2Position - point1Position);
+
+
+			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
+			// Safeguard: Normalize projectedToFloorVector only if valid
+			if (glm::length(projectedToFloorVector) > 0.0f) {
+				projectedToFloorVector = glm::normalize(projectedToFloorVector);
+			} else {
+				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+			}
+
+			
+			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
+			if (glm::length(yawRight) > 0.0f) {
+				yawRight = glm::normalize(yawRight);
+			}
+			else {
+				yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
+			}
+
+			
+			
+			glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
+			if (glm::length(yawUp) > 0.0f) {
+				yawUp = glm::normalize(yawUp);
+			}
+			else {
+				yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
+			}
+
+
+			point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, 0.0, -1.0, 2.0);
+
+			// Safeguard: Recalculate aiming direction and normalize
+			aimingDirection = point2Position - point1Position;
+			if (glm::length(aimingDirection) > 0.0f) {
+				aimingDirection = glm::normalize(aimingDirection);
+			}
+			else {
+				aimingDirection = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+			}
+
 
 			
 
-			if (GetAsyncKeyState(VK_NUMPAD8)) rollOffset += 0.5f;
-			if (GetAsyncKeyState(VK_NUMPAD2)) rollOffset -= 0.5f;
+			if (GetAsyncKeyState(VK_UP)) forwardOffset += 0.1f;
+			if (GetAsyncKeyState(VK_DOWN)) forwardOffset -= 0.1f;
+			if (GetAsyncKeyState(VK_NUMPAD0)) upOffset -= 0.1f; 
+			if (GetAsyncKeyState(VK_NUMPAD1)) upOffset += 0.1f;
+			if (GetAsyncKeyState(VK_LEFT)) rightOffset -= 0.1f; 
+			if (GetAsyncKeyState(VK_RIGHT)) rightOffset += 0.1f;
+
+			//dla merde, a refaire
+			//glm::fvec3 newWorldPosition = CalculateAimingReferencePoints(location_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, forwardOffset, rightOffset, upOffset);
+
 
 
 			// Apply new values to memory
-			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = socketTransformParams.Transform.Translation.x * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -socketTransformParams.Transform.Translation.y * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = socketTransformParams.Transform.Translation.z * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
 
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = rollFreeForward.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -rollFreeForward.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = rollFreeForward.z;
+			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
+			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
+			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
 
-			//API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(cameraPositionAddresses[0])), *(reinterpret_cast<float*>(cameraPositionAddresses[1])), *(reinterpret_cast<float*>(cameraPositionAddresses[2])));
-			//API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(aimVectorAddresses[0])), *(reinterpret_cast<float*>(aimVectorAddresses[1])), *(reinterpret_cast<float*>(aimVectorAddresses[2])));
+		/*	API::get()->log_info("new position : %f, %f, %f", *(reinterpret_cast<float*>(cameraPositionAddresses[0])), *(reinterpret_cast<float*>(cameraPositionAddresses[1])), *(reinterpret_cast<float*>(cameraPositionAddresses[2])));
+			API::get()->log_info("new aiming vector : %f, %f, %f", *(reinterpret_cast<float*>(aimVectorAddresses[0])), *(reinterpret_cast<float*>(aimVectorAddresses[1])), *(reinterpret_cast<float*>(aimVectorAddresses[2])));*/
 
 		}
 		//Ducking -----------------------------
@@ -350,8 +422,9 @@ public:
 	void UpdateActualWeaponMesh()
 	{
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		weapon = children.data[4]->get_property<API::UObject*>(L"WeaponMesh");
-		API::get()->log_info("%ls", weapon->get_full_name().c_str());
+		weapon = children.data[4];
+		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
 	}
 
 	void ResolveGunFlashSocketMemoryAddresses()
@@ -365,65 +438,104 @@ public:
 		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
 	}
 
+	glm::fvec3 ApplyYawAlignedOffset(glm::fvec3 forwardVector,
+		glm::fvec3 originalAimDirection,
+		float offsetForward,
+		float offsetRight,
+		float offsetUp)
+	{
+		// Step 1: Calculate the yaw-only forward vector (ignore pitch)
+		glm::fvec3 yawForward = glm::normalize(glm::fvec3(forwardVector.x, 0.0f, forwardVector.z));
+
+		// Step 2: Recompute the yaw-aligned local axes (right and up)
+		glm::fvec3 yawRight = glm::normalize(glm::cross(glm::fvec3(0.0f, -1.0f, 0.0f), yawForward));
+		glm::fvec3 yawUp = glm::normalize(glm::cross(yawForward, yawRight));
+
+		// Step 3: Calculate the offset in the yaw-aligned space
+		glm::fvec3 offset = (yawForward * offsetForward) + (yawRight * offsetRight) + (yawUp * offsetUp);
+
+		// Step 4: Add the offset to the original aiming direction
+		glm::fvec3 adjustedAimingDirection = glm::normalize(originalAimDirection + offset);
+
+		return adjustedAimingDirection;
+	}
+
+	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, float offsetForward, float offsetRight, float offsetUp)
+	{
+		// Apply the offsets along the local axes
+		glm::fvec3 offset = (forwardVector * offsetForward) + (rightVector * offsetRight) + (upVector * offsetUp);
+
+		// Calculate the new position
+		glm::fvec3 pointWorldPosition = worldPosition + offset;
+
+		return pointWorldPosition;
+	}
+
 	glm::fvec3 CalculateAimingVector(glm::fquat gunflashSocketQuaternion)
 	{
-		//  // Convert from game's left-handed to right-handed system
-		//gunflashSocketQuaternion = glm::quat(
-  //      gunflashSocketQuaternion.w,
-  //      -gunflashSocketQuaternion.x,  // Flip X and Z axes
-  //      gunflashSocketQuaternion.y,
-  //      -gunflashSocketQuaternion.z
-  //  );
+		//quick 
+		//if (GetAsyncKeyState(VK_UP)) pitchOffset += 0.1f;
+		//if (GetAsyncKeyState(VK_DOWN)) pitchOffset -= 0.1f;
+		//if (GetAsyncKeyState(VK_LEFT)) yawOffset -= 0.1f; // Numpad 4 for left
+		//if (GetAsyncKeyState(VK_RIGHT)) yawOffset += 0.1f; // Numpad 6 for right
 
-		// Base forward vector (Y is forward in your coordinate system)
-		glm::fvec3 baseForward = glm::fvec3(1.0f, 0.0f, 0.0f);
-		
-		// Calculate the aiming direction
-		glm::fvec3 aimingVector = gunflashSocketQuaternion * baseForward;
-
-		return glm::normalize(aimingVector);
-
-		//// Get the gun's LOCAL right and up axes from its quaternion
-		//glm::fvec3 localRight = gunflashSocketQuaternion * glm::fvec3(1.0f, 0.0f, 0.0f);
-		//glm::fvec3 localUp = gunflashSocketQuaternion * glm::fvec3(0.0f, 0.0f, 1.0f);
-
-		//// Rotate the base forward vector by the gun's socket quaternion
-		//glm::fvec3 aimingVector = gunflashSocketQuaternion * baseForward;
-
-		//// Apply weapon-specific offsets
-		//float pitchOffset = 0.0f;
-		//float yawOffset = 0.0f;
-
-		//// Apply pitch (up/down in LOCAL space) around the gun's right axis
-		//glm::fquat pitchQuat = glm::angleAxis(glm::radians(-pitchOffset), localRight);
-
-		//// Apply yaw (left/right in LOCAL space) around the gun's up axis
-		//glm::fquat yawQuat = glm::angleAxis(glm::radians(yawOffset), localUp);
-
-		//// Combine rotations: yaw first, then pitch
-		//glm::fquat offsetQuat = pitchQuat * yawQuat;
-
-		//// Apply the offset quaternion to the aiming vector
-		//aimingVector = offsetQuat * aimingVector;
-
-	
-	}
+		//API::get()->log_info("weapon Index : %i", equippedWeaponIndex);
+		//API::get()->log_info("pitchOffset : %f", pitchOffset);
+		//API::get()->log_info("yawOffset : %f", yawOffset);
 
 		//switch (equippedWeaponIndex)
 		//{
 		//case 22: // Pistol
-		//	pitchOffset += 0.0f;
-		//	yawOffset += 0.0f;
+		//	pitchOffset = 73.099457f
+		//	yawOffset = 2.899999f;
 		//	break;
 		//case 33: // Rifle
-		//	pitchOffset += 5.0f;
-		//	yawOffset += 5.0f;
+		//	pitchOffset = 5.0f;
+		//	yawOffset = 5.0f;
 		//	break;
 		//default:
-		//	pitchOffset += 5.0f;
-		//	yawOffset += 5.0f;
+		//	pitchOffset = 5.0f;
+		//	yawOffset = 5.0f;
 		//	break;
 		//}
+
+		// Base forward vector (Y is forward in your coordinate system)
+		glm::fvec3 baseForward = glm::fvec3(1.0f, 0.0f, 0.0f);
+		//glm::fvec3 forward = glm::normalize(gunflashSocketQuaternion * baseForward);
+		//glm::fvec3 baseUp = glm::fvec3(0.0f, 0.0f, 1.0f);
+		//glm::fvec3 up = glm::normalize(gunflashSocketQuaternion * baseUp);
+
+		// Corrected rotation in radians (from Blender notes)
+		glm::vec3 desiredRotationRadians(0.0f, 0.156467f /**0.5*/, 0.072526f /**2*/); // X, Y, Z in radians
+
+		glm::vec3 cameraCrosshairOffset(0.0f, -0.09f /**0.5*/, 0.06f /**2*/); // X, Y, Z in radians
+
+		// Step 1: Convert gunflashSocketQuaternion to Euler angles (local rotation)
+		glm::vec3 currentRotationRadians = glm::eulerAngles(gunflashSocketQuaternion);
+		API::get()->log_info("currentRotationRadians : x = %f, y = %f, z = %f", currentRotationRadians.x, currentRotationRadians.y, currentRotationRadians.z);
+
+		// Step 2: Calculate the correction needed
+		glm::vec3 correctionRadians = currentRotationRadians - desiredRotationRadians - cameraCrosshairOffset;
+		API::get()->log_info("correctionRadians : x = %f, y = %f, z = %f", correctionRadians.x, correctionRadians.y, correctionRadians.z);
+
+		// Step 3: Create a quaternion from the corrected angles
+		glm::fquat correctedQuaternion = glm::quat(correctionRadians);
+
+		// Calculate the aiming direction
+		glm::fvec3 aimingVector = glm::normalize(correctedQuaternion * baseForward);
+		//API::get()->log_info("aim vector gunsocket : x = %f, y = %f, z = %f", testaimingVector.x, testaimingVector.y, testaimingVector.z);
+		//API::get()->log_info("corrected aim vector gunsocket : x = %f, y = %f, z = %f", aimingVector.x, aimingVector.y, aimingVector.z);
+
+		//// Step 1: Create Quaternions for the pitch and yaw offsets
+		//glm::quat pitchQuat = glm::angleAxis(glm::radians(pitchOffset), glm::fvec3(1.0f, 0.0f, 0.0f)); // Pitch around X-axis
+		//glm::quat yawQuat = glm::angleAxis(glm::radians(yawOffset), glm::fvec3(0.0f, 1.0f, 0.0f));   // Yaw around Y-axis
+
+		// Step 2: Apply the offsets to the forward vector
+		//glm::fvec3 adjustedForward = glm::normalize(yawQuat * pitchQuat * glm::normalize(aimingVector));
+		return aimingVector;
+	}
+
+
 
 	struct FQuat {
     float x;
@@ -456,10 +568,10 @@ public:
 
 #pragma pack(push, 1) // Disable padding
 	struct FTransform {
-		struct FQuat Rotation;
-		struct FVector Translation;
+		glm::fquat Rotation;
+		glm::fvec3 Location;
 		uint8_t Padding[4];
-		struct FVector Scale3D;
+		glm::fvec3 Scale3D;
 	};
 #pragma pack(pop)
 

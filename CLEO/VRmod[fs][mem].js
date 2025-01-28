@@ -38,6 +38,9 @@ var offsetAmount = 0.005;
 let actualWeapon = 0;
 let heading = 0;
 
+var object1;
+var object2;
+
 while (true) {
     wait(0);
 
@@ -216,6 +219,28 @@ while (true) {
     
     let playerCoords = char.getCoordinates();
     actualWeapon = char.getCurrentWeapon().valueOf();
+
+    // let x = Memory.ReadFloat(0x53E2674, true, true);
+    // let y = Memory.ReadFloat(0x53E2678, true, true);
+    // let z = Memory.ReadFloat(0x53E267C, true, true);
+
+    // Object spawner for debug
+    // if (object1 == null && player.isPlaying())
+    // {
+    //     let modelID = 3027;
+    //     Streaming.RequestModel(modelID);
+    //     //Streaming.LoadAllModelsNow();
+
+    //     object1 = ScriptObject.Create(modelID, x, y, z)
+    //     object2 = ScriptObject.Create(modelID, x + Memory.ReadFloat(0x53E2668, true, true) * 0.5, y + Memory.ReadFloat(0x53E266C, true, true) * 0.5, z + Memory.ReadFloat(0x53E2670, true, true) * 0.5);
+    //     log(object1.getModel())
+    // }
+
+    // if (object1 != null)
+    //     object1.setCoordinates(x, y, z);
+     
+    // if (object2 != null)
+    //     object2.setCoordinates( x + Memory.ReadFloat(0x53E2668, true, true) * 0.25, y + Memory.ReadFloat(0x53E266C, true, true) * 0.25, z + Memory.ReadFloat(0x53E2670, true, true) * 0.25);
     
     //Writing the equipped weapon to memory for UEVR mod use. To apply weapon specific adjustments.
     Memory.WriteI8(0x53DACC6, actualWeapon, true, true);
