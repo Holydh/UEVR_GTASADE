@@ -69,6 +69,7 @@ private:
 	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
 	float yawOffsetDegrees = 0.0f;
 	float xAxisSensitivity = 125.0f;
+	glm::fvec3 actualPlayerPositionUE =  { 0.0f, 0.0f, 0.0f };
 	float characterHeading = 0.0f;
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
@@ -158,7 +159,6 @@ public:
 	void UpdateAimingVectors()
 	{
 		if (weaponMesh != nullptr) {
-
 			struct {
 				const struct API::FName& InSocketName = API::FName(L"gunflash");
 				glm::fvec3 Location;
@@ -181,6 +181,15 @@ public:
 			weaponMesh->call_function(L"GetUpVector", &upVector_params);
 			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
 			weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
+			//API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x,  forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
+
+			//Check if the return value is ok, if not, reset the UObject
+			if (glm::length(socketLocation_params.Location - actualPlayerPositionUE) > 200)
+			{
+				FetchRequiredUObjects();
+				API::get()->log_info("bad values retrieved, refetching UObject");
+				return;
+			}
 
 			glm::fvec3 point1Offsets = { 0.0f, 0.0f, 0.0f };
 			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
@@ -423,14 +432,10 @@ public:
 		
 		//When player is in car, the heading will also make the camera turn so the camera can stay aligned with the car
 		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
-		
-		// If player loads a save or after a cinematic, reset the camera to the camera heading direction
-		if (camResetRequested)
-			currentHeading = -*(reinterpret_cast<float*>(characterHeadingAddress));
 
 		// Calculate heading delta (handles wrap-around at 360 degrees)
 		float headingDelta = 0.0f;
-		if (characterIsInCar) {
+		if (characterIsInCar || camResetRequested) {
 			headingDelta = currentHeading - previousHeading;
 			// Handle wrap-around cases
 			if (headingDelta > 180.0f) headingDelta -= 360.0f;
@@ -445,6 +450,7 @@ public:
 		}
 		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
+		//API::get()->log_info("totalYawDegrees: %f", totalYawDegrees);
 		float yawRadians = totalYawDegrees * (M_PI / 180.0f);
 
 		// Create a yaw rotation matrix
@@ -478,6 +484,17 @@ public:
 		for (int i = 0; i < 12; ++i) {
 			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
+
+		// If player loads a save or after a cinematic, reset the camera to the camera heading direction
+		if (camResetRequested)
+		{
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
+			//currentHeading = -*(reinterpret_cast<float*>(characterHeadingAddress));
+			//API::get()->log_error("Here");
+		}
+
 		// Log some matrix values
 		// API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
 
@@ -497,7 +514,7 @@ public:
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = - socketLocation_params.Location.y * 0.01f;
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
-	
+		actualPlayerPositionUE = socketLocation_params.Location;
 
 		//duck
 		//Ducking -----------------------------
