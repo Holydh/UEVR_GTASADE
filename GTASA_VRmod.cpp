@@ -27,6 +27,9 @@ private:
 	//Addresses & offsets
 	uintptr_t baseAddressGameEXE = 0;
 	uintptr_t baseAddressUEVR = 0;
+
+	uintptr_t fpsCamInitializedAddress = 0x53DACD3;
+
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -87,6 +90,9 @@ private:
 	glm::fvec3 crosshairOffset = {0.0f, -1.0f, 2.0f};
 	int boneIndex = 0;
 
+	bool fpsCamWasInitialized = false;
+	bool camResetRequested = false;
+
 public:
 	GTASA_VRmod() = default;
 
@@ -94,28 +100,36 @@ public:
 
 	void on_initialize() override {
         API::get()->log_info("%s", "VR cpp mod initializing");
-
-        playerController = API::get()->get_player_controller(0);
-		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		const auto& playerCharacter = children.data[3];
-		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
-		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-        UpdateActualWeaponMesh();
-
         baseAddressGameEXE = GetModuleBaseAddress(nullptr);
         baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
         cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 
         AdjustAddresses();
         ResolveGunFlashSocketMemoryAddresses();
+		FetchRequiredUObjects();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
+		
+		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
+		
+		if (fpsCamInitialized && !fpsCamWasInitialized)
+		{
+			camResetRequested = true;
+			FetchRequiredUObjects();
+			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
+		}
+		else
+			camResetRequested = false;
+		fpsCamWasInitialized = fpsCamInitialized;
 
-		UpdateCameraMatrix(delta);
-		UpdateWeaponMeshOnChange();
-		UpdateAimingVectors();
+		if (fpsCamInitialized)
+		{
+			UpdateCameraMatrix(delta, camResetRequested);
+			UpdateWeaponMeshOnChange();
+			UpdateAimingVectors();
+		}
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -129,6 +143,16 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void FetchRequiredUObjects()
+	{
+		playerController = API::get()->get_player_controller(0);
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		const auto& playerCharacter = children.data[3];
+		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
+		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
+        UpdateActualWeaponMesh();
 	}
 
 	void UpdateAimingVectors()
@@ -379,7 +403,7 @@ public:
 		return pointWorldPosition;
 	}
 
-	void UpdateCameraMatrix(float delta)
+	void UpdateCameraMatrix(float delta, bool camResetRequested)
 	{
 		float originalMatrix[16];
 		for (int i = 0; i < 16; ++i) {
@@ -395,7 +419,15 @@ public:
 		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
 		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
+
+		
+		//When player is in car, the heading will also make the camera turn so the camera can stay aligned with the car
 		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
+		
+		// If player loads a save or after a cinematic, reset the camera to the camera heading direction
+		if (camResetRequested)
+			currentHeading = -*(reinterpret_cast<float*>(characterHeadingAddress));
+
 		// Calculate heading delta (handles wrap-around at 360 degrees)
 		float headingDelta = 0.0f;
 		if (characterIsInCar) {
@@ -413,7 +445,7 @@ public:
 		}
 		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
-		float yawRadians = totalYawDegrees * (M_PI / 180.0f); // More precise than 0.0174533
+		float yawRadians = totalYawDegrees * (M_PI / 180.0f);
 
 		// Create a yaw rotation matrix
 		float cosYaw = std::cos(yawRadians);
@@ -459,11 +491,54 @@ public:
 
 		playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
 
-		API::get()->log_info("Head Location : x = %f, y = %f, z = %f ", socketLocation_params.Location.x,socketLocation_params.Location.y,socketLocation_params.Location.z);
+		//API::get()->log_info("Head Location : x = %f, y = %f, z = %f ", socketLocation_params.Location.x, socketLocation_params.Location.y, socketLocation_params.Location.z);
 
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = socketLocation_params.Location.x * 0.01f;
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = - socketLocation_params.Location.y * 0.01f;
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
+
+	
+
+		//duck
+		//Ducking -----------------------------
+		// Check if the player is crouching
+		//bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
+		// 
+		//// Log the current crouch state for debugging
+		////API::get()->log_info("Is Crouching: %d", isDucking);
+
+		//if (isDucking && !wasDucking) {
+		//	// Player just started crouching, capture the initial camera offset
+		//	currentDuckOffset = initialCameraYoffset = *(reinterpret_cast<float*>(cameraYoffsetAddressUEVR));
+		//}
+
+		//// Update the current offset
+		//if (isDucking) {
+		//	// Smoothly increase the offset toward -maxDuckOffset
+		//	if (currentDuckOffset > initialCameraYoffset - maxDuckOffset) {
+		//		currentDuckOffset -= duckSpeed;
+		//	}
+		//	else {
+		//		currentDuckOffset = initialCameraYoffset - maxDuckOffset;
+		//	}
+		//}
+		//else {
+		//	// Smoothly reset the offset back to 0
+		//	if (currentDuckOffset < initialCameraYoffset) {
+		//		currentDuckOffset += duckSpeed;
+		//	}
+		//	else {
+		//		currentDuckOffset = initialCameraYoffset; // Ensure it doesn't overshoot
+		//	}
+		//}
+
+		//if (currentDuckOffset != lastWrittenOffset) {
+		//	*(reinterpret_cast<float*>(cameraYoffsetAddressUEVR)) = currentDuckOffset;
+		//	lastWrittenOffset = currentDuckOffset;
+		//}
+
+		//// Update the previous crouch state
+		//wasDucking = isDucking;
 	}
 
 	 uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
@@ -480,6 +555,7 @@ public:
         for (auto& address : aimVectorAddresses) address += baseAddressGameEXE;
         for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 
+		fpsCamInitializedAddress += baseAddressGameEXE;
         equippedWeaponAddress += baseAddressGameEXE;
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
@@ -507,18 +583,15 @@ public:
 	struct FVector {
 		float x, y, z;
 	};
+	
+	enum class EBoneSpaces
+{
+	WorldSpace                               = 0,
+	ComponentSpace                           = 1,
+	EBoneSpaces_MAX                          = 2,
+};
 
 
-#pragma pack(push, 1) // Disable padding
-	struct SceneComponent_GetBoneLocationByName final
-	{
-	public:
-		API::FName									  BoneName;                                          // 0x0000(0x0008)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-		uint8_t                                       BoneSpace;  //0 = world, 1= local                                       // 0x0008(0x0001)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-		uint8_t                                         Pad_9[3];                                        // 0x0009(0x0003)(Fixing Size After Last Property [ Dumper-7 ])
-		glm::fvec3                                     Location;                                       // 0x000C(0x000C)(Parm, OutParm, ZeroConstructor, ReturnParm, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	};
-#pragma pack(pop)
 
 #pragma pack(push, 1) // Disable padding
 	struct FTransform {
@@ -526,6 +599,16 @@ public:
 		glm::fvec3 Location;
 		uint8_t Padding[4];
 		glm::fvec3 Scale3D;
+	};
+#pragma pack(pop)
+
+#pragma pack(push, 1) // Disable padding
+	struct SceneComponent_GetBoneTransformByName
+	{
+		API::FName BoneName;
+		EBoneSpaces BoneSpace;
+		uint8_t Padding[7];
+		struct FTransform Transform;
 	};
 #pragma pack(pop)
 
