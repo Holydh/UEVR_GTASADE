@@ -54,13 +54,13 @@ private:
 	uintptr_t equippedWeaponAddress = 0x53DACC6;
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
-	uintptr_t characterIsCrouchingAddress = 0x53DACD2;
+	uintptr_t characterIsDuckingAddress = 0x53DACD2;
 
 	//variables
 	float initialCameraYoffset = 0.0f;
 	float currentDuckOffset = 0.0f;
 	float lastWrittenOffset = 0.0f;
-	float maxDuckOffset = 45.0f;  // Maximum offset when crouching
+	float maxDuckOffset = 60.0f;  // Maximum offset when crouching
 	float duckSpeed = 2.5f;     // Speed per frame adjustment
 	bool wasDucking = false;
 
@@ -131,6 +131,8 @@ public:
 			UpdateCameraMatrix(delta, camResetRequested);
 			UpdateWeaponMeshOnChange();
 			UpdateAimingVectors();
+			FixWeaponVisibility();
+			HandlePlayerDuck();
 		}
 	}
 
@@ -147,6 +149,13 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
+	void FixWeaponVisibility()
+	{
+		struct {
+			bool ownerNoSee = false;
+		} setOwnerNoSee_params;
+		weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
+	}
 
 	void UpdateCameraMatrix(float delta, bool camResetRequested)
 	{
@@ -251,21 +260,49 @@ public:
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
 		actualPlayerPositionUE = socketLocation_params.Location;
-		
+	}
 
-
+	void HandlePlayerDuck()
+	{
 		//duck
 		//Ducking -----------------------------
 		// Check if the player is crouching
-		//bool isDucking = *(reinterpret_cast<int*>(characterIsCrouchingAddress)) > 0;
-		// 
-		//// Log the current crouch state for debugging
-		////API::get()->log_info("Is Crouching: %d", isDucking);
+		bool isDucking = *(reinterpret_cast<uint8_t*>(characterIsDuckingAddress)) > 0;
+		 
+		API::get()->log_info("Is Ducking: %d, wasDucking: %d", isDucking, wasDucking);
 
-		//if (isDucking && !wasDucking) {
-		//	// Player just started crouching, capture the initial camera offset
-		//	currentDuckOffset = initialCameraYoffset = *(reinterpret_cast<float*>(cameraYoffsetAddressUEVR));
-		//}
+		if (isDucking && !wasDucking) {
+
+			struct {
+				glm::fvec3 Location;
+			}getComponentLocation_params;
+			playerHead->call_function(L"K2_GetComponentLocation", &getComponentLocation_params);
+
+
+			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+			addLocalOffset_params.bSweep = false;
+			addLocalOffset_params.bTeleport = true;
+			addLocalOffset_params.DeltaLocation = -glm::fvec3(0.0f, 0.0f, maxDuckOffset);
+
+			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		}
+
+		if (!isDucking && wasDucking) {
+			struct {
+				glm::fvec3 Location;
+			}getComponentLocation_params;
+			playerHead->call_function(L"K2_GetComponentLocation", &getComponentLocation_params);
+
+			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+			addLocalOffset_params.bSweep = false;
+			addLocalOffset_params.bTeleport = true;
+			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, maxDuckOffset);
+
+			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		}
+
+		// Update the previous crouch state
+		wasDucking = isDucking;
 
 		//// Update the current offset
 		//if (isDucking) {
@@ -292,8 +329,7 @@ public:
 		//	lastWrittenOffset = currentDuckOffset;
 		//}
 
-		//// Update the previous crouch state
-		//wasDucking = isDucking;
+
 	}
 
 	void UpdateAimingVectors()
@@ -348,7 +384,7 @@ public:
 				break;
 			case 23: // PistolSilenced
 				point1Offsets = { 2.80735, -2.52308, 9.9193 };
-				point2Offsets = { 17.3316, -3.5591, 12.2129 };
+				point2Offsets = { 17.3316, -3.5591 +0.1, 12.2129 +0.6 };
 				break;
 			case 24: // DesertEagle
 				point1Offsets = { 7.06492 , -2.25853 , 11.9386 + 0.5 };
@@ -390,10 +426,10 @@ public:
 				point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
 				point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
 				break;
-			//case 34: // Sniper
-			//	point1Offsets = { 3.00373 , -3.05089 , 10.5162  };
-			//	point2Offsets = { 76.0552 , 4.39762 , 17.8463 };
-			//	break;
+			case 34: // Sniper
+				point1Offsets = { 3.00373 , -3.05089 , 10.5162  };
+				point2Offsets = { 76.0552 , 4.39762, 17.8463 };
+				break;
 			//case 35: // RocketLauncher
 			//	point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
 			//	point2Offsets = { 29.0589, -3.88386, 14.4056  };
@@ -523,11 +559,6 @@ public:
 				weaponMesh->call_function(L"K2_GetComponentLocation", &componentToWorld_params);
 				point1Position = componentToWorld_params.Location;
 				aimingDirection = forwardVector_params.ForwardVector;
-
-				struct {
-					bool ownerNoSee = false;
-				} setOwnerNoSee_params;
-				weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 			}
 			
 
@@ -572,14 +603,20 @@ public:
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
 		weapon = children.data[4];
 		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-		struct {
-			bool absoluteLocation = true;
-			bool absoluteRotation = true;
-			bool absoluteScale = true;
-		} setAbsolute_params;
-		weapon->call_function(L"SetAbsolute", &setAbsolute_params);
-	
 		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+		
+		//struct {
+		//	bool absoluteLocation = true;
+		//	bool absoluteRotation = true;
+		//	bool absoluteScale = true;
+		//} setAbsolute_params;
+		//weaponMesh->call_function(L"SetAbsolute", &setAbsolute_params);
+
+		//struct {
+		//	uint32_t materialIndex = -1;
+		//	float flashAmount = 0.00001f;
+		//} setFlashAmount_params;
+		//weapon->call_function(L"SetEffect", &setFlashAmount_params);
 	}
 
 	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
@@ -611,7 +648,7 @@ public:
         equippedWeaponAddress += baseAddressGameEXE;
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
-        characterIsCrouchingAddress += baseAddressGameEXE;
+        characterIsDuckingAddress += baseAddressGameEXE;
     }
 
 	void ResolveGunFlashSocketMemoryAddresses()
@@ -673,7 +710,18 @@ public:
 	};
 #pragma pack(pop)
 
-
+#pragma pack(push, 1) // Disable padding
+	struct SceneComponent_K2_AddLocalOffset final
+{
+public:
+	glm::fvec3 DeltaLocation;                                     // 0x0000(0x000C)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	bool bSweep;                                            // 0x000C(0x0001)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	uint8_t Pad_D[3];                                        // 0x000D(0x0003)(Fixing Size After Last Property [ Dumper-7 ])
+	uint8_t Padding[0x8C];                                  // 0x0010(0x008C)(Parm, OutParm, IsPlainOldData, NoDestructor, ContainsInstancedReference, NativeAccessSpecifierPublic)
+	bool bTeleport;                                         // 0x009C(0x0001)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	uint8_t Pad_9D[3];                                       // 0x009D(0x0003)(Fixing Struct Size After Last Property [ Dumper-7 ])
+};
+#pragma pack(pop)
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
 		uintptr_t addr = baseAddress;
