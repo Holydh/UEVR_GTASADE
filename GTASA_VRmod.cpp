@@ -123,6 +123,7 @@ public:
 		}
 		else
 			camResetRequested = false;
+
 		fpsCamWasInitialized = fpsCamInitialized;
 
 		if (fpsCamInitialized)
@@ -146,271 +147,6 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-	void FetchRequiredUObjects()
-	{
-		playerController = API::get()->get_player_controller(0);
-		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		const auto& playerCharacter = children.data[3];
-		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
-		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-        UpdateActualWeaponMesh();
-	}
-
-	void UpdateAimingVectors()
-	{
-		if (weaponMesh != nullptr) {
-			struct {
-				const struct API::FName& InSocketName = API::FName(L"gunflash");
-				glm::fvec3 Location;
-			} socketLocation_params;
-
-			struct {
-				glm::fvec3 ForwardVector;
-			} forwardVector_params;
-
-			struct {
-				glm::fvec3 UpVector;
-			} upVector_params;
-
-			struct {
-				glm::fvec3 RightVector;
-			} rightVector_params;
-
-
-			weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
-			weaponMesh->call_function(L"GetUpVector", &upVector_params);
-			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
-			weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
-			//API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x,  forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
-
-			//Check if the return value is ok, if not, reset the UObject
-			if (glm::length(socketLocation_params.Location - actualPlayerPositionUE) > 200)
-			{
-				FetchRequiredUObjects();
-				API::get()->log_info("bad values retrieved, refetching UObject");
-				return;
-			}
-
-			glm::fvec3 point1Offsets = { 0.0f, 0.0f, 0.0f };
-			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
-
-			//mesh alignement weapon offsets
-			switch (equippedWeaponIndex)
-			{
-			//case 0:  // Unarmed
-			//case 1:  // BrassKnuckles
-			//case 2:  // GolfClub
-			//case 3:  // NightStick
-			//case 4:  // Knife
-			//case 5:  // BaseballBat
-			//case 6:  // Shovel
-			//case 7:  // PoolCue
-			//case 8:  // Katana
-			//case 9:  // Chainsaw
-			//case 10: // Dildo1
-			//case 11: // Dildo2
-			//case 12: // Vibe1
-			//case 13: // Vibe2
-			//case 14: // Flowers
-			//case 15: // Cane
-			//case 16: // Grenade
-			//case 17: // Teargas
-			//case 18: // Molotov
-			case 22: //Pistol colt 45
-				point1Offsets = {2.82819, -2.52103, 9.92684};
-				point2Offsets = {21.7272, -3.89487, 12.9088};
-				break;
-			case 23: // PistolSilenced
-				point1Offsets = { 2.80735, -2.52308, 9.9193 };
-				point2Offsets = { 17.3316, -3.5591, 12.2129 };
-				break;
-			case 24: // DesertEagle
-				point1Offsets = { 7.06492 , -2.25853 , 11.9386 };
-				point2Offsets = { 33.5914, -1.46079 - 1, 11.9439 - 1 };
-				break;
-			case 25: // Shotgun
-				point1Offsets = { 31.3429, -0.670153, 15.2663 };
-				point2Offsets = { 73.6795 , 4.2357 , 22.2237 };
-				break;
-			case 26: // Sawnoff
-				point1Offsets = { 21.2896, -2.13098 , 13.0224 };
-				point2Offsets = { 55.8867 , -2.10406, 16.3934  };
-				break;
-			case 27: // Spas12
-				point1Offsets = { 51.9659 , 1.30133, 19.5475 };
-				point2Offsets = { 70.459 , 3.20646 , 22.5404  };
-				break;
-			case 28: // MicroUzi
-				point1Offsets = { -0.267532, -2.19868 , 10.2951  };
-				point2Offsets = { 12.9468 , -0.996034, 11.293  };
-				break;
-			case 29: // Mp5
-				point1Offsets = { 6.8924, -1.74509 , 19.3761 };
-				point2Offsets = { 21.3778 , 0.000536, 21.2535 };
-				break;
-			case 30: //AK47
-				point1Offsets = { 3.8416 , -2.83908, 14.3539 };
-				point2Offsets = { 36.3719, 0.193737, 16.1544 };
-				break;
-			case 31: // M4
-				point1Offsets = { 9.68564 , -1.44209 , 11.9889  };
-				point2Offsets = { 26.5178 , 0.065352 , 12.6177  };
-				break;
-			case 32: // Tec9
-				point1Offsets = { 1.1631 , -3.60654, 11.7162  };
-				point2Offsets = { 24.9241 , -3.60654, 13.9038 };
-				break;
-			case 33: //Rifle cuntgun
-				point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
-				point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
-				break;
-			case 34: // Sniper
-				point1Offsets = { 3.00373 , -3.05089 , 10.5162  };
-				point2Offsets = { 76.0552 , 4.39762 , 17.8463 };
-				break;
-			case 35: // RocketLauncher
-				point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
-				point2Offsets = { 29.0589, -3.88386, 14.4056  };
-				break;
-			case 36: // RocketLauncherHeatSeek
-				point1Offsets = { -57.665 , -3.74195 , 20.2618  };
-				point2Offsets = { 34.8035, -3.52085 , 20.1928   };
-				break;
-			case 37: // Flamethrower
-				point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
-				point2Offsets = { 76.7885, 0.537026 , 31.6837  };
-				break;
-			case 38: // Minigun
-				point1Offsets = { 48.1025 , -2.9978 , 14.3878  };
-				point2Offsets = { 86.6453 , 0.429413 , 35.9644  };
-				break;
-			//case 39: // Satchel
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 40: // Detonator
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 41: // SprayCan
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 42: // Extinguisher
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 43: // Camera
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 44: // NightVision
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 45: // Infrared
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 46: // Parachute
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-
-			default:
-				point1Offsets = {0.0f , 0.0f, 0.0f};
-				point2Offsets = {0.0f , 0.0f, 0.0f};
-				break;
-			}
-
-			glm::fvec3 point1Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
-			glm::fvec3 point2Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
-
-			glm::fvec3 aimingDirection = glm::normalize(point2Position - point1Position);
-
-
-			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
-			// Safeguard: Normalize projectedToFloorVector only if valid
-			if (glm::length(projectedToFloorVector) > 0.0f) {
-				projectedToFloorVector = glm::normalize(projectedToFloorVector);
-			}
-			else {
-				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
-			}
-
-
-			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
-			if (glm::length(yawRight) > 0.0f) {
-				yawRight = glm::normalize(yawRight);
-			}
-			else {
-				yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
-			}
-
-
-			glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
-			if (glm::length(yawUp) > 0.0f) {
-				yawUp = glm::normalize(yawUp);
-			}
-			else {
-				yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
-			}
-
-			point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
-
-			// Safeguard: Recalculate aiming direction and normalize
-			aimingDirection = point2Position - point1Position;
-			if (glm::length(aimingDirection) > 0.0f) {
-				aimingDirection = glm::normalize(aimingDirection);
-			}
-			else {
-				aimingDirection = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
-			}
-
-			//API::get()->log_info("position : x = %f, y = %f, z = %f", point1Position.x,  point1Position.y,  point1Position.z);
-
-			// Apply new values to memory
-			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
-
-
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
-		}
-		else
-		{
-			API::get()->log_info("%s", "mesh not found");
-		}
-	}
-
-	void UpdateWeaponMeshOnChange() {
-		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
-        if (equippedWeaponIndex != actualWeaponIndex) {
-            UpdateActualWeaponMesh();
-            equippedWeaponIndex = actualWeaponIndex;
-        }
-    }
-
-	void UpdateActualWeaponMesh()
-	{
-		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		weapon = children.data[4];
-		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
-	}
-
-	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
-	{
-		// Apply the offsets along the local axes
-		glm::fvec3 offset = (forwardVector * offsets.x) + (rightVector * offsets.y) + (upVector * offsets.z);
-
-		// Calculate the new position
-		glm::fvec3 pointWorldPosition = worldPosition + offset;
-
-		return pointWorldPosition;
-	}
 
 	void UpdateCameraMatrix(float delta, bool camResetRequested)
 	{
@@ -450,7 +186,7 @@ public:
 		}
 		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
-		//API::get()->log_info("totalYawDegrees: %f", totalYawDegrees);
+		
 		float yawRadians = totalYawDegrees * (M_PI / 180.0f);
 
 		// Create a yaw rotation matrix
@@ -515,6 +251,8 @@ public:
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
 		actualPlayerPositionUE = socketLocation_params.Location;
+		
+
 
 		//duck
 		//Ducking -----------------------------
@@ -558,7 +296,304 @@ public:
 		//wasDucking = isDucking;
 	}
 
-	 uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
+	void UpdateAimingVectors()
+	{
+		if (weaponMesh != nullptr) {
+			struct {
+				glm::fvec3 ForwardVector;
+			} forwardVector_params;
+
+			struct {
+				glm::fvec3 UpVector;
+			} upVector_params;
+
+			struct {
+				glm::fvec3 RightVector;
+			} rightVector_params;
+
+
+			weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
+			weaponMesh->call_function(L"GetUpVector", &upVector_params);
+			weaponMesh->call_function(L"GetRightVector", &rightVector_params);
+
+			glm::fvec3 point1Offsets = { 0.0f, 0.0f, 0.0f };
+			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
+			bool socketAvailable = true;
+
+			//mesh alignement weapon offsets
+			switch (equippedWeaponIndex)
+			{
+			//case 0:  // Unarmed
+			//case 1:  // BrassKnuckles
+			//case 2:  // GolfClub
+			//case 3:  // NightStick
+			//case 4:  // Knife
+			//case 5:  // BaseballBat
+			//case 6:  // Shovel
+			//case 7:  // PoolCue
+			//case 8:  // Katana
+			//case 9:  // Chainsaw
+			//case 10: // Dildo1
+			//case 11: // Dildo2
+			//case 12: // Vibe1
+			//case 13: // Vibe2
+			//case 14: // Flowers
+			//case 15: // Cane
+			//case 16: // Grenade
+			//case 17: // Teargas
+			//case 18: // Molotov
+			case 22: //Pistol colt 45
+				point1Offsets = {2.82819, -2.52103, 9.92684};
+				point2Offsets = {21.7272, -3.89487, 12.9088};
+				break;
+			case 23: // PistolSilenced
+				point1Offsets = { 2.80735, -2.52308, 9.9193 };
+				point2Offsets = { 17.3316, -3.5591, 12.2129 };
+				break;
+			case 24: // DesertEagle
+				point1Offsets = { 7.06492 , -2.25853 , 11.9386 + 0.5 };
+				point2Offsets = { 33.5914, -1.46079 - 0.5, 11.9439 - 0.5};
+				break;
+			case 25: // Shotgun
+				point1Offsets = { 31.3429, -0.670153, 15.2663 };
+				point2Offsets = { 73.6795 , 4.2357 -1 , 22.2237 -2 };
+				break;
+			case 26: // Sawnoff
+				point1Offsets = { 21.2896, -2.13098 , 13.0224 };
+				point2Offsets = { 55.8867 , -2.10406 -1, 16.3934 -2  };
+				break;
+			case 27: // Spas12
+				point1Offsets = { 51.9659 , 1.30133, 19.5475 };
+				point2Offsets = { 70.459 , 3.20646 , 22.5404  };
+				break;
+			case 28: // MicroUzi
+				point1Offsets = { -0.267532, -2.19868 , 10.2951  };
+				point2Offsets = { 12.9468 , -0.996034, 11.293  };
+				break;
+			case 29: // Mp5
+				point1Offsets = { 6.8924, -1.74509 , 19.3761 };
+				point2Offsets = { 21.3778 , 0.000536, 21.2535 };
+				break;
+			case 30: //AK47
+				point1Offsets = { 3.8416 , -2.83908, 14.3539 };
+				point2Offsets = { 36.3719, 0.193737, 16.1544 };
+				break;
+			case 31: // M4
+				point1Offsets = { 5.85945 , -1.78476 , 15.1271   };
+				point2Offsets = { 60.0434  , 2.99539-1 , 16.4006-1.5  };
+				break;
+			case 32: // Tec9
+				point1Offsets = { 1.1631 , -3.60654, 11.7162  };
+				point2Offsets = { 24.9241 , -3.60654, 13.9038-1.5 };
+				break;
+			case 33: //Rifle cuntgun
+				point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
+				point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
+				break;
+			//case 34: // Sniper
+			//	point1Offsets = { 3.00373 , -3.05089 , 10.5162  };
+			//	point2Offsets = { 76.0552 , 4.39762 , 17.8463 };
+			//	break;
+			//case 35: // RocketLauncher
+			//	point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
+			//	point2Offsets = { 29.0589, -3.88386, 14.4056  };
+			//	break;
+			//case 36: // RocketLauncherHeatSeek
+			//	point1Offsets = { -57.665 , -3.74195 , 20.2618  };
+			//	point2Offsets = { 34.8035, -3.52085 , 20.1928   };
+			//	break;
+			case 37: // Flamethrower
+				point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
+				point2Offsets = { 76.7885, 0.537026 , 31.6837  };
+				break;
+			case 38: // Minigun
+				point1Offsets = { 48.1025 , -2.9978 , 14.3878  };
+				point2Offsets = { 86.6453 , 0.429413 , 35.9644  };
+				break;
+			//case 39: // Satchel
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 40: // Detonator
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 41: // SprayCan
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 42: // Extinguisher
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 43: // Camera
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 44: // NightVision
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 45: // Infrared
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+			//case 46: // Parachute
+			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			//	break;
+
+			default:
+				point1Offsets = {0.0f , 0.0f, 0.0f};
+				point2Offsets = {0.0f , 0.0f, 0.0f};
+				socketAvailable = false;
+				break;
+			}
+
+			glm::fvec3 point1Position = {0.0f , 0.0f, 0.0f};
+			glm::fvec3 point2Position = {0.0f , 0.0f, 0.0f};
+			glm::fvec3 aimingDirection = {0.0f , 0.0f, 0.0f};
+
+			if (socketAvailable)
+			{
+				struct {
+					const struct API::FName& InSocketName = API::FName(L"gunflash");
+					glm::fvec3 Location;
+				} socketLocation_params;
+
+				weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
+				//API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x,  forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
+
+				//Check if the return value is ok, if not, reset the UObject
+				if (glm::length(socketLocation_params.Location - actualPlayerPositionUE) > 200)
+				{
+					FetchRequiredUObjects();
+					API::get()->log_info("bad values retrieved, refetching UObject");
+					return;
+				}
+
+				point1Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
+				point2Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+
+				aimingDirection = glm::normalize(point2Position - point1Position);
+
+				glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
+				// Safeguard: Normalize projectedToFloorVector only if valid
+				if (glm::length(projectedToFloorVector) > 0.0f) {
+					projectedToFloorVector = glm::normalize(projectedToFloorVector);
+				}
+				else {
+					projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+				}
+
+
+				glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
+				if (glm::length(yawRight) > 0.0f) {
+					yawRight = glm::normalize(yawRight);
+				}
+				else {
+					yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
+				}
+
+
+				glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
+				if (glm::length(yawUp) > 0.0f) {
+					yawUp = glm::normalize(yawUp);
+				}
+				else {
+					yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
+				}
+
+				point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
+
+				// Safeguard: Recalculate aiming direction and normalize
+				aimingDirection = point2Position - point1Position;
+				if (glm::length(aimingDirection) > 0.0f) {
+					aimingDirection = glm::normalize(aimingDirection);
+				}
+				else {
+					aimingDirection = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+				}
+			}
+			else
+			{
+				struct {
+					glm::fvec3 Location;
+				} componentToWorld_params;
+				weaponMesh->call_function(L"K2_GetComponentLocation", &componentToWorld_params);
+				point1Position = componentToWorld_params.Location;
+				aimingDirection = forwardVector_params.ForwardVector;
+
+				struct {
+					bool ownerNoSee = false;
+				} setOwnerNoSee_params;
+				weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
+			}
+			
+
+			
+
+			// Apply new values to memory
+			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
+			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
+
+
+			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
+			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
+			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
+		}
+		else
+		{
+			API::get()->log_info("%s", "mesh not found");
+		}
+	}
+
+	void UpdateWeaponMeshOnChange() {
+		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+        if (equippedWeaponIndex != actualWeaponIndex) {
+            UpdateActualWeaponMesh();
+            equippedWeaponIndex = actualWeaponIndex;
+        }
+    }
+
+	void FetchRequiredUObjects()
+	{
+		playerController = API::get()->get_player_controller(0);
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		const auto& playerCharacter = children.data[3];
+		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
+		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
+        UpdateActualWeaponMesh();
+	}
+
+	void UpdateActualWeaponMesh()
+	{
+		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		weapon = children.data[4];
+		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+		struct {
+			bool absoluteLocation = true;
+			bool absoluteRotation = true;
+			bool absoluteScale = true;
+		} setAbsolute_params;
+		weapon->call_function(L"SetAbsolute", &setAbsolute_params);
+	
+		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+	}
+
+	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
+	{
+		// Apply the offsets along the local axes
+		glm::fvec3 offset = (forwardVector * offsets.x) + (rightVector * offsets.y) + (upVector * offsets.z);
+
+		// Calculate the new position
+		glm::fvec3 pointWorldPosition = worldPosition + offset;
+
+		return pointWorldPosition;
+	}
+
+	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
         HMODULE hModule = GetModuleHandle(moduleName);
         if (hModule == nullptr) {
             API::get()->log_info("Failed to get the base address of the module.");
