@@ -28,8 +28,6 @@ private:
 	uintptr_t baseAddressGameEXE = 0;
 	uintptr_t baseAddressUEVR = 0;
 
-	uintptr_t fpsCamInitializedAddress = 0x53DACC6;
-
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -51,13 +49,17 @@ private:
 	uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
 	std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
 	uintptr_t cameraYoffsetAddressUEVR = 0;
-	uintptr_t equippedWeaponAddress = 0x53DACC7;
-	uintptr_t characterIsDuckingAddress = 0x53DACC8;
-	uintptr_t characterWasDuckingAddress = 0x53DACC9;
-	uintptr_t characterHeadingAddress = 0x53DACCA;
-	uintptr_t characterIsInCarAddress = 0x53DACCE;
+	
 
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
+
+	//borrowed empty addresses
+	uintptr_t fpsCamInitializedAddress = 0x53DACC6;
+	uintptr_t equippedWeaponAddress = 0x53DACC7;
+	uintptr_t characterIsDuckingAddress = 0x53DACC8;
+	uintptr_t currentDuckOffsetAddress = 0x53DACD1;
+	uintptr_t characterHeadingAddress = 0x53DACCA;
+	uintptr_t characterIsInCarAddress = 0x53DACCE;
 
 	//variables
 	float initialCameraYoffset = 0.0f;
@@ -116,7 +118,7 @@ public:
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
-		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 16;
+		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 		
 		if (fpsCamInitialized && !fpsCamWasInitialized)
@@ -272,44 +274,44 @@ public:
 		//Ducking -----------------------------
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<uint8_t*>(characterIsDuckingAddress)) > 0;
-		bool wasDucking = *(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) > 0; //prevents ducking being applied when reseting the mod while already ducked
+		float currentDuckOffset = *(reinterpret_cast<float*>(currentDuckOffsetAddress));
+		API::get()->log_info("%f",currentDuckOffset);
 		
 		//API::get()->log_info("Is Ducking: %d, wasDucking: %d", isDucking, wasDucking);
 
-		if (isDucking && !wasDucking) {
+		if (isDucking && currentDuckOffset > -maxDuckOffset) {
+				SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+				addLocalOffset_params.bSweep = false;
+				addLocalOffset_params.bTeleport = true;
+				addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
+				playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			struct {
-				glm::fvec3 Location;
-			}getComponentLocation_params;
-			playerHead->call_function(L"K2_GetComponentLocation", &getComponentLocation_params);
+				*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
+		}
+		else if (isDucking && currentDuckOffset <= -maxDuckOffset)
+		{
+			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = -maxDuckOffset;
+		/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
+		}
+		
 
+		if (!isDucking && currentDuckOffset < 0.0f) {
+				SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+				addLocalOffset_params.bSweep = false;
+				addLocalOffset_params.bTeleport = true;
+				addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
+				playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-			addLocalOffset_params.bSweep = false;
-			addLocalOffset_params.bTeleport = true;
-			addLocalOffset_params.DeltaLocation = -glm::fvec3(0.0f, 0.0f, maxDuckOffset);
-
-			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-			*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;
+				*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
+		}
+		else if (!isDucking && currentDuckOffset >= 0.0f)
+		{
+			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = 0.0f;
+		/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
 		}
 
-		if (!isDucking && wasDucking) {
-			struct {
-				glm::fvec3 Location;
-			}getComponentLocation_params;
-			playerHead->call_function(L"K2_GetComponentLocation", &getComponentLocation_params);
-
-			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-			addLocalOffset_params.bSweep = false;
-			addLocalOffset_params.bTeleport = true;
-			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, maxDuckOffset);
-
-			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-			*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 0;
-		}
-
-		// Update the previous crouch state
-		wasDucking = isDucking;
+		//// Update the previous crouch state
+		//wasDucking = isDucking;
 	}
 
 	void UpdateAimingVectors()
@@ -625,12 +627,16 @@ public:
         for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 
 		fpsCamInitializedAddress += baseAddressGameEXE;
-        equippedWeaponAddress += baseAddressGameEXE;
+        
+		equippedWeaponAddress += baseAddressGameEXE;
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
-        characterIsDuckingAddress += baseAddressGameEXE;
-		characterWasDuckingAddress += baseAddressGameEXE;
+        
+		characterIsDuckingAddress += baseAddressGameEXE;
+		currentDuckOffsetAddress += baseAddressGameEXE;
+
 		weaponWheelOpenAddress += baseAddressGameEXE;
+
     }
 
 	void ResolveGunFlashSocketMemoryAddresses()
