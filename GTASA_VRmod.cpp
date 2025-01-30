@@ -57,9 +57,11 @@ private:
 	uintptr_t fpsCamInitializedAddress = 0x53DACC6;
 	uintptr_t equippedWeaponAddress = 0x53DACC7;
 	uintptr_t characterIsDuckingAddress = 0x53DACC8;
-	uintptr_t currentDuckOffsetAddress = 0x53DACD1;
+	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
+	uintptr_t characterIsShootingAddress = 0x53DACCF;
+	uintptr_t currentRecoilOffsetAddress = 0x53DACCF;
 
 	//variables
 	float initialCameraYoffset = 0.0f;
@@ -97,6 +99,10 @@ private:
 
 	bool fpsCamWasInitialized = false;
 	bool camResetRequested = false;
+
+	glm::fvec3 weaponBaseLocalPos = {0.0f, 0.0f, 0.0f};
+	glm::fvec3 weaponRecoilSpeed = {-10.0, 0.0f, 5.0f};
+	float weaponBackFromRecoilSpeed = 5.0f;
 
 public:
 	GTASA_VRmod() = default;
@@ -138,7 +144,8 @@ public:
 			UpdateWeaponMeshOnChange();
 			UpdateAimingVectors();
 			FixWeaponVisibility();
-			HandlePlayerDuck();
+			PlayerDucking();
+			WeaponRecoil();
 		}
 	}
 
@@ -268,16 +275,49 @@ public:
 		actualPlayerPositionUE = socketLocation_params.Location;
 	}
 
-	void HandlePlayerDuck()
+	void WeaponRecoil()
+	{
+		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
+		glm::fvec3 currentRecoilOffsets = *(reinterpret_cast<glm::fvec3*>(currentRecoilOffsetAddress));
+		SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+		addLocalOffset_params.bSweep = false;
+		addLocalOffset_params.bTeleport = false;
+
+		if (isShooting)
+		{
+			addLocalOffset_params.DeltaLocation = weaponRecoilSpeed;
+			weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		}
+		else
+		{
+			struct {
+				FTransform Transform;
+			}getRelativeTransform_params;
+
+			weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
+
+			glm::fvec3 direction = getRelativeTransform_params.Transform.Location - weaponBaseLocalPos;
+
+			if (glm::length(direction) > 0.1)
+			{
+				addLocalOffset_params.DeltaLocation = glm::normalize(direction) * weaponBackFromRecoilSpeed;
+				weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+			}
+			else
+			{
+				addLocalOffset_params.DeltaLocation = weaponBaseLocalPos;
+				weaponMesh->call_function(L"K2_SetComponentLocation", &addLocalOffset_params);
+			}
+		}
+	}
+
+	void PlayerDucking()
 	{
 		//duck
 		//Ducking -----------------------------
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<uint8_t*>(characterIsDuckingAddress)) > 0;
 		float currentDuckOffset = *(reinterpret_cast<float*>(currentDuckOffsetAddress));
-		API::get()->log_info("%f",currentDuckOffset);
-		
-		//API::get()->log_info("Is Ducking: %d, wasDucking: %d", isDucking, wasDucking);
 
 		if (isDucking && currentDuckOffset > -maxDuckOffset) {
 				SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
@@ -307,7 +347,6 @@ public:
 		else if (!isDucking && currentDuckOffset >= 0.0f)
 		{
 			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = 0.0f;
-		/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
 		}
 
 		//// Update the previous crouch state
@@ -582,11 +621,22 @@ public:
 
 	void UpdateActualWeaponMesh()
 	{
+		//reset the current recoil offset
+		*(reinterpret_cast<glm::fvec3*>(currentRecoilOffsetAddress)) = glm::fvec3(0.0f, 0.0f, 0.0f);
+
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
 		weapon = children.data[4];
 		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
 		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
 		
+		//update the base position for recoil
+		struct {
+				FTransform Transform;
+			}getRelativeTransform_params;
+
+			weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
+		API::get()->log_info("weapon base local position : x = %f, y = %f, z = %f", getRelativeTransform_params.Transform.Location.x, getRelativeTransform_params.Transform.Location.y, getRelativeTransform_params.Transform.Location.z);
+
 		//struct {
 		//	bool absoluteLocation = true;
 		//	bool absoluteRotation = true;
@@ -631,6 +681,8 @@ public:
 		equippedWeaponAddress += baseAddressGameEXE;
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
+		characterIsShootingAddress += baseAddressGameEXE;
+		currentRecoilOffsetAddress += baseAddressGameEXE;
         
 		characterIsDuckingAddress += baseAddressGameEXE;
 		currentDuckOffsetAddress += baseAddressGameEXE;
