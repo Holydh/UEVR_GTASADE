@@ -55,6 +55,7 @@ private:
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
 	uintptr_t characterIsDuckingAddress = 0x53DACD2;
+	uintptr_t weaponWheelOpenAddress = 0x507C580;
 
 	//variables
 	float initialCameraYoffset = 0.0f;
@@ -114,6 +115,8 @@ public:
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
+		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 16;
+		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 		
 		if (fpsCamInitialized && !fpsCamWasInitialized)
 		{
@@ -126,7 +129,7 @@ public:
 
 		fpsCamWasInitialized = fpsCamInitialized;
 
-		if (fpsCamInitialized)
+		if (fpsCamInitialized && !weaponWheelOpen)
 		{
 			UpdateCameraMatrix(delta, camResetRequested);
 			UpdateWeaponMeshOnChange();
@@ -269,7 +272,7 @@ public:
 		// Check if the player is crouching
 		bool isDucking = *(reinterpret_cast<uint8_t*>(characterIsDuckingAddress)) > 0;
 		 
-		API::get()->log_info("Is Ducking: %d, wasDucking: %d", isDucking, wasDucking);
+		//API::get()->log_info("Is Ducking: %d, wasDucking: %d", isDucking, wasDucking);
 
 		if (isDucking && !wasDucking) {
 
@@ -649,6 +652,7 @@ public:
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
         characterIsDuckingAddress += baseAddressGameEXE;
+		weaponWheelOpenAddress += baseAddressGameEXE;
     }
 
 	void ResolveGunFlashSocketMemoryAddresses()
