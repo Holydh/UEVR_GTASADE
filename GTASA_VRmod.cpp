@@ -59,7 +59,7 @@ private:
 	uintptr_t equippedWeaponAddress = 0x53DACC7;
 	uintptr_t characterIsDuckingAddress = 0x53DACC8;
 	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
-	uintptr_t characterHeadingAddress = 0x53DACCA;
+	uintptr_t characterHeadingAddress = 0x53DACF1;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
 
 	uintptr_t characterIsShootingAddress = 0x53DACE1;
@@ -102,9 +102,11 @@ private:
 	bool fpsCamWasInitialized = false;
 	bool camResetRequested = false;
 
+	glm::fvec3 weaponBaseLocalRot = {0.4f, 0.0f, 0.0f};
 	glm::fvec3 weaponBaseLocalPos = {0.0f, 0.0f, 0.0f};
-	glm::fvec3 weaponRecoilSpeed = {0.0f, 500.0f, 500.0f};
-	float weaponBackFromRecoilSpeed = 5.0f;
+	glm::fvec3 weaponRecoilSpeed = {20.0f, 20.0f, 20.0f};
+	glm::fvec3 currentWeaponOffset = {0.0f, 0.0f, 0.0f};
+	float weaponBackFromRecoilSpeed = 1.0f;
 
 public:
 	GTASA_VRmod() = default;
@@ -147,7 +149,7 @@ public:
 			UpdateAimingVectors();
 			FixWeaponVisibility();
 			PlayerDucking();
-			WeaponRecoil();
+			//WeaponRecoil();
 		}
 	}
 
@@ -280,39 +282,39 @@ public:
 	void WeaponRecoil()
 	{
 		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
-		
-
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+
 
         if (isShooting)
         {        
-            UEVR_Vector3f test = { 0.0, 10.0, 10.0 };    
-            motionState->set_location_offset(&test);
-            motionState->set_permanent(true);
-        }
-		//
-		
+			UEVR_Vector3f weaponRecoil = {weaponRecoilSpeed.x, weaponRecoilSpeed.y, weaponRecoilSpeed.z};
+			// use the UEVR uobject attached offset :  
+            motionState->set_location_offset(&weaponRecoil);
+			motionState->set_hand(1);
+			motionState->set_permanent(true);
+			currentWeaponOffset = weaponRecoilSpeed;
+		}
 		//else
 		//{
-		//	struct {
-		//		FTransform Transform;
-		//	}getRelativeTransform_params;
-
-		//	weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
-
-		//	glm::fvec3 direction = getRelativeTransform_params.Transform.Location - weaponBaseLocalPos;
-
+		//	glm::fvec3 direction = currentWeaponOffset - weaponBaseLocalPos;
+		//	
 		//	if (glm::length(direction) > 0.1)
 		//	{
-		//		addLocalOffset_params.DeltaLocation = glm::normalize(direction) * weaponBackFromRecoilSpeed;
-		//		weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		//		glm::fvec3 movement = glm::normalize(direction) * weaponBackFromRecoilSpeed * 0.0001f;
+		//		currentWeaponOffset -= movement;
+		//		API::get()->log_info("backFromRecoil : x = %f", glm::length(direction));
+		//		UEVR_Vector3f backFromRecoil = { currentWeaponOffset.x, currentWeaponOffset.y, currentWeaponOffset.z };
+		//		motionState->set_location_offset(&backFromRecoil);
 		//	}
 		//	else
 		//	{
-		//		addLocalOffset_params.DeltaLocation = direction;
-		//		weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		//		UEVR_Vector3f backFromRecoil = { weaponBaseLocalPos.x, weaponBaseLocalPos.y, weaponBaseLocalPos.z };
+		//		currentWeaponOffset = weaponBaseLocalPos;
+		//		motionState->set_location_offset(&backFromRecoil);
+		//		
 		//	}
 		//}
+		
 	}
 
 	void PlayerDucking()
@@ -620,7 +622,7 @@ public:
 		const auto& playerCharacter = children.data[3];
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-        /*UpdateActualWeaponMesh();*/
+        UpdateActualWeaponMesh();
 	}
 
 	void UpdateActualWeaponMesh()
@@ -632,18 +634,16 @@ public:
 			if (child->is_a(gta_weapon_c)) {
 				weapon = child;
 				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-				API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
 				break;
 			}
 		}
-		
-		//update the base position for recoil
-		struct {
-				FTransform Transform;
-			}getRelativeTransform_params;
-
-		weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
-		API::get()->log_info("weapon base local position : x = %f, y = %f, z = %f", getRelativeTransform_params.Transform.Location.x, getRelativeTransform_params.Transform.Location.y, getRelativeTransform_params.Transform.Location.z);
+		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+		glm::fquat baseOffset = glm::fquat(weaponBaseLocalRot);
+		UEVR_Quaternionf rotationOffset = { baseOffset.w , baseOffset.x, baseOffset.y, baseOffset.z};
+		motionState->set_rotation_offset(&rotationOffset);
+		motionState->set_hand(1);
+		motionState->set_permanent(true);
 
 		//struct {
 		//	bool absoluteLocation = true;
