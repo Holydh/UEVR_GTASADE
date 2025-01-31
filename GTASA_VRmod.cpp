@@ -10,6 +10,7 @@
 #include <math.h>
 
 
+
 DWORD PID;
 
 using namespace uevr;
@@ -60,8 +61,9 @@ private:
 	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
 	uintptr_t characterHeadingAddress = 0x53DACCA;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
-	uintptr_t characterIsShootingAddress = 0x53DACCF;
-	uintptr_t currentRecoilOffsetAddress = 0x53DACCF;
+
+	uintptr_t characterIsShootingAddress = 0x53DACE1;
+
 
 	//variables
 	float initialCameraYoffset = 0.0f;
@@ -101,7 +103,7 @@ private:
 	bool camResetRequested = false;
 
 	glm::fvec3 weaponBaseLocalPos = {0.0f, 0.0f, 0.0f};
-	glm::fvec3 weaponRecoilSpeed = {-10.0, 0.0f, 5.0f};
+	glm::fvec3 weaponRecoilSpeed = {0.0f, 500.0f, 500.0f};
 	float weaponBackFromRecoilSpeed = 5.0f;
 
 public:
@@ -278,37 +280,39 @@ public:
 	void WeaponRecoil()
 	{
 		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
-		glm::fvec3 currentRecoilOffsets = *(reinterpret_cast<glm::fvec3*>(currentRecoilOffsetAddress));
-		SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-		addLocalOffset_params.bSweep = false;
-		addLocalOffset_params.bTeleport = false;
+		
 
-		if (isShooting)
-		{
-			addLocalOffset_params.DeltaLocation = weaponRecoilSpeed;
-			weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-		}
-		else
-		{
-			struct {
-				FTransform Transform;
-			}getRelativeTransform_params;
+		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 
-			weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
+        if (isShooting)
+        {        
+            UEVR_Vector3f test = { 0.0, 10.0, 10.0 };    
+            motionState->set_location_offset(&test);
+            motionState->set_permanent(true);
+        }
+		//
+		
+		//else
+		//{
+		//	struct {
+		//		FTransform Transform;
+		//	}getRelativeTransform_params;
 
-			glm::fvec3 direction = getRelativeTransform_params.Transform.Location - weaponBaseLocalPos;
+		//	weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
 
-			if (glm::length(direction) > 0.1)
-			{
-				addLocalOffset_params.DeltaLocation = glm::normalize(direction) * weaponBackFromRecoilSpeed;
-				weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-			}
-			else
-			{
-				addLocalOffset_params.DeltaLocation = weaponBaseLocalPos;
-				weaponMesh->call_function(L"K2_SetComponentLocation", &addLocalOffset_params);
-			}
-		}
+		//	glm::fvec3 direction = getRelativeTransform_params.Transform.Location - weaponBaseLocalPos;
+
+		//	if (glm::length(direction) > 0.1)
+		//	{
+		//		addLocalOffset_params.DeltaLocation = glm::normalize(direction) * weaponBackFromRecoilSpeed;
+		//		weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		//	}
+		//	else
+		//	{
+		//		addLocalOffset_params.DeltaLocation = direction;
+		//		weaponMesh->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+		//	}
+		//}
 	}
 
 	void PlayerDucking()
@@ -616,25 +620,29 @@ public:
 		const auto& playerCharacter = children.data[3];
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-        UpdateActualWeaponMesh();
+        /*UpdateActualWeaponMesh();*/
 	}
 
 	void UpdateActualWeaponMesh()
 	{
-		//reset the current recoil offset
-		*(reinterpret_cast<glm::fvec3*>(currentRecoilOffsetAddress)) = glm::fvec3(0.0f, 0.0f, 0.0f);
-
+		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		weapon = children.data[4];
-		weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-		API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+
+		for (auto child : children) {
+			if (child->is_a(gta_weapon_c)) {
+				weapon = child;
+				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+				API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				break;
+			}
+		}
 		
 		//update the base position for recoil
 		struct {
 				FTransform Transform;
 			}getRelativeTransform_params;
 
-			weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
+		weaponMesh->call_function(L"GetRelativeTransform", &getRelativeTransform_params);
 		API::get()->log_info("weapon base local position : x = %f, y = %f, z = %f", getRelativeTransform_params.Transform.Location.x, getRelativeTransform_params.Transform.Location.y, getRelativeTransform_params.Transform.Location.z);
 
 		//struct {
@@ -682,7 +690,6 @@ public:
         characterHeadingAddress += baseAddressGameEXE;
         characterIsInCarAddress += baseAddressGameEXE;
 		characterIsShootingAddress += baseAddressGameEXE;
-		currentRecoilOffsetAddress += baseAddressGameEXE;
         
 		characterIsDuckingAddress += baseAddressGameEXE;
 		currentDuckOffsetAddress += baseAddressGameEXE;
@@ -722,7 +729,7 @@ public:
 
 
 
-#pragma pack(push, 1) // Disable padding
+#pragma pack(push, 1)
 	struct FTransform {
 		glm::fquat Rotation;
 		glm::fvec3 Location;
@@ -731,7 +738,7 @@ public:
 	};
 #pragma pack(pop)
 
-#pragma pack(push, 1) // Disable padding
+#pragma pack(push, 1)
 	struct SceneComponent_GetBoneTransformByName
 	{
 		API::FName BoneName;
@@ -741,7 +748,7 @@ public:
 	};
 #pragma pack(pop)
 
-#pragma pack(push, 1) // Disable padding
+#pragma pack(push, 1)
 	struct SceneComponent_GetSocketTransform {
 		API::FName InSocketName;
 		uint8_t ERelativeTransformSpace;
@@ -750,16 +757,16 @@ public:
 	};
 #pragma pack(pop)
 
-#pragma pack(push, 1) // Disable padding
+#pragma pack(push, 1)
 	struct SceneComponent_K2_AddLocalOffset final
 {
 public:
-	glm::fvec3 DeltaLocation;                                     // 0x0000(0x000C)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	bool bSweep;                                            // 0x000C(0x0001)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	uint8_t Pad_D[3];                                        // 0x000D(0x0003)(Fixing Size After Last Property [ Dumper-7 ])
-	uint8_t Padding[0x8C];                                  // 0x0010(0x008C)(Parm, OutParm, IsPlainOldData, NoDestructor, ContainsInstancedReference, NativeAccessSpecifierPublic)
-	bool bTeleport;                                         // 0x009C(0x0001)(Parm, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	uint8_t Pad_9D[3];                                       // 0x009D(0x0003)(Fixing Struct Size After Last Property [ Dumper-7 ])
+	glm::fvec3 DeltaLocation;                             
+	bool bSweep;                                          
+	uint8_t Pad_D[3];                                     
+	uint8_t Padding[0x8C];                                
+	bool bTeleport;                                       
+	uint8_t Pad_9D[3];                                    
 };
 #pragma pack(pop)
 
