@@ -50,7 +50,7 @@ private:
 	uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
 	std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
 	uintptr_t cameraYoffsetAddressUEVR = 0;
-	
+
 
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
 
@@ -77,7 +77,7 @@ private:
 	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
 	float yawOffsetDegrees = 0.0f;
 	float xAxisSensitivity = 125.0f;
-	glm::fvec3 actualPlayerPositionUE =  { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	float characterHeading = 0.0f;
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
@@ -96,18 +96,16 @@ private:
 	float upOffset = 0.0f;
 	float rightOffset = 0.0f;
 
-	glm::fvec3 crosshairOffset = {0.0f, -1.0f, 2.0f};
+	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 	int boneIndex = 0;
 
 	bool fpsCamWasInitialized = false;
 	bool camResetRequested = false;
 
-	glm::fvec3 defaultWeaponRotationEuler = {0.4f, 0.0f, 0.0f};
-	glm::fvec3 defaultWeaponPosition = {0.0f, 0.0f, 0.0f};
-	glm::fvec3 positionRecoilForce = {0.0f, -0.005f, -1.0f};
-	glm::fvec3 rotationRecoilForceEuler = {-0.01f, 0.0f, 0.0f};
-	glm::fvec3 currentWeaponRecoilPosition = {0.0f, 0.0f, 0.0f};
-	glm::fvec3 currentWeaponRecoilRotationEuler = {0.0f, 0.0f, 0.0f};
+	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
+	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
 
@@ -117,23 +115,23 @@ public:
 	void on_dllmain() override {}
 
 	void on_initialize() override {
-        API::get()->log_info("%s", "VR cpp mod initializing");
-        baseAddressGameEXE = GetModuleBaseAddress(nullptr);
-        baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
-        cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
+		API::get()->log_info("%s", "VR cpp mod initializing");
+		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
+		baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
+		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 
-        AdjustAddresses();
-        ResolveGunFlashSocketMemoryAddresses();
+		AdjustAddresses();
+		ResolveGunFlashSocketMemoryAddresses();
 		FetchRequiredUObjects();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		
+
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
-		
+
 		if (fpsCamInitialized && !fpsCamWasInitialized)
 		{
 			camResetRequested = true;
@@ -194,7 +192,7 @@ public:
 		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
 		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 
-		
+
 		//When player is in car, the heading will also make the camera turn so the camera can stay aligned with the car
 		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
 
@@ -215,7 +213,7 @@ public:
 		}
 		// Combine joystick and heading changes
 		float totalYawDegrees = joystickYaw + headingDelta;
-		
+
 		float yawRadians = totalYawDegrees * (M_PI / 180.0f);
 
 		// Create a yaw rotation matrix
@@ -276,7 +274,7 @@ public:
 		//API::get()->log_info("Head Location : x = %f, y = %f, z = %f ", socketLocation_params.Location.x, socketLocation_params.Location.y, socketLocation_params.Location.z);
 
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = socketLocation_params.Location.x * 0.01f;
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = - socketLocation_params.Location.y * 0.01f;
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -socketLocation_params.Location.y * 0.01f;
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
 		actualPlayerPositionUE = socketLocation_params.Location;
@@ -284,19 +282,123 @@ public:
 
 	void WeaponRecoil(float delta)
 	{
+		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
+		glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
+		switch (equippedWeaponIndex)
+		{
+			//case 0:  // Unarmed
+			//case 1:  // BrassKnuckles
+			//case 2:  // GolfClub
+			//case 3:  // NightStick
+			//case 4:  // Knife
+			//case 5:  // BaseballBat
+			//case 6:  // Shovel
+			//case 7:  // PoolCue
+			//case 8:  // Katana
+			//case 9:  // Chainsaw
+			//case 10: // Dildo1
+			//case 11: // Dildo2
+			//case 12: // Vibe1
+			//case 13: // Vibe2
+			//case 14: // Flowers
+			//case 15: // Cane
+			//case 16: // Grenade
+			//case 17: // Teargas
+			//case 18: // Molotov
+		case 22: //Pistol colt 45
+			positionRecoilForce = { 0.0f, -0.005f, -0.5f };
+			rotationRecoilForceEuler = { -0.08f, 0.0f, 0.0f };
+			break;
+		case 23: // PistolSilenced
+			positionRecoilForce = { 0.0f, -0.005f, -0.5f };
+			rotationRecoilForceEuler = { -0.05f, 0.0f, 0.0f };
+			break;
+		case 24: // DesertEagle
+			positionRecoilForce = { 0.0f, -0.005f, -2.5f };
+			rotationRecoilForceEuler = { -0.15f, 0.0f, 0.0f };
+			break;
+		case 25: // Shotgun
+			positionRecoilForce = { 0.0f, -0.005f, -5.0f };
+			rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
+			break;
+		case 26: // Sawnoff
+			positionRecoilForce = { 0.0f, -0.005f, -5.0f };
+			rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
+			break;
+		case 27: // Spas12
+			positionRecoilForce = { 0.0f, -0.005f, -5.0f };
+			rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
+			break;
+		case 28: // MicroUzi
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 29: // Mp5
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 30: //AK47
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 31: // M4
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 32: // Tec9
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 33: //Rifle cuntgun
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 34: // Sniper
+			positionRecoilForce = { 0.0f, -0.005f, -1.0f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 35: // RocketLauncher
+			positionRecoilForce = { 0.0f, -0.005f, -1.5f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 36: // RocketLauncherHeatSeek
+			positionRecoilForce = { 0.0f, -0.005f, -1.5f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+		case 37: // Flamethrower
+			positionRecoilForce = { 0.0f, -0.00001f, -0.0001f };
+			rotationRecoilForceEuler = { -0.0001f, 0.0f, 0.0f };
+			break;
+		case 38: // Minigun
+			positionRecoilForce = { 0.0f, -0.005f, -1.5f };
+			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+			break;
+			//case 39: // Satchel
+			//case 40: // Detonator
+			//case 41: // SprayCan
+			//case 42: // Extinguisher
+			//case 43: // Camera
+			//case 44: // NightVision
+			//case 45: // Infrared
+			//case 46: // Parachute
+
+		default:
+			return;
+		}
+
 		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 
 
-        if (isShooting)
-        {       
+		if (isShooting)
+		{
 			// use the UEVR uobject attached offset : 
 			currentWeaponRecoilPosition += positionRecoilForce;
 			currentWeaponRecoilRotationEuler += rotationRecoilForceEuler;
-			UEVR_Vector3f recoilPosition = {currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z};
+			UEVR_Vector3f recoilPosition = { currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z };
 			glm::fquat weaponRecoilRotationQuat = glm::fquat(currentWeaponRecoilRotationEuler);
-			UEVR_Quaternionf recoilRotation = {weaponRecoilRotationQuat.w, weaponRecoilRotationQuat.x, weaponRecoilRotationQuat.y, weaponRecoilRotationQuat.z};
-            motionState->set_location_offset(&recoilPosition);
+			UEVR_Quaternionf recoilRotation = { weaponRecoilRotationQuat.w, weaponRecoilRotationQuat.x, weaponRecoilRotationQuat.y, weaponRecoilRotationQuat.z };
+			motionState->set_location_offset(&recoilPosition);
 			motionState->set_rotation_offset(&recoilRotation);
 			motionState->set_permanent(true);
 		}
@@ -317,7 +419,7 @@ public:
 			UEVR_Quaternionf recoveredRotationFromRecoil = { smoothedWeaponRotationQuat.w, smoothedWeaponRotationQuat.x, smoothedWeaponRotationQuat.y, smoothedWeaponRotationQuat.z };
 			motionState->set_rotation_offset(&recoveredRotationFromRecoil);
 		}
-		
+
 	}
 
 	void PlayerDucking()
@@ -329,29 +431,29 @@ public:
 		float currentDuckOffset = *(reinterpret_cast<float*>(currentDuckOffsetAddress));
 
 		if (isDucking && currentDuckOffset > -maxDuckOffset) {
-				SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-				addLocalOffset_params.bSweep = false;
-				addLocalOffset_params.bTeleport = true;
-				addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
-				playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+			addLocalOffset_params.bSweep = false;
+			addLocalOffset_params.bTeleport = true;
+			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
+			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-				*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
+			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
 		}
 		else if (isDucking && currentDuckOffset <= -maxDuckOffset)
 		{
 			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = -maxDuckOffset;
-		/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
+			/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
 		}
-		
+
 
 		if (!isDucking && currentDuckOffset < 0.0f) {
-				SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-				addLocalOffset_params.bSweep = false;
-				addLocalOffset_params.bTeleport = true;
-				addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
-				playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
+			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
+			addLocalOffset_params.bSweep = false;
+			addLocalOffset_params.bTeleport = true;
+			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
+			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-				*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
+			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
 		}
 		else if (!isDucking && currentDuckOffset >= 0.0f)
 		{
@@ -389,52 +491,52 @@ public:
 			//mesh alignement weapon offsets
 			switch (equippedWeaponIndex)
 			{
-			//case 0:  // Unarmed
-			//case 1:  // BrassKnuckles
-			//case 2:  // GolfClub
-			//case 3:  // NightStick
-			//case 4:  // Knife
-			//case 5:  // BaseballBat
-			//case 6:  // Shovel
-			//case 7:  // PoolCue
-			//case 8:  // Katana
-			//case 9:  // Chainsaw
-			//case 10: // Dildo1
-			//case 11: // Dildo2
-			//case 12: // Vibe1
-			//case 13: // Vibe2
-			//case 14: // Flowers
-			//case 15: // Cane
-			//case 16: // Grenade
-			//case 17: // Teargas
-			//case 18: // Molotov
+				//case 0:  // Unarmed
+				//case 1:  // BrassKnuckles
+				//case 2:  // GolfClub
+				//case 3:  // NightStick
+				//case 4:  // Knife
+				//case 5:  // BaseballBat
+				//case 6:  // Shovel
+				//case 7:  // PoolCue
+				//case 8:  // Katana
+				//case 9:  // Chainsaw
+				//case 10: // Dildo1
+				//case 11: // Dildo2
+				//case 12: // Vibe1
+				//case 13: // Vibe2
+				//case 14: // Flowers
+				//case 15: // Cane
+				//case 16: // Grenade
+				//case 17: // Teargas
+				//case 18: // Molotov
 			case 22: //Pistol colt 45
-				point1Offsets = {2.82819, -2.52103, 9.92684};
-				point2Offsets = {21.7272, -3.89487, 12.9088};
+				point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				point2Offsets = { 21.7272, -3.89487, 12.9088 };
 				break;
 			case 23: // PistolSilenced
 				point1Offsets = { 2.80735, -2.52308, 9.9193 };
-				point2Offsets = { 17.3316, -3.5591 +0.1, 12.2129 +0.6 };
+				point2Offsets = { 17.3316, -3.5591 + 0.1, 12.2129 + 0.6 };
 				break;
 			case 24: // DesertEagle
 				point1Offsets = { 7.06492 , -2.25853 , 11.9386 + 0.5 };
-				point2Offsets = { 33.5914, -1.46079 - 0.5, 11.9439 - 0.5};
+				point2Offsets = { 33.5914, -1.46079 - 0.5, 11.9439 - 0.5 };
 				break;
 			case 25: // Shotgun
 				point1Offsets = { 31.3429, -0.670153, 15.2663 };
-				point2Offsets = { 73.6795 , 4.2357 -1 , 22.2237 -2 };
+				point2Offsets = { 73.6795 , 4.2357 - 1 , 22.2237 - 2 };
 				break;
 			case 26: // Sawnoff
 				point1Offsets = { 21.2896, -2.13098 , 13.0224 };
-				point2Offsets = { 55.8867 , -2.10406 -1, 16.3934 -2  };
+				point2Offsets = { 55.8867 , -2.10406 - 1, 16.3934 - 2 };
 				break;
 			case 27: // Spas12
 				point1Offsets = { 51.9659 , 1.30133, 19.5475 };
-				point2Offsets = { 70.459 , 3.20646 , 22.5404  };
+				point2Offsets = { 70.459 , 3.20646 , 22.5404 };
 				break;
 			case 28: // MicroUzi
-				point1Offsets = { -0.267532, -2.19868 , 10.2951  };
-				point2Offsets = { 12.9468 , -0.996034, 11.293  };
+				point1Offsets = { -0.267532, -2.19868 , 10.2951 };
+				point2Offsets = { 12.9468 , -0.996034, 11.293 };
 				break;
 			case 29: // Mp5
 				point1Offsets = { 6.8924, -1.74509 , 19.3761 };
@@ -445,80 +547,80 @@ public:
 				point2Offsets = { 36.3719, 0.193737, 16.1544 };
 				break;
 			case 31: // M4
-				point1Offsets = { 5.85945 , -1.78476 , 15.1271   };
-				point2Offsets = { 60.0434  , 2.99539-1 , 16.4006-1.5  };
+				point1Offsets = { 5.85945 , -1.78476 , 15.1271 };
+				point2Offsets = { 60.0434  , 2.99539 - 1 , 16.4006 - 1.5 };
 				break;
 			case 32: // Tec9
-				point1Offsets = { 1.1631 , -3.60654, 11.7162  };
-				point2Offsets = { 24.9241 , -3.60654, 13.9038-1.5 };
+				point1Offsets = { 1.1631 , -3.60654, 11.7162 };
+				point2Offsets = { 24.9241 , -3.60654, 13.9038 - 1.5 };
 				break;
 			case 33: //Rifle cuntgun
 				point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
 				point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
 				break;
 			case 34: // Sniper
-				point1Offsets = { 3.00373 , -3.05089 , 10.5162  };
+				point1Offsets = { 3.00373 , -3.05089 , 10.5162 };
 				point2Offsets = { 76.0552 , 4.39762, 17.8463 };
 				break;
-			//case 35: // RocketLauncher
-			//	point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
-			//	point2Offsets = { 29.0589, -3.88386, 14.4056  };
-			//	break;
-			//case 36: // RocketLauncherHeatSeek
-			//	point1Offsets = { -57.665 , -3.74195 , 20.2618  };
-			//	point2Offsets = { 34.8035, -3.52085 , 20.1928   };
-			//	break;
+				//case 35: // RocketLauncher
+				//	point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
+				//	point2Offsets = { 29.0589, -3.88386, 14.4056  };
+				//	break;
+				//case 36: // RocketLauncherHeatSeek
+				//	point1Offsets = { -57.665 , -3.74195 , 20.2618  };
+				//	point2Offsets = { 34.8035, -3.52085 , 20.1928   };
+				//	break;
 			case 37: // Flamethrower
 				point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
-				point2Offsets = { 76.7885, 0.537026 , 31.6837  };
+				point2Offsets = { 76.7885, 0.537026 , 31.6837 };
 				break;
 			case 38: // Minigun
-				point1Offsets = { 48.1025 , -2.9978 , 14.3878  };
-				point2Offsets = { 86.6453 , 0.429413 , 35.9644  };
+				point1Offsets = { 48.1025 , -2.9978 , 14.3878 };
+				point2Offsets = { 86.6453 , 0.429413 , 35.9644 };
 				break;
-			//case 39: // Satchel
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 40: // Detonator
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 41: // SprayCan
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 42: // Extinguisher
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 43: // Camera
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 44: // NightVision
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 45: // Infrared
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 46: // Parachute
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
+				//case 39: // Satchel
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 40: // Detonator
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 41: // SprayCan
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 42: // Extinguisher
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 43: // Camera
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 44: // NightVision
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 45: // Infrared
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
+				//case 46: // Parachute
+				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				//	break;
 
 			default:
-				point1Offsets = {0.0f , 0.0f, 0.0f};
-				point2Offsets = {0.0f , 0.0f, 0.0f};
+				point1Offsets = { 0.0f , 0.0f, 0.0f };
+				point2Offsets = { 0.0f , 0.0f, 0.0f };
 				socketAvailable = false;
 				break;
 			}
 
-			glm::fvec3 point1Position = {0.0f , 0.0f, 0.0f};
-			glm::fvec3 point2Position = {0.0f , 0.0f, 0.0f};
-			glm::fvec3 aimingDirection = {0.0f , 0.0f, 0.0f};
+			glm::fvec3 point1Position = { 0.0f , 0.0f, 0.0f };
+			glm::fvec3 point2Position = { 0.0f , 0.0f, 0.0f };
+			glm::fvec3 aimingDirection = { 0.0f , 0.0f, 0.0f };
 
 			if (socketAvailable)
 			{
@@ -590,9 +692,9 @@ public:
 				point1Position = componentToWorld_params.Location;
 				aimingDirection = forwardVector_params.ForwardVector;
 			}
-			
 
-			
+
+
 
 			// Apply new values to memory
 			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
@@ -617,7 +719,7 @@ public:
 		const auto& playerCharacter = children.data[3];
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-        UpdateActualWeaponMesh();
+		UpdateActualWeaponMesh();
 	}
 
 	void UpdateWeaponMeshOnChange() {
@@ -643,7 +745,7 @@ public:
 		}
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z};
+		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
 		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
 		motionState->set_hand(1);
 		motionState->set_permanent(true);
@@ -674,32 +776,32 @@ public:
 	}
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
-        HMODULE hModule = GetModuleHandle(moduleName);
-        if (hModule == nullptr) {
-            API::get()->log_info("Failed to get the base address of the module.");
-            return 0;
-        }
-        return reinterpret_cast<uintptr_t>(hModule);
-    }
+		HMODULE hModule = GetModuleHandle(moduleName);
+		if (hModule == nullptr) {
+			API::get()->log_info("Failed to get the base address of the module.");
+			return 0;
+		}
+		return reinterpret_cast<uintptr_t>(hModule);
+	}
 
-    void AdjustAddresses() {
-        for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
-        for (auto& address : aimVectorAddresses) address += baseAddressGameEXE;
-        for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
+	void AdjustAddresses() {
+		for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
+		for (auto& address : aimVectorAddresses) address += baseAddressGameEXE;
+		for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 
 		fpsCamInitializedAddress += baseAddressGameEXE;
-        
+
 		equippedWeaponAddress += baseAddressGameEXE;
-        characterHeadingAddress += baseAddressGameEXE;
-        characterIsInCarAddress += baseAddressGameEXE;
+		characterHeadingAddress += baseAddressGameEXE;
+		characterIsInCarAddress += baseAddressGameEXE;
 		characterIsShootingAddress += baseAddressGameEXE;
-        
+
 		characterIsDuckingAddress += baseAddressGameEXE;
 		currentDuckOffsetAddress += baseAddressGameEXE;
 
 		weaponWheelOpenAddress += baseAddressGameEXE;
 
-    }
+	}
 
 	void ResolveGunFlashSocketMemoryAddresses()
 	{
@@ -713,22 +815,22 @@ public:
 	}
 
 	struct FQuat {
-    float x;
-    float y;
-    float z;
-	float w;
+		float x;
+		float y;
+		float z;
+		float w;
 	};
 
 	struct FVector {
 		float x, y, z;
 	};
-	
+
 	enum class EBoneSpaces
-{
-	WorldSpace                               = 0,
-	ComponentSpace                           = 1,
-	EBoneSpaces_MAX                          = 2,
-};
+	{
+		WorldSpace = 0,
+		ComponentSpace = 1,
+		EBoneSpaces_MAX = 2,
+	};
 
 
 
@@ -762,15 +864,15 @@ public:
 
 #pragma pack(push, 1)
 	struct SceneComponent_K2_AddLocalOffset final
-{
-public:
-	glm::fvec3 DeltaLocation;                             
-	bool bSweep;                                          
-	uint8_t Pad_D[3];                                     
-	uint8_t Padding[0x8C];                                
-	bool bTeleport;                                       
-	uint8_t Pad_9D[3];                                    
-};
+	{
+	public:
+		glm::fvec3 DeltaLocation;
+		bool bSweep;
+		uint8_t Pad_D[3];
+		uint8_t Padding[0x8C];
+		bool bTeleport;
+		uint8_t Pad_9D[3];
+	};
 #pragma pack(pop)
 
 	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
