@@ -102,11 +102,14 @@ private:
 	bool fpsCamWasInitialized = false;
 	bool camResetRequested = false;
 
-	glm::fvec3 weaponBaseLocalRot = {0.4f, 0.0f, 0.0f};
-	glm::fvec3 weaponBaseLocalPos = {0.0f, 0.0f, 0.0f};
-	glm::fvec3 weaponRecoilSpeed = {20.0f, 20.0f, 20.0f};
-	glm::fvec3 currentWeaponOffset = {0.0f, 0.0f, 0.0f};
-	float weaponBackFromRecoilSpeed = 1.0f;
+	glm::fvec3 defaultWeaponRotationEuler = {0.4f, 0.0f, 0.0f};
+	glm::fvec3 defaultWeaponPosition = {0.0f, 0.0f, 0.0f};
+	glm::fvec3 positionRecoilForce = {0.0f, -0.005f, -1.0f};
+	glm::fvec3 rotationRecoilForceEuler = {-0.01f, 0.0f, 0.0f};
+	glm::fvec3 currentWeaponRecoilPosition = {0.0f, 0.0f, 0.0f};
+	glm::fvec3 currentWeaponRecoilRotationEuler = {0.0f, 0.0f, 0.0f};
+	float recoilPositionRecoverySpeed = 10.0f;
+	float recoilRotationRecoverySpeed = 8.0f;
 
 public:
 	GTASA_VRmod() = default;
@@ -149,7 +152,7 @@ public:
 			UpdateAimingVectors();
 			FixWeaponVisibility();
 			PlayerDucking();
-			//WeaponRecoil();
+			WeaponRecoil(delta);
 		}
 	}
 
@@ -279,41 +282,41 @@ public:
 		actualPlayerPositionUE = socketLocation_params.Location;
 	}
 
-	void WeaponRecoil()
+	void WeaponRecoil(float delta)
 	{
 		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 
 
         if (isShooting)
-        {        
-			UEVR_Vector3f weaponRecoil = {weaponRecoilSpeed.x, weaponRecoilSpeed.y, weaponRecoilSpeed.z};
-			// use the UEVR uobject attached offset :  
-            motionState->set_location_offset(&weaponRecoil);
-			motionState->set_hand(1);
+        {       
+			// use the UEVR uobject attached offset : 
+			currentWeaponRecoilPosition += positionRecoilForce;
+			currentWeaponRecoilRotationEuler += rotationRecoilForceEuler;
+			UEVR_Vector3f recoilPosition = {currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z};
+			glm::fquat weaponRecoilRotationQuat = glm::fquat(currentWeaponRecoilRotationEuler);
+			UEVR_Quaternionf recoilRotation = {weaponRecoilRotationQuat.w, weaponRecoilRotationQuat.x, weaponRecoilRotationQuat.y, weaponRecoilRotationQuat.z};
+            motionState->set_location_offset(&recoilPosition);
+			motionState->set_rotation_offset(&recoilRotation);
 			motionState->set_permanent(true);
-			currentWeaponOffset = weaponRecoilSpeed;
 		}
-		//else
-		//{
-		//	glm::fvec3 direction = currentWeaponOffset - weaponBaseLocalPos;
-		//	
-		//	if (glm::length(direction) > 0.1)
-		//	{
-		//		glm::fvec3 movement = glm::normalize(direction) * weaponBackFromRecoilSpeed * 0.0001f;
-		//		currentWeaponOffset -= movement;
-		//		API::get()->log_info("backFromRecoil : x = %f", glm::length(direction));
-		//		UEVR_Vector3f backFromRecoil = { currentWeaponOffset.x, currentWeaponOffset.y, currentWeaponOffset.z };
-		//		motionState->set_location_offset(&backFromRecoil);
-		//	}
-		//	else
-		//	{
-		//		UEVR_Vector3f backFromRecoil = { weaponBaseLocalPos.x, weaponBaseLocalPos.y, weaponBaseLocalPos.z };
-		//		currentWeaponOffset = weaponBaseLocalPos;
-		//		motionState->set_location_offset(&backFromRecoil);
-		//		
-		//	}
-		//}
+		else
+		{
+			// Smoothly return position to base
+			currentWeaponRecoilPosition = glm::mix(currentWeaponRecoilPosition, defaultWeaponPosition, delta * recoilPositionRecoverySpeed);
+			UEVR_Vector3f recoveredPositionFromRecoil = { currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z };
+			motionState->set_location_offset(&recoveredPositionFromRecoil);
+
+			// Convert Euler angles (radians) to quaternions for smooth rotation recovery
+			glm::fquat weaponRecoilRotationQuat = glm::fquat(currentWeaponRecoilRotationEuler);
+			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+
+			// Smoothly interpolate between current rotation and default rotation
+			glm::fquat smoothedWeaponRotationQuat = glm::slerp(weaponRecoilRotationQuat, defaultWeaponRotationQuat, delta * recoilRotationRecoverySpeed);
+			currentWeaponRecoilRotationEuler = glm::eulerAngles(smoothedWeaponRotationQuat);
+			UEVR_Quaternionf recoveredRotationFromRecoil = { smoothedWeaponRotationQuat.w, smoothedWeaponRotationQuat.x, smoothedWeaponRotationQuat.y, smoothedWeaponRotationQuat.z };
+			motionState->set_rotation_offset(&recoveredRotationFromRecoil);
+		}
 		
 	}
 
@@ -607,14 +610,6 @@ public:
 		}
 	}
 
-	void UpdateWeaponMeshOnChange() {
-		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
-        if (equippedWeaponIndex != actualWeaponIndex) {
-            UpdateActualWeaponMesh();
-            equippedWeaponIndex = actualWeaponIndex;
-        }
-    }
-
 	void FetchRequiredUObjects()
 	{
 		playerController = API::get()->get_player_controller(0);
@@ -623,6 +618,14 @@ public:
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
         UpdateActualWeaponMesh();
+	}
+
+	void UpdateWeaponMeshOnChange() {
+		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+		if (equippedWeaponIndex != actualWeaponIndex) {
+			UpdateActualWeaponMesh();
+			equippedWeaponIndex = actualWeaponIndex;
+		}
 	}
 
 	void UpdateActualWeaponMesh()
@@ -639,9 +642,9 @@ public:
 			}
 		}
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-		glm::fquat baseOffset = glm::fquat(weaponBaseLocalRot);
-		UEVR_Quaternionf rotationOffset = { baseOffset.w , baseOffset.x, baseOffset.y, baseOffset.z};
-		motionState->set_rotation_offset(&rotationOffset);
+		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z};
+		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
 		motionState->set_hand(1);
 		motionState->set_permanent(true);
 
