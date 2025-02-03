@@ -1,6 +1,8 @@
 #include <memory>
 
 #include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
 #define GLM_FORCE_QUAT_DATA_XYZW
 #include "uevr/Plugin.hpp"
@@ -128,6 +130,7 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 
+
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
@@ -175,110 +178,97 @@ public:
 		weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 	}
 
-	void UpdateCameraMatrix(float delta, bool camResetRequested)
-	{
-		float originalMatrix[16];
-		for (int i = 0; i < 16; ++i) {
-			originalMatrix[i] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
-			cameraMatrixValues[i] = originalMatrix[i];
-		}
+	void UpdateCameraMatrix(float delta, bool camResetRequested) {
+    // Retrieve the original camera matrix from memory
+    glm::mat4 originalMatrix;
+    for (int i = 0; i < 16; ++i) {
+        originalMatrix[i / 4][i % 4] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
+    }
 
-		/*	API::get()->log_info("Original Matrix:\n");
-			printMatrix(originalMatrix);*/
+    // Camera Matrix Yaw movements ---------------------------------------------------
+    UEVR_Vector2f rightJoystick{};
+    API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
+    characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 
-			// Camera Matrix Yaw movements ---------------------------------------------------
-		UEVR_Vector2f rightJoystick{};
-		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
-		//API::get()->log_info("Joystick Input X: %f", rightJoystick.x);
-		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
+    // Retrieve the head's forward, up, and right vectors
+    struct {
+        glm::fvec3 ForwardVector;
+    } forwardVector_params;
+
+    struct {
+        glm::fvec3 UpVector;
+    } upVector_params;
+
+    struct {
+        glm::fvec3 RightVector;
+    } rightVector_params;
+
+    playerHead->call_function(L"GetForwardVector", &forwardVector_params);
+    playerHead->call_function(L"GetUpVector", &upVector_params);
+    playerHead->call_function(L"GetRightVector", &rightVector_params);
+
+	API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
+	API::get()->log_info("GetRightVector : x = %f, y = %f, z = %f", rightVector_params.RightVector.x, rightVector_params.RightVector.y, rightVector_params.RightVector.z);
+	API::get()->log_info("GetUpVector : x = %f, y = %f, z = %f", upVector_params.UpVector.x, upVector_params.UpVector.y, upVector_params.UpVector.z);
 
 
-		//When player is in car, the heading will also make the camera turn so the camera can stay aligned with the car
-		float currentHeading = characterIsInCar ? -*(reinterpret_cast<float*>(characterHeadingAddress)) : 0.0f;
+    // Create a full rotation matrix from the head's forward, up, and right vectors
+    glm::mat4 headRotationMatrix = glm::mat4(1.0f);
 
-		// Calculate heading delta (handles wrap-around at 360 degrees)
-		float headingDelta = 0.0f;
-		if (characterIsInCar || camResetRequested) {
-			headingDelta = currentHeading - previousHeading;
-			// Handle wrap-around cases
-			if (headingDelta > 180.0f) headingDelta -= 360.0f;
-			if (headingDelta < -180.0f) headingDelta += 360.0f;
-		}
-		previousHeading = currentHeading;
+    headRotationMatrix[0] =  glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y ,-forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
+    headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z , 0.0f); // Right vector
+    headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
-		const float DEADZONE = 0.1f;
-		float joystickYaw = 0.0f;
-		if (abs(rightJoystick.x) > DEADZONE) {
-			joystickYaw = rightJoystick.x * delta * xAxisSensitivity;
-		}
-		// Combine joystick and heading changes
-		float totalYawDegrees = joystickYaw + headingDelta;
+    // Apply joystick input to adjust the local yaw rotation
+    const float DEADZONE = 0.1f;
+    float joystickYaw = 0.0f;
+    if (abs(rightJoystick.x) > DEADZONE) {
+        joystickYaw = rightJoystick.x * delta * xAxisSensitivity;
+    }
 
-		float yawRadians = totalYawDegrees * (M_PI / 180.0f);
+    // Convert joystick yaw to radians
+    float yawRadians = joystickYaw * (M_PI / 180.0f);
 
-		// Create a yaw rotation matrix
-		float cosYaw = std::cos(yawRadians);
-		float sinYaw = std::sin(yawRadians);
-		float yawRotationMatrix[16] = {
-			cosYaw, -sinYaw, 0.0f, 0.0f,
-			sinYaw,   cosYaw, 0.0f,   0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f,   0.0f, 0.0f,   1.0f
-		};
+    // Create a yaw rotation matrix for the joystick input
+    glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate around the Y-axis
 
-		// Multiply the original matrix by the yaw rotation matrix
-		float modifiedMatrix[16];
-		for (int i = 0; i < 4; ++i) {
-			for (int j = 0; j < 4; ++j) {
-				modifiedMatrix[i * 4 + j] = 0.0f;
-				for (int k = 0; k < 4; ++k) {
-					modifiedMatrix[i * 4 + j] += originalMatrix[i * 4 + k] * yawRotationMatrix[k * 4 + j];
-				}
-			}
-		}
+    // Combine the head rotation matrix with the joystick yaw rotation
+    glm::mat4 finalRotationMatrix = headRotationMatrix * joystickYawRotation;
 
-		// Copy the modified matrix back to cameraMatrixValues
-		for (int i = 0; i < 16; ++i) {
-			cameraMatrixValues[i] = modifiedMatrix[i];
-		}
-		//API::get()->log_info("Modified Matrix:\n");
-		//printMatrix(cameraMatrixValues);
+    // Multiply the original matrix by the final rotation matrix
+    glm::mat4 modifiedMatrix = originalMatrix * finalRotationMatrix;
 
-		for (int i = 0; i < 12; ++i) {
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-		}
+    // Copy the modified matrix back to cameraMatrixValues
+    for (int i = 0; i < 16; ++i) {
+        cameraMatrixValues[i] = headRotationMatrix[i / 4][i % 4];
+    }
 
-		// If player loads a save or after a cinematic, reset the camera to the camera heading direction
-		if (camResetRequested)
-		{
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
-			//currentHeading = -*(reinterpret_cast<float*>(characterHeadingAddress));
-			//API::get()->log_error("Here");
-		}
+    // Write the modified matrix back to memory
+    for (int i = 0; i < 12; ++i) {
+        *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
+    }
 
-		// Log some matrix values
-		// API::get()->log_info("Updated rotation matrix values -> matrix0: %f, matrix1: %f, matrix2: %f", cameraMatrixValues[0], cameraMatrixValues[1], cameraMatrixValues[2]);
+    // If player loads a save or after a cinematic, reset the camera to the camera heading direction
+    if (camResetRequested) {
+        *(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
+        *(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
+        *(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
+    }
 
-		//End of camera matrix yaw movements --------------------------------------------------
+    // Update the camera position based on the head's socket location
+    struct {
+        API::FName InSocketName = API::FName(L"head");
+        glm::fvec3 Location;
+    } socketLocation_params;
 
-		// camera matrix position - affects Unreal's objects LOD levels around the player
-		struct {
-			API::FName InSocketName = API::FName(L"head");
-			glm::fvec3 Location;
-		} socketLocation_params;
+    playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
 
-		playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = socketLocation_params.Location.x * 0.01f;
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -socketLocation_params.Location.y * 0.01f;
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
-		//API::get()->log_info("Head Location : x = %f, y = %f, z = %f ", socketLocation_params.Location.x, socketLocation_params.Location.y, socketLocation_params.Location.z);
-
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = socketLocation_params.Location.x * 0.01f;
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -socketLocation_params.Location.y * 0.01f;
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
-
-		actualPlayerPositionUE = socketLocation_params.Location;
-	}
+    actualPlayerPositionUE = socketLocation_params.Location;
+}
 
 	void WeaponRecoil(float delta)
 	{
