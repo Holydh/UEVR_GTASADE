@@ -773,12 +773,10 @@ public:
 			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
 			motionState->set_hand(1);
 			motionState->set_permanent(true);
-			API::get()->log_error("not hello");
 		}
 		if (characterIsGettingInACar || characterIsInCar)
 		{
-			uevr::API::UObjectHook::remove_all_motion_controller_states();
-			API::get()->log_error("hello ?");
+			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 		}
 	}
 
