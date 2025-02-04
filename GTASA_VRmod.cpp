@@ -63,6 +63,7 @@ private:
 	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
 	uintptr_t characterHeadingAddress = 0x53DACF1;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
+	uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
 
 	uintptr_t characterIsShootingAddress = 0x53DACE1;
 
@@ -86,6 +87,7 @@ private:
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
 
+	bool characterIsGettingInACar = false;
 	bool characterIsInCar = false;
 	bool characterWasInCar = false;
 	int equippedWeaponIndex = 0;
@@ -124,7 +126,6 @@ public:
 		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
 		baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
 		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
-
 		AdjustAddresses();
 		ResolveGunFlashSocketMemoryAddresses();
 		FetchRequiredUObjects();
@@ -135,11 +136,13 @@ public:
 
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
+		characterIsGettingInACar = *(reinterpret_cast<int*>(characterIsGettingInACarAddress)) > 0;
+		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
 		if (fpsCamInitialized && !fpsCamWasInitialized)
 		{
-			camResetRequested = true;
+			camResetRequested = characterIsInCar ? false: true;
 			FetchRequiredUObjects();
 			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
 		}
@@ -154,10 +157,11 @@ public:
 			UpdateWeaponMeshOnChange();
 			UpdateAimingVectors();
 			FixWeaponVisibility();
+			WeaponHandling(delta);
 			PlayerDucking();
-			WeaponRecoil(delta);
-			DetachWeaponWhenDriving();
 		}
+
+		characterWasInCar = characterIsInCar;
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -181,18 +185,6 @@ public:
 		weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 	}
 
-	void DetachWeaponWhenDriving()
-	{
-		if (characterIsInCar && !characterWasInCar)
-		{
-			UpdateActualWeaponMesh(false);
-		}
-		if (!characterIsInCar && characterWasInCar)
-		{
-			UpdateActualWeaponMesh(true);
-		}
-	}
-
 	void UpdateCameraMatrix(float delta, bool camResetRequested) {
     // Retrieve the original camera matrix from memory
     glm::mat4 originalMatrix;
@@ -203,10 +195,6 @@ public:
     // Camera Matrix rotation ---------------------------------------------------
     UEVR_Vector2f rightJoystick{};
     API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
-    characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
-
-
-
 
 	// Retrieve the head's forward, up, and right vectors
 	struct {
@@ -233,21 +221,16 @@ public:
 	headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z, 0.0f); // Right vector
 	headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
-	API::get()->log_info("ForwardVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[0][0], headRotationMatrix[0][1], headRotationMatrix[0][2]);
-	API::get()->log_info("RightVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[1][0], headRotationMatrix[1][1], headRotationMatrix[1][2]);
-	API::get()->log_info("UpVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[2][0], headRotationMatrix[2][1], headRotationMatrix[2][2]);
-
 	float joystickYaw = 0.0f;
 
 	if (characterIsInCar && !characterWasInCar)
 	{
 		accumulatedJoystickRotation = glm::mat4(1.0f);
 	}
-	if (!characterIsInCar && characterWasInCar)
+	if ((!characterIsInCar && characterWasInCar) || (!characterIsInCar && camResetRequested))
 	{
 		camResetRequested = true;
 		baseHeadRotation = headRotationMatrix;
-		joystickYaw += 180.0f;
 	}
 
 	// Calculate the delta rotation matrix. 
@@ -257,7 +240,7 @@ public:
 
 	// Apply joystick input to adjust the local yaw rotation
 	const float DEADZONE = 0.1f;
-	
+	joystickYaw = camResetRequested ? 180.0f : 0.0f;
 	if (abs(rightJoystick.x) > DEADZONE) {
 		joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
 	}
@@ -307,11 +290,19 @@ public:
     *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
     actualPlayerPositionUE = socketLocation_params.Location;
-	characterWasInCar = characterIsInCar;
 }
 
-	void WeaponRecoil(float delta)
+	void WeaponHandling(float delta)
 	{
+		if (characterIsInCar && !characterWasInCar)
+		{
+			UpdateActualWeaponMesh();
+		}
+
+		if (characterIsInCar)
+			return;
+			
+
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 		glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
 		switch (equippedWeaponIndex)
@@ -749,18 +740,18 @@ public:
 		const auto& playerCharacter = children.data[3];
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-		UpdateActualWeaponMesh(true);
+		UpdateActualWeaponMesh();
 	}
 
 	void UpdateWeaponMeshOnChange() {
 		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		if (equippedWeaponIndex != actualWeaponIndex) {
-			UpdateActualWeaponMesh(true);
+			UpdateActualWeaponMesh();
 			equippedWeaponIndex = actualWeaponIndex;
 		}
 	}
 
-	void UpdateActualWeaponMesh(bool attachWeapon)
+	void UpdateActualWeaponMesh()
 	{
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
@@ -774,8 +765,7 @@ public:
 			}
 		}
 
-
-		if (attachWeapon)
+		if (!characterIsInCar)
 		{
 			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
@@ -783,31 +773,13 @@ public:
 			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
 			motionState->set_hand(1);
 			motionState->set_permanent(true);
+			API::get()->log_error("not hello");
 		}
-		else //detach weapon when driving vehicles
+		if (characterIsGettingInACar || characterIsInCar)
 		{
-			API::UObject* empty = nullptr;
-			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(empty);
-			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-			motionState->set_hand(1);
-			motionState->set_permanent(true);
+			uevr::API::UObjectHook::remove_all_motion_controller_states();
+			API::get()->log_error("hello ?");
 		}
-	
-
-		
-
-		//struct {
-		//	bool absoluteLocation = true;
-		//	bool absoluteRotation = true;
-		//	bool absoluteScale = true;
-		//} setAbsolute_params;
-		//weaponMesh->call_function(L"SetAbsolute", &setAbsolute_params);
-
-		//struct {
-		//	uint32_t materialIndex = -1;
-		//	float flashAmount = 0.00001f;
-		//} setFlashAmount_params;
-		//weapon->call_function(L"SetEffect", &setFlashAmount_params);
 	}
 
 	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
@@ -840,6 +812,7 @@ public:
 		equippedWeaponAddress += baseAddressGameEXE;
 		characterHeadingAddress += baseAddressGameEXE;
 		characterIsInCarAddress += baseAddressGameEXE;
+		characterIsGettingInACarAddress += baseAddressGameEXE;
 		characterIsShootingAddress += baseAddressGameEXE;
 
 		characterIsDuckingAddress += baseAddressGameEXE;
