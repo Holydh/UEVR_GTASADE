@@ -285,9 +285,12 @@ public:
 
     playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
 
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = socketLocation_params.Location.x * 0.01f;
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -socketLocation_params.Location.y * 0.01f;
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
+	//fix audio listener unaligned with original game
+	glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector,rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
+
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
+    *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
 
     actualPlayerPositionUE = socketLocation_params.Location;
 }
@@ -666,8 +669,8 @@ public:
 					return;
 				}
 
-				point1Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
-				point2Position = CalculateAimingReferencePoints(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+				point1Position = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
+				point2Position = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
 
 				aimingDirection = glm::normalize(point2Position - point1Position);
 
@@ -698,7 +701,7 @@ public:
 					yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
 				}
 
-				point2Position = CalculateAimingReferencePoints(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
+				point2Position = OffsetLocalPositionFromWorld(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
 
 				// Safeguard: Recalculate aiming direction and normalize
 				aimingDirection = point2Position - point1Position;
@@ -718,9 +721,6 @@ public:
 				point1Position = componentToWorld_params.Location;
 				aimingDirection = forwardVector_params.ForwardVector;
 			}
-
-
-
 
 			// Apply new values to memory
 			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
@@ -785,7 +785,7 @@ public:
 		}
 	}
 
-	glm::fvec3 CalculateAimingReferencePoints(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
+	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
 	{
 		// Apply the offsets along the local axes
 		glm::fvec3 offset = (forwardVector * offsets.x) + (rightVector * offsets.y) + (upVector * offsets.z);
