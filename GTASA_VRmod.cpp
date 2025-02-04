@@ -59,7 +59,7 @@ private:
 	//borrowed empty addresses
 	uintptr_t fpsCamInitializedAddress = 0x53DACC6;
 	uintptr_t equippedWeaponAddress = 0x53DACC7;
-	uintptr_t characterIsDuckingAddress = 0x53DACC8;
+	uintptr_t characterIsDuckingAddress = 0x53DAD11;
 	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
 	uintptr_t characterHeadingAddress = 0x53DACF1;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
@@ -295,6 +295,11 @@ public:
 	void WeaponHandling(float delta)
 	{
 		if (characterIsInCar && !characterWasInCar)
+		{
+			UpdateActualWeaponMesh();
+		}
+
+		if (!characterIsInCar && characterWasInCar)
 		{
 			UpdateActualWeaponMesh();
 		}

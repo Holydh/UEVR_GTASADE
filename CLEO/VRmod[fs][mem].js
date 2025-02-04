@@ -13,41 +13,16 @@ var firstPersonCamEnabled = true;//IniFile.ReadString(configPath, configSection,
 var firstPersonCamInitialized = false;
 var memorySetup = false;
 
-let footLocalOffsetX = IniFile.ReadFloat(configPath, configSection, 'foot_Local_Offset_X');
-let footLocalOffsetY = IniFile.ReadFloat(configPath, configSection, 'foot_Local_Offset_Y');
-let footLocalOffsetZ = IniFile.ReadFloat(configPath, configSection, 'foot_Local_Offset_Z');
-
-var carLocalOffsetX = IniFile.ReadFloat(configPath, configSection, 'car_Local_Offset_X');
-var carLocalOffsetY = IniFile.ReadFloat(configPath, configSection, 'car_Local_Offset_Y');
-var carLocalOffsetZ = IniFile.ReadFloat(configPath, configSection, 'car_Local_Offset_Z');
-
-var bikeLocalOffsetX = IniFile.ReadFloat(configPath, configSection, 'bike_Local_Offset_X');
-var bikeLocalOffsetY = IniFile.ReadFloat(configPath, configSection, 'bike_Local_Offset_Y');
-var bikeLocalOffsetZ = IniFile.ReadFloat(configPath, configSection, 'bike_Local_Offset_Z');
-
-// var flyingVehicleLocalOffsetX = 0; // No offset along the X-axis
-// var flyingVehicleLocalOffsetY = 0; // Slightly behind the player
-// var flyingVehicleLocalOffsetZ = 1.0; // Slightly above the player
-
-let actualOffsetX = 0;
-let actualOffsetY = 0;
-let actualOffsetZ = 0;
-
-var offsetAmount = 0.005;
-
 let actualWeapon = 0;
 let heading = 0;
 
-var object1;
-var object2;
+// var object1;
+// var object2;
 
 while (true) {
     wait(0);
 
     if (!memorySetup && player.isPlaying()) {
-        //log(Camera.GetActiveCoordinates());
-        // log(char.getCoordinates());
-
         //nop intructions writing to camera matrix
         // Matrix is standard 4x4 DirectX format
         // Matrix values 0 to 11 = rotation
@@ -98,20 +73,20 @@ while (true) {
 
         //no instructions writing to Camera Matrix value 11
 
-        // //nop Camera Matrix 12 value - x Position
-        // Memory.Write(0x111DEA5, 7, 0x90, true, true);
-        // Memory.Write(0x111DEAC, 1, 0x90, true, true);
-        // Memory.Write(0x111DEAD, 1, 0x90, true, true);
+        //nop Camera Matrix 12 value - x Position
+        Memory.Write(0x111DEA5, 7, 0x90, true, true);
+        Memory.Write(0x111DEAC, 1, 0x90, true, true);
+        Memory.Write(0x111DEAD, 1, 0x90, true, true);
 
-        // Memory.Write(0x111DF57, 7, 0x90, true, true);
-        // Memory.Write(0x111DF5E, 1, 0x90, true, true);
+        Memory.Write(0x111DF57, 7, 0x90, true, true);
+        Memory.Write(0x111DF5E, 1, 0x90, true, true);
 
-        // //nop Camera Matrix 13 value - z Position 
-        // Memory.Write(0x111DEB3, 7, 0x90, true, true);
-        // Memory.Write(0x111DEBA, 1, 0x90, true, true);
+        //nop Camera Matrix 13 value - z Position 
+        Memory.Write(0x111DEB3, 7, 0x90, true, true);
+        Memory.Write(0x111DEBA, 1, 0x90, true, true);
 
-        // Memory.Write(0x111DF72, 7, 0x90, true, true);
-        // Memory.Write(0x111DF79, 1, 0x90, true, true);
+        Memory.Write(0x111DF72, 7, 0x90, true, true);
+        Memory.Write(0x111DF79, 1, 0x90, true, true);
 
         //nop Camera Matrix 14 value - y Position
         Memory.Write(0x111DEBE, 7, 0x90, true, true);
@@ -210,6 +185,32 @@ while (true) {
         Memory.Write(0x1108E7A, 3, 0x90, true, true);
         Memory.Write(0x1108E7D, 1, 0x90, true, true);
 
+        // nop rocket launcher specific instruction writing to aiming vector :
+        Memory.Write(0x110E71D, 5, 0x90, true, true);
+        Memory.Write(0x110E722, 1, 0x90, true, true);
+
+        Memory.Write(0x110E70B, 7, 0x90, true, true);
+        Memory.Write(0x110E712, 1, 0x90, true, true);
+
+        // nop sniper specific instruction writing to aiming vector :
+        Memory.Write(0x110E19E, 5, 0x90, true, true);
+        Memory.Write(0x110E1A3, 1, 0x90, true, true);
+
+        Memory.Write(0x110E196, 7, 0x90, true, true);
+        Memory.Write(0x110E19D, 1, 0x90, true, true);
+
+        // nop car specific instruction writing to aiming vector :
+        Memory.Write(0x110BB78, 3, 0x90, true, true);
+        Memory.Write(0x110BB7B, 1, 0x90, true, true);
+
+        Memory.Write(0x110C5A4, 3, 0x90, true, true);
+        Memory.Write(0x110C5A7, 1, 0x90, true, true);
+
+        Memory.Write(0x110C59E, 5, 0x90, true, true);
+        Memory.Write(0x110C5A3, 1, 0x90, true, true);
+
+        Memory.Write(0x110BB68, 5, 0x90, true, true);
+        Memory.Write(0x110BB6D, 1, 0x90, true, true);
 
         // log(char.isInAnyCar())
         // log(char.isOnAnyBike())
@@ -217,10 +218,11 @@ while (true) {
         memorySetup = true;
     }
     
-    let playerCoords = char.getCoordinates();
     actualWeapon = char.getCurrentWeapon().valueOf();
-
-    // Object spawner for debug
+    //char.setHeading(180);
+    //Camera.Restore()
+    
+    //Object spawn debug
     // let x = Memory.ReadFloat(0x53E2674, true, true);
     // let y = Memory.ReadFloat(0x53E2678, true, true);
     // let z = Memory.ReadFloat(0x53E267C, true, true);
@@ -242,52 +244,40 @@ while (true) {
     // if (object2 != null)
     //     object2.setCoordinates( x + Memory.ReadFloat(0x53E2668, true, true) * 0.25, y + Memory.ReadFloat(0x53E266C, true, true) * 0.25, z + Memory.ReadFloat(0x53E2670, true, true) * 0.25);
     
+    //Writing the firstPersonCam state to reset the camera heading after cinematics.
+    Memory.WriteI8(0x53DACC6, firstPersonCamInitialized ? 1 : 0, true, true);
+
     //Writing the equipped weapon to memory for UEVR mod use. To apply weapon specific adjustments.
-    Memory.WriteI8(0x53DACC6, actualWeapon, true, true);
-    
-    heading = char.getHeading();
-    //Writing the heading to memory for UEVR mod use. To handle car camera.
-    Memory.WriteFloat(0x53DACCA, heading, true, true);
+    Memory.WriteI8(0x53DACC7, actualWeapon, true, true);
 
     //Writing the crouch status to memory for UEVR mod use. To handle camera adjustements.
-    Memory.WriteI8(0x53DACD2, char.isDucking() ? 1 : 0, true, true);
+    Memory.WriteI8(0x53DAD11, char.isDucking() ? 1 : 0, true, true);
 
-    if (player.isPlaying() && Pad.IsKeyPressed(KeyCode.T)) {
-        if (!firstPersonCamInitialized) {
-            firstPersonCamEnabled = true;
-            IniFile.WriteString(firstPersonCamEnabled ? 'TRUE' : 'FALSE', configPath, configSection, 'FPS_controls_enabled');
-        }
-        else {
-            firstPersonCamEnabled = false;
-            IniFile.WriteString(firstPersonCamEnabled ? 'TRUE' : 'FALSE', configPath, configSection, 'FPS_controls_enabled');
-        }
-        wait(300);
-    };
+    // Memory 0x53DACDA written by UEVR dll, "currentDuckOffset"
 
-   
-    // if (firstPersonCamEnabled)
-    // {
-    // //     //log(playerCoords);
-    // //     //writing camera matrix position to player coordinates.
-    // //     // Memory.WriteFloat(0x53E2C30, playerCoords.x + actualOffsetX, true, true);
-    // //     // Memory.WriteFloat(0x53E2C34, playerCoords.y + actualOffsetY, true, true);
-    //     Memory.WriteFloat(0x53E2C38, Memory.ReadFloat(0x58013E0, true, true) , true, true); 
-    // //     //Memory.ReadFloat(0x58013E0, true, true)  + actualOffsetZ
-        
-    // }
+    Memory.WriteI8(0x53DACCE, char.isInAnyCar() ? 1 : 0, true, true);
 
+    Memory.WriteI8(0x53DAD01, char.isGettingInToACar()? 1 : 0, true, true);
+    
+    Memory.WriteI8(0x53DACE1, char.isShooting() ? 1 : 0, true, true);
+
+    heading = char.getHeading();
+    //Writing the heading to memory for UEVR mod use. To handle car camera.
+    Memory.WriteFloat(0x53DACF1, heading, true, true);
+
+    // if (player.isPlaying() && Pad.IsKeyPressed(KeyCode.T)) {
 
     if (firstPersonCamEnabled && !firstPersonCamInitialized) {
-        if (!Camera.GetFadingStatus() && player.isControlOn() && !char.isInFlyingVehicle() && actualWeapon != 35 && actualWeapon != 36)
+        if (!Camera.GetFadingStatus() && player.isControlOn() && !char.isInFlyingVehicle()) // && actualWeapon != 35 && actualWeapon != 36
             toggleFirstPersonControls(true);
     }
 
     if (!firstPersonCamEnabled && firstPersonCamInitialized) {
         if (!Camera.GetFadingStatus() && player.isControlOn())
             toggleFirstPersonControls(false);
-        else {
-            wait(50);
-        }
+        // else {
+        //     //wait(50);
+        // }
     }
 
     
@@ -301,199 +291,23 @@ while (true) {
             firstPersonCamInitialized = false;
         };
 
-        if (char.isInFlyingVehicle()) {
-            firstPersonCamInitialized = false;
-            Camera.Restore();
-        };
-
-        if (actualWeapon == 35 || actualWeapon == 36){
-            firstPersonCamInitialized = false;
-        }
-            
-
-        if (firstPersonCamEnabled) {
-            // Get the player's heading in degrees
-            let headingDegrees = char.getHeading();
-
-            // Convert heading to radians
-            let headingRadians = headingDegrees * (Math.PI / 180);
-
-            // First-person view offset when on foot
-            let localOffsetX; // No offset along the X-axis
-            let localOffsetY; // Slightly behind the player
-            let localOffsetZ; // Slightly above the player
-
-            if (char.isInAnyCar()) {
-                let speed = char.getCarIsUsing().getSpeed() * 0.015;
-                
-                //send the isInAnyCar state to memory for UEVR mod use
-                Memory.WriteI8(0x53DACCE, 1, true, true);
-                // if(char.isInFlyingVehicle)
-                if (char.isOnAnyBike()) {
-                    if (Pad.IsKeyPressed(KeyCode.NumPad1)) {
-                        bikeLocalOffsetX -= offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetX, configPath, configSection, 'bike_Local_Offset_X');
-                    }
-                    if (Pad.IsKeyPressed(KeyCode.NumPad3)) {
-                        bikeLocalOffsetX += offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetX, configPath, configSection, 'bike_Local_Offset_X');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad5)) {
-                        bikeLocalOffsetY += offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetY, configPath, configSection, 'bike_Local_Offset_Y');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad2)) {
-                        bikeLocalOffsetY -= offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetY, configPath, configSection, 'bike_Local_Offset_Y');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad4)) {
-                        bikeLocalOffsetZ += offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetZ, configPath, configSection, 'bike_Local_Offset_Z');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad0)) {
-                        bikeLocalOffsetZ -= offsetAmount;
-                        IniFile.WriteFloat(bikeLocalOffsetZ, configPath, configSection, 'bike_Local_Offset_Z');
-                    }
+        // if (char.isInFlyingVehicle()) {
+        //     firstPersonCamInitialized = false;
+        //     Camera.Restore();
+        // };            
 
 
-                    // Define the local offsets (relative to the player's orientation)
-                    localOffsetX = bikeLocalOffsetX; // No offset along the X-axis
-                    localOffsetY = bikeLocalOffsetY + speed; // Slightly behind the player
-                    localOffsetZ = bikeLocalOffsetZ; // Slightly above the player
-                }
-                else {
-                    if (Pad.IsKeyPressed(KeyCode.NumPad1)) {
-                        carLocalOffsetX -= offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetX, configPath, configSection, 'car_Local_Offset_X');
-                    }
-                    if (Pad.IsKeyPressed(KeyCode.NumPad3)) {
-                        carLocalOffsetX += offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetX, configPath, configSection, 'car_Local_Offset_X');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad5)) {
-                        carLocalOffsetY += offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetY, configPath, configSection, 'car_Local_Offset_Y');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad2)) {
-                        carLocalOffsetY -= offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetY, configPath, configSection, 'car_Local_Offset_y');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad4)) {
-                        carLocalOffsetZ += offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetZ, configPath, configSection, 'car_Local_Offset_Z');
-                    }
-
-                    if (Pad.IsKeyPressed(KeyCode.NumPad0)) {
-                        carLocalOffsetZ -= offsetAmount;
-                        IniFile.WriteFloat(carLocalOffsetZ, configPath, configSection, 'car_Local_Offset_Z');
-                    }
-
-                    localOffsetX = carLocalOffsetX; // No offset along the X-axis
-                    localOffsetY = carLocalOffsetY + speed; // Slightly behind the player
-                    localOffsetZ = carLocalOffsetZ; // Slightly above the player
-                }
-            }
-            else {
-                Memory.WriteI8(0x53DACCE, 0, true, true);
-                if (Pad.IsKeyPressed(KeyCode.NumPad1)) {
-                    footLocalOffsetX -= offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetX, configPath, configSection, 'foot_Local_Offset_X');
-                }
-                if (Pad.IsKeyPressed(KeyCode.NumPad3)) {
-                    footLocalOffsetX += offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetX, configPath, configSection, 'foot_Local_Offset_X');
-                }
-
-                if (Pad.IsKeyPressed(KeyCode.NumPad5)) {
-                    footLocalOffsetY += offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetY, configPath, configSection, 'foot_Local_Offset_Y');
-                }
-
-                if (Pad.IsKeyPressed(KeyCode.NumPad2)) {
-                    footLocalOffsetY -= offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetY, configPath, configSection, 'foot_Local_Offset_Y');
-                }
-
-                if (Pad.IsKeyPressed(KeyCode.NumPad4)) {
-                    footLocalOffsetZ += offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetZ, configPath, configSection, 'foot_Local_Offset_Z');
-                }
-
-                if (Pad.IsKeyPressed(KeyCode.NumPad0)) {
-                    footLocalOffsetZ -= offsetAmount;
-                    IniFile.WriteFloat(footLocalOffsetZ, configPath, configSection, 'foot_Local_Offset_Z');
-                }
-
-                // First-person view offset when on foot
-                localOffsetX = footLocalOffsetX; // No offset along the X-axis
-                localOffsetY = footLocalOffsetY; // Slightly behind the player
-                localOffsetZ = footLocalOffsetZ; // Slightly above the player
-                // log(char.getHeading());
-            }
-
-            // Convert local offsets to world offsets using the heading
-            actualOffsetX = localOffsetX * Math.cos(headingRadians) - localOffsetY * Math.sin(headingRadians);
-            actualOffsetY = localOffsetX * Math.sin(headingRadians) + localOffsetY * Math.cos(headingRadians);
-            actualOffsetZ = localOffsetZ;
-            //writing camera position to player coordinates.
-            // Memory.WriteFloat(0x53E2674, playerCoords.x + worldOffsetX, true, true);
-            // Memory.WriteFloat(0x53E2678, playerCoords.y + worldOffsetY, true, true);
-            // Memory.WriteFloat(0x53E267C, playerCoords.z + localOffsetZ, true, true); 
-
-
-            //Writing camera position to player coordinates.
-            // Memory.WriteFloat(0x53E2674, playerCoords.x + worldOffsetX, true, true);
-            // Memory.WriteFloat(0x53E2678, playerCoords.y + worldOffsetY, true, true);
-            // Memory.WriteFloat(0x53E267C, playerCoords.z + localOffsetZ, true, true);
-        }
         if (!firstPersonCamInitialized) {
             toggleFirstPersonControls(false);
         }
 
     }
 
-    
-
-    //log(char.isOnAnyBike())
-
-
     function toggleFirstPersonControls(enable) {
         if (enable) {
-            //nop the instructions writing to the camera position
-
-            //VR test
-            Camera.Restore();
-            wait(10);
-            var actualCar;
-            if (!char.isOnFoot()) {
-                log("fps controls activated");
-                actualCar = char.getCarIsUsing()
-                char.warpFromCarToCoord(actualCar.getCoordinates().x, actualCar.getCoordinates().y, actualCar.getCoordinates().z + 5)
-                //Camera.PointAtChar(char, 53, 1);
-                Camera.PointAtChar(char, 53, 1);
-                char.warpIntoCar(actualCar)
-            }
-            else {
-                log("fps controls activated");
-                Camera.PointAtChar(char, 53, 1);
-            }
-            //VR test end
-
-            //Memory.Write(0x11080C6, 7, 0x90, true, true);
             firstPersonCamInitialized = true;
-
         }
         else {
-            //VR test
-            Camera.Restore();
-            //VR test end
             firstPersonCamInitialized = false;
             log("fps controls deactivated");
         }
