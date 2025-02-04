@@ -81,10 +81,13 @@ private:
 	float xAxisSensitivity = 125.0f;
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	float characterHeading = 0.0f;
+	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
+	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
 	float characterHeadingOffset = 0.0f;
 	float previousHeading = 0.0f;
 
 	bool characterIsInCar = false;
+	bool characterWasInCar = false;
 	int equippedWeaponIndex = 0;
 	uevr::API::UObject* playerController;
 	uevr::API::UObject* playerHead;
@@ -130,7 +133,6 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 
-
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
@@ -154,6 +156,7 @@ public:
 			FixWeaponVisibility();
 			PlayerDucking();
 			WeaponRecoil(delta);
+			DetachWeaponWhenDriving();
 		}
 	}
 
@@ -178,6 +181,18 @@ public:
 		weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 	}
 
+	void DetachWeaponWhenDriving()
+	{
+		if (characterIsInCar && !characterWasInCar)
+		{
+			UpdateActualWeaponMesh(false);
+		}
+		if (!characterIsInCar && characterWasInCar)
+		{
+			UpdateActualWeaponMesh(true);
+		}
+	}
+
 	void UpdateCameraMatrix(float delta, bool camResetRequested) {
     // Retrieve the original camera matrix from memory
     glm::mat4 originalMatrix;
@@ -185,70 +200,94 @@ public:
         originalMatrix[i / 4][i % 4] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
     }
 
-    // Camera Matrix Yaw movements ---------------------------------------------------
+    // Camera Matrix rotation ---------------------------------------------------
     UEVR_Vector2f rightJoystick{};
     API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
     characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 
-    // Retrieve the head's forward, up, and right vectors
-    struct {
-        glm::fvec3 ForwardVector;
-    } forwardVector_params;
-
-    struct {
-        glm::fvec3 UpVector;
-    } upVector_params;
-
-    struct {
-        glm::fvec3 RightVector;
-    } rightVector_params;
-
-    playerHead->call_function(L"GetForwardVector", &forwardVector_params);
-    playerHead->call_function(L"GetUpVector", &upVector_params);
-    playerHead->call_function(L"GetRightVector", &rightVector_params);
-
-	API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
-	API::get()->log_info("GetRightVector : x = %f, y = %f, z = %f", rightVector_params.RightVector.x, rightVector_params.RightVector.y, rightVector_params.RightVector.z);
-	API::get()->log_info("GetUpVector : x = %f, y = %f, z = %f", upVector_params.UpVector.x, upVector_params.UpVector.y, upVector_params.UpVector.z);
 
 
-    // Create a full rotation matrix from the head's forward, up, and right vectors
-    glm::mat4 headRotationMatrix = glm::mat4(1.0f);
 
-    headRotationMatrix[0] =  glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y ,-forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
-    headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z , 0.0f); // Right vector
-    headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
+	// Retrieve the head's forward, up, and right vectors
+	struct {
+		glm::fvec3 ForwardVector;
+	} forwardVector_params;
 
-    // Apply joystick input to adjust the local yaw rotation
-    const float DEADZONE = 0.1f;
-    float joystickYaw = 0.0f;
-    if (abs(rightJoystick.x) > DEADZONE) {
-        joystickYaw = rightJoystick.x * delta * xAxisSensitivity;
-    }
+	struct {
+		glm::fvec3 UpVector;
+	} upVector_params;
 
-    // Convert joystick yaw to radians
-    float yawRadians = joystickYaw * (M_PI / 180.0f);
+	struct {
+		glm::fvec3 RightVector;
+	} rightVector_params;
 
-    // Create a yaw rotation matrix for the joystick input
-    glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 1.0f, 0.0f)); // Rotate around the Y-axis
+	playerHead->call_function(L"GetForwardVector", &forwardVector_params);
+	playerHead->call_function(L"GetUpVector", &upVector_params);
+	playerHead->call_function(L"GetRightVector", &rightVector_params);
 
-    // Combine the head rotation matrix with the joystick yaw rotation
-    glm::mat4 finalRotationMatrix = headRotationMatrix * joystickYawRotation;
+	// Create a full rotation matrix from the head's forward, up, and right vectors
+	glm::mat4 headRotationMatrix = glm::mat4(1.0f);
 
-    // Multiply the original matrix by the final rotation matrix
-    glm::mat4 modifiedMatrix = originalMatrix * finalRotationMatrix;
+	headRotationMatrix[0] = characterIsInCar ? glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, -forwardVector_params.ForwardVector.z, 0.0f) :
+												glm::vec4(forwardVector_params.ForwardVector.x, -forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
+	headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z, 0.0f); // Right vector
+	headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
-    // Copy the modified matrix back to cameraMatrixValues
-    for (int i = 0; i < 16; ++i) {
-        cameraMatrixValues[i] = headRotationMatrix[i / 4][i % 4];
-    }
+	API::get()->log_info("ForwardVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[0][0], headRotationMatrix[0][1], headRotationMatrix[0][2]);
+	API::get()->log_info("RightVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[1][0], headRotationMatrix[1][1], headRotationMatrix[1][2]);
+	API::get()->log_info("UpVector matrix : 1 = %f,  2 = %f,  3 = %f ", headRotationMatrix[2][0], headRotationMatrix[2][1], headRotationMatrix[2][2]);
+
+	float joystickYaw = 0.0f;
+
+	if (characterIsInCar && !characterWasInCar)
+	{
+		accumulatedJoystickRotation = glm::mat4(1.0f);
+	}
+	if (!characterIsInCar && characterWasInCar)
+	{
+		camResetRequested = true;
+		baseHeadRotation = headRotationMatrix;
+		joystickYaw += 180.0f;
+	}
+
+	// Calculate the delta rotation matrix. 
+	// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
+	// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
+	glm::mat4 deltaRotationMatrix = characterIsInCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
+
+	// Apply joystick input to adjust the local yaw rotation
+	const float DEADZONE = 0.1f;
+	
+	if (abs(rightJoystick.x) > DEADZONE) {
+		joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
+	}
+
+	// Convert joystick yaw to radians
+	float yawRadians = joystickYaw * (M_PI / 180.0f);
+
+	// Create a yaw rotation matrix for the joystick input
+	glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around the Y-axis
+
+	// Combine the delta rotation with the joystick yaw rotation
+	accumulatedJoystickRotation = accumulatedJoystickRotation * joystickYawRotation;
+
+	// Combine the delta rotation with the joystick yaw rotation
+	glm::mat4 totalDeltaRotation = accumulatedJoystickRotation * deltaRotationMatrix;
+
+	//// Combine the head rotation matrix with the joystick yaw rotation
+	glm::mat4 finalRotationMatrix = accumulatedJoystickRotation * totalDeltaRotation;
+
+	// Copy the modified matrix back to cameraMatrixValues
+	for (int i = 0; i < 16; ++i) {
+		cameraMatrixValues[i] = finalRotationMatrix[i / 4][i % 4];
+	}
 
     // Write the modified matrix back to memory
     for (int i = 0; i < 12; ++i) {
         *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
     }
 
-    // If player loads a save or after a cinematic, reset the camera to the camera heading direction
+    //If player loads a save or after a cinematic, reset the camera to the camera heading direction
     if (camResetRequested) {
         *(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
         *(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
@@ -268,6 +307,7 @@ public:
     *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = socketLocation_params.Location.z * 0.01f;
 
     actualPlayerPositionUE = socketLocation_params.Location;
+	characterWasInCar = characterIsInCar;
 }
 
 	void WeaponRecoil(float delta)
@@ -709,18 +749,18 @@ public:
 		const auto& playerCharacter = children.data[3];
 		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-		UpdateActualWeaponMesh();
+		UpdateActualWeaponMesh(true);
 	}
 
 	void UpdateWeaponMeshOnChange() {
 		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
 		if (equippedWeaponIndex != actualWeaponIndex) {
-			UpdateActualWeaponMesh();
+			UpdateActualWeaponMesh(true);
 			equippedWeaponIndex = actualWeaponIndex;
 		}
 	}
 
-	void UpdateActualWeaponMesh()
+	void UpdateActualWeaponMesh(bool attachWeapon)
 	{
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
@@ -733,12 +773,28 @@ public:
 				break;
 			}
 		}
-		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-		motionState->set_hand(1);
-		motionState->set_permanent(true);
+
+
+		if (attachWeapon)
+		{
+			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+			motionState->set_hand(1);
+			motionState->set_permanent(true);
+		}
+		else //detach weapon when driving vehicles
+		{
+			API::UObject* empty = nullptr;
+			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(empty);
+			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+			motionState->set_hand(1);
+			motionState->set_permanent(true);
+		}
+	
+
+		
 
 		//struct {
 		//	bool absoluteLocation = true;
