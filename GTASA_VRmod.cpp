@@ -8,6 +8,8 @@
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
+#include <vector>
+#include <unordered_map>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -31,6 +33,83 @@ private:
 	uintptr_t baseAddressGameEXE = 0;
 	uintptr_t baseAddressUEVR = 0;
 
+	std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsRotationAddresses = {
+		{0x111DE7E, 7}, {0x111DE85, 1},
+		{0x111DECC, 7}, {0x111DED3, 1},
+		{0x111DED9, 7}, {0x111DEE0, 1},
+		{0x111DE5C, 7}, {0x111DE63, 1}, {0x111DE64, 1},
+		{0x111DE3B, 7}, {0x111DE42, 1},
+		{0x111DE68, 7}, {0x111DE6F, 1},
+		{0x111DE75, 7},	{0x111DE7C, 1},	{0x111DE7D, 1},
+		{0x111DE8F, 7},	{0x111DE96, 1},	{0x111DE97, 1},
+		{0x111DE98, 7},	{0x111DE9F, 1},	{0x111DEA0, 1}
+	};
+
+		std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsPositionAddresses = {
+		{0x111DEA5, 7},	{0x111DEAC, 1},	{0x111DEAD, 1},	{0x111DF57, 7},	{0x111DF5E, 1},
+		{0x111DEB3, 7},	{0x111DEBA, 1},	{0x111DF72, 7},	{0x111DF79, 1},
+		{0x111DEBE, 7},	{0x111DEC5, 1},	{0x111DEC6, 1},	{0x111DF8D, 7},	{0x111DF94, 1},
+	};
+	
+	std::vector<std::pair<uintptr_t, size_t>> ingameCameraPositionInstructionsAddresses = {
+		{0x1109F20, 3},	{0x1109F23, 1},
+		{0x1109F96, 3},	{0x1109F99, 1},
+		{0x110A28E, 3},	{0x110A291, 1},
+		{0x11255AB, 3},	{0x11255AE, 1},
+		{0x11070E2, 3},	{0x11070E5, 1},
+		{0x110A3BD, 3},	{0x110A3C0, 1},
+		{0x11080C6, 7},
+		{0x1109F24, 3},
+		{0x1109FBC, 5},
+		{0x110A252, 5},	{0x110A257, 1},
+		{0x110A2C0, 5},
+		{0x11255B4, 5},
+		{0x11070FF, 5},
+		{0x110A3DD, 5},
+		{0x1108165, 5},	{0x110816A, 1},
+		{0x1109FA4, 5},
+		{0x110A29C, 5},
+		{0x11255B3, 5},
+		{0x11070F0, 5},
+		{0x110A3CB, 5}
+	};
+
+	std::vector<std::pair<uintptr_t, size_t>> aimingVectorInstructionsAddresses = {
+		{0x11090E8, 5},
+		{0xAE0410, 5},
+		{0x1109EA5, 5},
+		{0x1105AAC, 7},	{0x1105AB3, 1},
+		{0x1107E3B, 7},	{0x1107E42, 1},
+		{0x1108E75, 5},
+		{0xAE0406, 5},
+		{0x11090ED, 3},	{0x11090F0, 1},
+		{0xAE040B, 5},
+		{0x1109EAA, 3},	{0x1109EAD, 1},
+		{0x1105AC9, 5},	{0x1105ACE, 1},
+		{0x1107E43, 5},	{0x1107E48, 1},
+		{0x1108E7A, 3},	{0x1108E7D, 1}
+	};
+
+	std::vector<std::pair<uintptr_t, size_t>> rocketLauncherAimingVectorInstructionsAddresses = {
+		{0x110E71D, 5},	{0x110E722, 1},
+		{0x110E70B, 7},	{0x110E712, 1}
+	};
+
+	std::vector<std::pair<uintptr_t, size_t>> sniperAimingVectorInstructionsAddresses = {
+		{0x110E19E, 5},	{0x110E1A3, 1},
+		{0x110E196, 7},	{0x110E19D, 1}
+	};
+
+	std::vector<std::pair<uintptr_t, size_t>> carAimingVectorInstructionsAddresses = {
+		{0x110BB78, 3},	{0x110BB7B, 1},
+		{0x110C5A4, 3},	{0x110C5A7, 1},
+		{0x110C59E, 5},	{0x110C5A3, 1},
+		{0x110BB68, 5},	{0x110BB6D, 1}
+	};
+
+	bool instructionNoped = false;
+
+
 	uintptr_t cameraMatrixAddresses[16] = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -45,13 +124,14 @@ private:
 	{
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
-	uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
-	std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
-	uintptr_t gunFlashSocketPositionAddresses[3] = {};
-	uintptr_t gunFlashSocketRotationAddresses[3] = {};
-	uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
-	std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
-	uintptr_t cameraYoffsetAddressUEVR = 0;
+
+	//uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
+	//std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
+	//uintptr_t gunFlashSocketPositionAddresses[3] = {};
+	//uintptr_t gunFlashSocketRotationAddresses[3] = {};
+	//uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
+	//std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
+	//uintptr_t cameraYoffsetAddressUEVR = 0;
 
 
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
@@ -125,20 +205,63 @@ public:
 		API::get()->log_info("%s", "VR cpp mod initializing");
 		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
 		baseAddressUEVR = GetModuleBaseAddress(TEXT("UEVRBackend.dll"));
-		cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
+		//cameraYoffsetAddressUEVR = FindDMAAddy(baseAddressUEVR + baseCameraYoffsetAddressUEVR, cameraY_UEVROffsets);
 		AdjustAddresses();
-		ResolveGunFlashSocketMemoryAddresses();
+		//ResolveGunFlashSocketMemoryAddresses();
 		FetchRequiredUObjects();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
+				
 
 		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
 		characterIsGettingInACar = *(reinterpret_cast<int*>(characterIsGettingInACarAddress)) > 0;
 		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
+
+		
+		if (GetAsyncKeyState(VK_NUMPAD0) && !instructionNoped)
+		{
+			NopMemory(matrixInstructionsRotationAddresses);
+			NopMemory(matrixInstructionsPositionAddresses);
+			NopMemory(ingameCameraPositionInstructionsAddresses);
+			NopMemory(aimingVectorInstructionsAddresses);
+			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			NopMemory(sniperAimingVectorInstructionsAddresses);
+			NopMemory(carAimingVectorInstructionsAddresses);
+			instructionNoped = true;
+		}
+		if (GetAsyncKeyState(VK_NUMPAD1) && instructionNoped)
+		{
+			RestoreMemory(matrixInstructionsRotationAddresses);
+			RestoreMemory(matrixInstructionsPositionAddresses);
+			RestoreMemory(ingameCameraPositionInstructionsAddresses);
+			RestoreMemory(aimingVectorInstructionsAddresses);
+			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			RestoreMemory(sniperAimingVectorInstructionsAddresses);
+			RestoreMemory(carAimingVectorInstructionsAddresses);
+			instructionNoped = false;
+		}
+
+		if (characterIsInCar && !characterWasInCar)
+		{
+			RestoreMemory(matrixInstructionsRotationAddresses);
+			RestoreMemory(matrixInstructionsPositionAddresses);
+			RestoreMemory(ingameCameraPositionInstructionsAddresses);
+			RestoreMemory(aimingVectorInstructionsAddresses);
+			RestoreMemory(carAimingVectorInstructionsAddresses);
+		}
+
+		if (!characterIsInCar && characterWasInCar)
+		{
+			NopMemory(matrixInstructionsRotationAddresses);
+			NopMemory(matrixInstructionsPositionAddresses);
+			NopMemory(ingameCameraPositionInstructionsAddresses);
+			NopMemory(aimingVectorInstructionsAddresses);
+			NopMemory(carAimingVectorInstructionsAddresses);
+		}
 
 		if (fpsCamInitialized && !fpsCamWasInitialized)
 		{
@@ -153,9 +276,14 @@ public:
 
 		if (fpsCamInitialized && !weaponWheelOpen)
 		{
-			UpdateCameraMatrix(delta, camResetRequested);
+			if (!characterIsInCar)
+			{
+				UpdateCameraMatrix(delta, camResetRequested);
+				UpdateAimingVectors();
+			}
+			
 			UpdateWeaponMeshOnChange();
-			UpdateAimingVectors();
+			
 			FixWeaponVisibility();
 			WeaponHandling(delta);
 			PlayerDucking();
@@ -166,7 +294,6 @@ public:
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		// Matrix camera position
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
@@ -186,114 +313,114 @@ public:
 	}
 
 	void UpdateCameraMatrix(float delta, bool camResetRequested) {
-    // Retrieve the original camera matrix from memory
-    glm::mat4 originalMatrix;
-    for (int i = 0; i < 16; ++i) {
-        originalMatrix[i / 4][i % 4] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
-    }
+		// Retrieve the original camera matrix from memory
+		//glm::mat4 originalMatrix;
+		//for (int i = 0; i < 16; ++i) {
+		//    originalMatrix[i / 4][i % 4] = *(reinterpret_cast<float*>(cameraMatrixAddresses[i]));
+		//}
+		
+			// Retrieve the head's forward, up, and right vectors
+		struct {
+			glm::fvec3 ForwardVector;
+		} forwardVector_params;
 
-    // Camera Matrix rotation ---------------------------------------------------
-    UEVR_Vector2f rightJoystick{};
-    API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
+		struct {
+			glm::fvec3 UpVector;
+		} upVector_params;
 
-	// Retrieve the head's forward, up, and right vectors
-	struct {
-		glm::fvec3 ForwardVector;
-	} forwardVector_params;
+		struct {
+			glm::fvec3 RightVector;
+		} rightVector_params;
 
-	struct {
-		glm::fvec3 UpVector;
-	} upVector_params;
+		playerHead->call_function(L"GetForwardVector", &forwardVector_params);
+		playerHead->call_function(L"GetUpVector", &upVector_params);
+		playerHead->call_function(L"GetRightVector", &rightVector_params);
 
-	struct {
-		glm::fvec3 RightVector;
-	} rightVector_params;
 
-	playerHead->call_function(L"GetForwardVector", &forwardVector_params);
-	playerHead->call_function(L"GetUpVector", &upVector_params);
-	playerHead->call_function(L"GetRightVector", &rightVector_params);
+		// Camera Matrix rotation ---------------------------------------------------
+		UEVR_Vector2f rightJoystick{};
+		API::get()->param()->vr->get_joystick_axis(API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
 
-	// Create a full rotation matrix from the head's forward, up, and right vectors
-	glm::mat4 headRotationMatrix = glm::mat4(1.0f);
+		// Create a full rotation matrix from the head's forward, up, and right vectors
+		glm::mat4 headRotationMatrix = glm::mat4(1.0f);
 
-	headRotationMatrix[0] = characterIsInCar ? glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, -forwardVector_params.ForwardVector.z, 0.0f) :
-												glm::vec4(forwardVector_params.ForwardVector.x, -forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
-	headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z, 0.0f); // Right vector
-	headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
+		headRotationMatrix[0] = characterIsInCar ? glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, -forwardVector_params.ForwardVector.z, 0.0f) :
+			glm::vec4(forwardVector_params.ForwardVector.x, -forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
+		headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z, 0.0f); // Right vector
+		headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
-	float joystickYaw = 0.0f;
+		float joystickYaw = 0.0f;
 
-	if (characterIsInCar && !characterWasInCar)
-	{
-		accumulatedJoystickRotation = glm::mat4(1.0f);
+		if (characterIsInCar && !characterWasInCar)
+		{
+			accumulatedJoystickRotation = glm::mat4(1.0f);
+		}
+		if ((!characterIsInCar && characterWasInCar) || (!characterIsInCar && camResetRequested))
+		{
+			camResetRequested = true;
+			baseHeadRotation = headRotationMatrix;
+		}
+
+		// Calculate the delta rotation matrix. 
+		// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
+		// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
+		glm::mat4 deltaRotationMatrix = characterIsInCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
+
+		// Apply joystick input to adjust the local yaw rotation
+		const float DEADZONE = 0.1f;
+		joystickYaw = /*camResetRequested ? 180.0f : */0.0f;
+		if (abs(rightJoystick.x) > DEADZONE) {
+			joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
+		}
+
+		// Convert joystick yaw to radians
+		float yawRadians = joystickYaw * (M_PI / 180.0f);
+
+		// Create a yaw rotation matrix for the joystick input
+		glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around the Y-axis
+
+		// Combine the delta rotation with the joystick yaw rotation
+		accumulatedJoystickRotation = accumulatedJoystickRotation * joystickYawRotation;
+
+		// Combine the delta rotation with the joystick yaw rotation
+		glm::mat4 totalDeltaRotation = accumulatedJoystickRotation * deltaRotationMatrix;
+
+		//// Combine the head rotation matrix with the joystick yaw rotation
+		glm::mat4 finalRotationMatrix = accumulatedJoystickRotation * totalDeltaRotation;
+
+		// Copy the modified matrix back to cameraMatrixValues
+		for (int i = 0; i < 16; ++i) {
+			cameraMatrixValues[i] = finalRotationMatrix[i / 4][i % 4];
+		}
+
+		// Write the modified matrix back to memory
+		for (int i = 0; i < 12; ++i) {
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
+		}
+
+		//If player loads a save or after a cinematic, reset the camera to the camera heading direction
+		if (camResetRequested) {
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
+			*(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
+		}
+
+		// Update the camera position based on the head's socket location
+		struct {
+			API::FName InSocketName = API::FName(L"head");
+			glm::fvec3 Location;
+		} socketLocation_params;
+
+		playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
+
+		//fix audio listener unaligned with original game
+		glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
+
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
+		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
+		actualPlayerPositionUE = socketLocation_params.Location;
 	}
-	if ((!characterIsInCar && characterWasInCar) || (!characterIsInCar && camResetRequested))
-	{
-		camResetRequested = true;
-		baseHeadRotation = headRotationMatrix;
-	}
-
-	// Calculate the delta rotation matrix. 
-	// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
-	// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
-	glm::mat4 deltaRotationMatrix = characterIsInCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
-
-	// Apply joystick input to adjust the local yaw rotation
-	const float DEADZONE = 0.1f;
-	joystickYaw = camResetRequested ? 180.0f : 0.0f;
-	if (abs(rightJoystick.x) > DEADZONE) {
-		joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
-	}
-
-	// Convert joystick yaw to radians
-	float yawRadians = joystickYaw * (M_PI / 180.0f);
-
-	// Create a yaw rotation matrix for the joystick input
-	glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around the Y-axis
-
-	// Combine the delta rotation with the joystick yaw rotation
-	accumulatedJoystickRotation = accumulatedJoystickRotation * joystickYawRotation;
-
-	// Combine the delta rotation with the joystick yaw rotation
-	glm::mat4 totalDeltaRotation = accumulatedJoystickRotation * deltaRotationMatrix;
-
-	//// Combine the head rotation matrix with the joystick yaw rotation
-	glm::mat4 finalRotationMatrix = accumulatedJoystickRotation * totalDeltaRotation;
-
-	// Copy the modified matrix back to cameraMatrixValues
-	for (int i = 0; i < 16; ++i) {
-		cameraMatrixValues[i] = finalRotationMatrix[i / 4][i % 4];
-	}
-
-    // Write the modified matrix back to memory
-    for (int i = 0; i < 12; ++i) {
-        *(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
-    }
-
-    //If player loads a save or after a cinematic, reset the camera to the camera heading direction
-    if (camResetRequested) {
-        *(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
-        *(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
-        *(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
-    }
-
-    // Update the camera position based on the head's socket location
-    struct {
-        API::FName InSocketName = API::FName(L"head");
-        glm::fvec3 Location;
-    } socketLocation_params;
-
-    playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
-
-	//fix audio listener unaligned with original game
-	glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector,rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
-
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
-    *(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
-
-    actualPlayerPositionUE = socketLocation_params.Location;
-}
 
 	void WeaponHandling(float delta)
 	{
@@ -722,15 +849,32 @@ public:
 				aimingDirection = forwardVector_params.ForwardVector;
 			}
 
-			// Apply new values to memory
-			*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
-			*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
 
 
-			*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
-			*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
-			*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
+			//if (characterIsInCar)
+			//{
+			//						// Apply new values to memory
+			//	*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
+			//	*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -actualPlayerPositionUE.y * 0.01f;;
+			//	*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = actualPlayerPositionUE.z * 0.01f;;
+
+
+			//	//forward vector
+			//	*(reinterpret_cast<float*>(aimVectorAddresses[0])) = cameraMatrixValues[4];
+			//	*(reinterpret_cast<float*>(aimVectorAddresses[1])) = cameraMatrixValues[5];
+			//	*(reinterpret_cast<float*>(aimVectorAddresses[2])) = cameraMatrixValues[6];
+			//}
+			//else
+			//{
+							// Apply new values to memory
+				*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
+				*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
+				*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
+
+				*(reinterpret_cast<float*>(aimVectorAddresses[0])) = aimingDirection.x;
+				*(reinterpret_cast<float*>(aimVectorAddresses[1])) = -aimingDirection.y;
+				*(reinterpret_cast<float*>(aimVectorAddresses[2])) = aimingDirection.z;
+			//}
 		}
 		else
 		{
@@ -806,6 +950,14 @@ public:
 	}
 
 	void AdjustAddresses() {
+		for (auto& [address, size] : matrixInstructionsRotationAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : matrixInstructionsPositionAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : ingameCameraPositionInstructionsAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : aimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : rocketLauncherAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : sniperAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
+		for (auto& [address, size] : carAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
+
 		for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
 		for (auto& address : aimVectorAddresses) address += baseAddressGameEXE;
 		for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
@@ -825,16 +977,61 @@ public:
 
 	}
 
-	void ResolveGunFlashSocketMemoryAddresses()
-	{
-		gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddressGameEXE + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
-		gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
-		gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
+	//void ResolveGunFlashSocketMemoryAddresses()
+	//{
+	//	gunFlashSocketRotationAddresses[0] = FindDMAAddy(baseAddressGameEXE + baseGunFlashSocketRotationAddress, gunFlashSocketOffsets);
+	//	gunFlashSocketRotationAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x4;
+	//	gunFlashSocketRotationAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x8;
 
-		gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
-		gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
-		gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
+	//	gunFlashSocketPositionAddresses[0] = gunFlashSocketRotationAddresses[0] + 0x40;
+	//	gunFlashSocketPositionAddresses[1] = gunFlashSocketRotationAddresses[0] + 0x44;
+	//	gunFlashSocketPositionAddresses[2] = gunFlashSocketRotationAddresses[0] + 0x48;
+	//}
+
+	// Structure to store original bytes and their addresses
+	struct OriginalByte {
+		uintptr_t address;
+		uint8_t value;
+	};
+
+	// Map to store original bytes for each address
+	std::unordered_map<uintptr_t, OriginalByte> originalBytes;
+
+	// Function to NOP a batch of addresses
+	void NopMemory(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
+		for (const auto& [address, size] : addresses) {
+			DWORD oldProtect;
+			VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+			for (size_t i = 0; i < size; ++i) {
+				uintptr_t currentAddr = address + i;
+				if (originalBytes.find(currentAddr) == originalBytes.end()) { // Avoid overwriting stored bytes
+					originalBytes[currentAddr] = { currentAddr, *reinterpret_cast<uint8_t*>(currentAddr) };
+				}
+				*reinterpret_cast<uint8_t*>(currentAddr) = 0x90; // Write NOP
+			}
+
+			VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
+		}
 	}
+
+	// Function to restore original bytes for a batch of addresses
+	void RestoreMemory(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
+		for (const auto& [address, size] : addresses) {
+			DWORD oldProtect;
+			VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+			for (size_t i = 0; i < size; ++i) {
+				uintptr_t currentAddr = address + i;
+				if (originalBytes.find(currentAddr) != originalBytes.end()) {
+					*reinterpret_cast<uint8_t*>(currentAddr) = originalBytes[currentAddr].value; // Restore original byte
+				}
+			}
+
+			VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
+		}
+	}
+
 
 	struct FQuat {
 		float x;
