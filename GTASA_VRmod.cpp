@@ -354,9 +354,9 @@ public:
 		// Create a full rotation matrix from the head's forward, up, and right vectors
 		glm::mat4 headRotationMatrix = glm::mat4(1.0f);
 
-		headRotationMatrix[0] = characterIsInCar ? glm::vec4(forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, -forwardVector_params.ForwardVector.z, 0.0f) :
+		headRotationMatrix[0] = characterIsInCar ? glm::vec4(-forwardVector_params.ForwardVector.x, forwardVector_params.ForwardVector.y, -forwardVector_params.ForwardVector.z, 0.0f) :
 			glm::vec4(forwardVector_params.ForwardVector.x, -forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z, 0.0f); // Negated forward vector
-		headRotationMatrix[1] = glm::vec4(rightVector_params.RightVector.x, -rightVector_params.RightVector.y, rightVector_params.RightVector.z, 0.0f); // Right vector
+		headRotationMatrix[1] = glm::vec4(-rightVector_params.RightVector.x, rightVector_params.RightVector.y, -rightVector_params.RightVector.z, 0.0f); // Right vector
 		headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
 		float joystickYaw = 0.0f;
