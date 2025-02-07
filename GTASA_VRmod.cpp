@@ -209,7 +209,6 @@ public:
 		API::get()->log_info("%s", "VR cpp mod initializing");
 		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
 		AdjustAddresses();
-		FetchRequiredUObjects();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
