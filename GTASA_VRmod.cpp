@@ -806,6 +806,11 @@ public:
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[0])) = cameraMatrixValues[4];
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
+
+				//forward vector
+				*(reinterpret_cast<float*>(aimUpVectorAddresses[0])) = cameraMatrixValues[8];
+				*(reinterpret_cast<float*>(aimUpVectorAddresses[1])) = cameraMatrixValues[9];
+				*(reinterpret_cast<float*>(aimUpVectorAddresses[2])) = cameraMatrixValues[10];
 			}
 			else
 			{
