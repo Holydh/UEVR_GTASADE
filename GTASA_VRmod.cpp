@@ -138,15 +138,6 @@ private:
 		0x53E2674, 0x53E2678, 0x53E267C
 	};
 
-	//uintptr_t baseGunFlashSocketRotationAddress = 0x53EB720;
-	//std::vector<unsigned int> gunFlashSocketOffsets = { 0x5E0, 0xF0, 0x0, 0x700, 0x1A0, 0x10, 0x190 };
-	//uintptr_t gunFlashSocketPositionAddresses[3] = {};
-	//uintptr_t gunFlashSocketRotationAddresses[3] = {};
-	//uintptr_t baseCameraYoffsetAddressUEVR = 0x08D9E00;
-	//std::vector<unsigned int> cameraY_UEVROffsets = { 0x330, 0x8, 0x20, 0x150, 0x0, 0x390, 0x48 };
-	//uintptr_t cameraYoffsetAddressUEVR = 0;
-
-
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
 
 	//borrowed empty addresses
@@ -381,34 +372,6 @@ public:
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
 		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
 		actualPlayerPositionUE = socketLocation_params.Location;
-	}
-
-	void ToggleOriginalMemoryInstructions(bool nopInstructions)
-	{
-		if (nopInstructions && !instructionsNoped)
-		{
-			NopMemory(matrixInstructionsRotationAddresses);
-			NopMemory(matrixInstructionsPositionAddresses);
-			NopMemory(ingameCameraPositionInstructionsAddresses);
-			NopMemory(aimingForwardVectorInstructionsAddresses);
-			NopMemory(aimingUpVectorInstructionsAddresses);
-			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			NopMemory(sniperAimingVectorInstructionsAddresses);
-			NopMemory(carAimingVectorInstructionsAddresses);
-			instructionsNoped = true;
-		}
-		if (!nopInstructions && instructionsNoped)
-		{
-			RestoreMemory(matrixInstructionsRotationAddresses);
-			RestoreMemory(matrixInstructionsPositionAddresses);
-			RestoreMemory(ingameCameraPositionInstructionsAddresses);
-			RestoreMemory(aimingForwardVectorInstructionsAddresses);
-			RestoreMemory(aimingUpVectorInstructionsAddresses);
-			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			RestoreMemory(sniperAimingVectorInstructionsAddresses);
-			RestoreMemory(carAimingVectorInstructionsAddresses);
-			instructionsNoped = false;
-		}
 	}
 
 	void WeaponHandling(float delta)
@@ -907,6 +870,34 @@ public:
 		if (characterIsGettingInACar || characterIsInCar)
 		{
 			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+		}
+	}
+
+	void ToggleOriginalMemoryInstructions(bool nopInstructions)
+	{
+		if (nopInstructions && !instructionsNoped)
+		{
+			NopMemory(matrixInstructionsRotationAddresses);
+			NopMemory(matrixInstructionsPositionAddresses);
+			NopMemory(ingameCameraPositionInstructionsAddresses);
+			NopMemory(aimingForwardVectorInstructionsAddresses);
+			NopMemory(aimingUpVectorInstructionsAddresses);
+			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			NopMemory(sniperAimingVectorInstructionsAddresses);
+			NopMemory(carAimingVectorInstructionsAddresses);
+			instructionsNoped = true;
+		}
+		if (!nopInstructions && instructionsNoped)
+		{
+			RestoreMemory(matrixInstructionsRotationAddresses);
+			RestoreMemory(matrixInstructionsPositionAddresses);
+			RestoreMemory(ingameCameraPositionInstructionsAddresses);
+			RestoreMemory(aimingForwardVectorInstructionsAddresses);
+			RestoreMemory(aimingUpVectorInstructionsAddresses);
+			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			RestoreMemory(sniperAimingVectorInstructionsAddresses);
+			RestoreMemory(carAimingVectorInstructionsAddresses);
+			instructionsNoped = false;
 		}
 	}
 
