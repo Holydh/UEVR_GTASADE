@@ -44,7 +44,7 @@ private:
 		{0x111DE98, 7},	{0x111DE9F, 1},	{0x111DEA0, 1}
 	};
 
-		std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsPositionAddresses = {
+	std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsPositionAddresses = {
 		{0x111DEA5, 7},	{0x111DEAC, 1},	{0x111DEAD, 1},	{0x111DF57, 7},	{0x111DF5E, 1},
 		{0x111DEB3, 7},	{0x111DEBA, 1},	{0x111DF72, 7},	{0x111DF79, 1},
 		{0x111DEBE, 7},	{0x111DEC5, 1},	{0x111DEC6, 1},	{0x111DF8D, 7},	{0x111DF94, 1},
@@ -114,8 +114,6 @@ private:
 		{0x110CE81, 3},
 		{0x110CE7A, 3}, {0x110CE7D, 1}
 	};
-
-	bool instructionsNoped = false;
 
 
 	uintptr_t cameraMatrixAddresses[16] = {
@@ -209,6 +207,7 @@ public:
 		API::get()->log_info("%s", "VR cpp mod initializing");
 		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
 		AdjustAddresses();
+		StoreOriginalMemoryInstructions();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -239,33 +238,24 @@ public:
 
 		if (characterIsInCar && !characterWasInCar)
 		{
-			API::get()->log_info("Getting in : characterIsInCar = %i", characterIsInCar);
-			API::get()->log_info("characterWasInCar = %i", characterWasInCar);
-			//RestoreMemory(matrixInstructionsRotationAddresses);
 			RestoreMemory(matrixInstructionsPositionAddresses);
 			RestoreMemory(ingameCameraPositionInstructionsAddresses);
 			RestoreMemory(aimingForwardVectorInstructionsAddresses);
 			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			RestoreMemory(sniperAimingVectorInstructionsAddresses);
-			//RestoreMemory(carAimingVectorInstructionsAddresses);
 		}
 
 		if (!characterIsInCar && characterWasInCar)
 		{
-			API::get()->log_info("Getting out : characterIsInCar = %i", characterIsInCar);
-			API::get()->log_info("characterWasInCar = %i", characterWasInCar);
-			//NopMemory(matrixInstructionsRotationAddresses);
 			NopMemory(matrixInstructionsPositionAddresses);
 			NopMemory(ingameCameraPositionInstructionsAddresses);
 			NopMemory(aimingForwardVectorInstructionsAddresses);
 			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			NopMemory(sniperAimingVectorInstructionsAddresses);
-			//NopMemory(carAimingVectorInstructionsAddresses);
 		}
 
 		if (fpsCamInitialized && !weaponWheelOpen)
 		{
-
 			UpdateCameraMatrix(delta, camResetRequested);
 			UpdateAimingVectors();
 			UpdateWeaponMeshOnChange();
@@ -346,7 +336,7 @@ public:
 
 		// Apply joystick input to adjust the local yaw rotation
 		const float DEADZONE = 0.1f;
-		joystickYaw = camResetRequested ? 180.0f : 0.0f;
+		joystickYaw = 0.0f;
 		if (abs(rightJoystick.x) > DEADZONE) {
 			joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
 		}
@@ -678,7 +668,7 @@ public:
 				break;
 			case 30: //AK47
 				point1Offsets = { 3.8416 , -2.83908, 14.3539 };
-				point2Offsets = { 36.3719, 0.193737, 16.1544 };
+				point2Offsets = { 36.3719, 0.193737-0.2, 16.1544 -0.2 };
 				break;
 			case 31: // M4
 				point1Offsets = { 5.85945 , -1.78476 , 15.1271 };
@@ -904,31 +894,38 @@ public:
 		}
 	}
 
+	void StoreOriginalMemoryInstructions()
+	{
+		StoreOriginalBytes(matrixInstructionsRotationAddresses);
+		StoreOriginalBytes(matrixInstructionsPositionAddresses);
+		StoreOriginalBytes(ingameCameraPositionInstructionsAddresses);
+		StoreOriginalBytes(aimingForwardVectorInstructionsAddresses);
+		StoreOriginalBytes(rocketLauncherAimingVectorInstructionsAddresses);
+		StoreOriginalBytes(sniperAimingVectorInstructionsAddresses);
+		StoreOriginalBytes(carAimingVectorInstructionsAddresses);
+	}
+
 	void ToggleOriginalMemoryInstructions(bool restoreInstructions)
 	{
-		if (!restoreInstructions && !instructionsNoped)
+		if (!restoreInstructions)
 		{
 			NopMemory(matrixInstructionsRotationAddresses);
 			NopMemory(matrixInstructionsPositionAddresses);
 			NopMemory(ingameCameraPositionInstructionsAddresses);
 			NopMemory(aimingForwardVectorInstructionsAddresses);
-			//NopMemory(aimingUpVectorInstructionsAddresses);
 			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			NopMemory(sniperAimingVectorInstructionsAddresses);
 			NopMemory(carAimingVectorInstructionsAddresses);
-			instructionsNoped = true;
 		}
-		if (restoreInstructions && instructionsNoped)
+		if (restoreInstructions)
 		{
 			RestoreMemory(matrixInstructionsRotationAddresses);
 			RestoreMemory(matrixInstructionsPositionAddresses);
 			RestoreMemory(ingameCameraPositionInstructionsAddresses);
 			RestoreMemory(aimingForwardVectorInstructionsAddresses);
-			//RestoreMemory(aimingUpVectorInstructionsAddresses);
 			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			RestoreMemory(sniperAimingVectorInstructionsAddresses);
 			RestoreMemory(carAimingVectorInstructionsAddresses);
-			instructionsNoped = false;
 		}
 	}
 
@@ -999,9 +996,6 @@ public:
 
 			for (size_t i = 0; i < size; ++i) {
 				uintptr_t currentAddr = address + i;
-				if (originalBytes.find(currentAddr) == originalBytes.end()) { // Avoid overwriting stored bytes
-					originalBytes[currentAddr] = { currentAddr, *reinterpret_cast<uint8_t*>(currentAddr) };
-				}
 				*reinterpret_cast<uint8_t*>(currentAddr) = 0x90; // Write NOP
 			}
 
@@ -1025,6 +1019,22 @@ public:
 			VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
 		}
 	}
+
+	void StoreOriginalBytes(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
+    for (const auto& [address, size] : addresses) {
+        DWORD oldProtect;
+        VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+        for (size_t i = 0; i < size; ++i) {
+            uintptr_t currentAddr = address + i;
+            if (originalBytes.find(currentAddr) == originalBytes.end()) { // Avoid overwriting stored bytes
+                originalBytes[currentAddr] =  { currentAddr, *reinterpret_cast<uint8_t*>(currentAddr) };
+            }
+        }
+
+        VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
+    }
+}
 
 
 	struct FQuat {
