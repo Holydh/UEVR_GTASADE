@@ -215,25 +215,52 @@ public:
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		FetchRequiredUObjects();		
 
-		bool fpsCamInitialized = *(reinterpret_cast<int*>(fpsCamInitializedAddress)) > 0;
+		bool fpsCamInitialized = *(reinterpret_cast<byte*>(fpsCamInitializedAddress)) > 0;
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
-		characterIsGettingInACar = *(reinterpret_cast<int*>(characterIsGettingInACarAddress)) > 0;
-		characterIsInCar = *(reinterpret_cast<int*>(characterIsInCarAddress)) > 0;
+		characterIsGettingInACar = *(reinterpret_cast<byte*>(characterIsGettingInACarAddress)) > 0;
+		characterIsInCar = *(reinterpret_cast<byte*>(characterIsInCarAddress)) > 0;
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
 		if (fpsCamInitialized && !fpsCamWasInitialized)
 		{
 			camResetRequested = characterIsInCar ? false: true;
 			FetchRequiredUObjects();
-			ToggleOriginalMemoryInstructions(true);
+			ToggleOriginalMemoryInstructions(false);
 			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
 		}
 		else
 			camResetRequested = false;
-		
+		//
 		if (!fpsCamInitialized && fpsCamWasInitialized)
 		{
-			ToggleOriginalMemoryInstructions(false);
+			ToggleOriginalMemoryInstructions(true);
+			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
+		}
+
+		if (characterIsInCar && !characterWasInCar)
+		{
+			API::get()->log_info("Getting in : characterIsInCar = %i", characterIsInCar);
+			API::get()->log_info("characterWasInCar = %i", characterWasInCar);
+			//RestoreMemory(matrixInstructionsRotationAddresses);
+			RestoreMemory(matrixInstructionsPositionAddresses);
+			RestoreMemory(ingameCameraPositionInstructionsAddresses);
+			RestoreMemory(aimingForwardVectorInstructionsAddresses);
+			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			RestoreMemory(sniperAimingVectorInstructionsAddresses);
+			//RestoreMemory(carAimingVectorInstructionsAddresses);
+		}
+
+		if (!characterIsInCar && characterWasInCar)
+		{
+			API::get()->log_info("Getting out : characterIsInCar = %i", characterIsInCar);
+			API::get()->log_info("characterWasInCar = %i", characterWasInCar);
+			//NopMemory(matrixInstructionsRotationAddresses);
+			NopMemory(matrixInstructionsPositionAddresses);
+			NopMemory(ingameCameraPositionInstructionsAddresses);
+			NopMemory(aimingForwardVectorInstructionsAddresses);
+			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
+			NopMemory(sniperAimingVectorInstructionsAddresses);
+			//NopMemory(carAimingVectorInstructionsAddresses);
 		}
 
 		if (fpsCamInitialized && !weaponWheelOpen)
@@ -796,21 +823,21 @@ public:
 
 			if (characterIsInCar)
 			{
-				// Apply new values to memory
-				*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
-				*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -actualPlayerPositionUE.y * 0.01f;;
-				*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = actualPlayerPositionUE.z * 0.01f;;
+				// Apply new values to memory - This messes up the aiming vector
+				//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
+				//*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -actualPlayerPositionUE.y * 0.01f;;
+				//*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = actualPlayerPositionUE.z * 0.01f;;
 
 
-				//forward vector
+				////forward vector
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[0])) = cameraMatrixValues[4];
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
 				*(reinterpret_cast<float*>(aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
 
-				//forward vector
-				*(reinterpret_cast<float*>(aimUpVectorAddresses[0])) = cameraMatrixValues[8];
-				*(reinterpret_cast<float*>(aimUpVectorAddresses[1])) = cameraMatrixValues[9];
-				*(reinterpret_cast<float*>(aimUpVectorAddresses[2])) = cameraMatrixValues[10];
+				////forward vector
+				//*(reinterpret_cast<float*>(aimUpVectorAddresses[0])) = cameraMatrixValues[8];
+				//*(reinterpret_cast<float*>(aimUpVectorAddresses[1])) = cameraMatrixValues[9];
+				//*(reinterpret_cast<float*>(aimUpVectorAddresses[2])) = cameraMatrixValues[10];
 			}
 			else
 			{
@@ -877,27 +904,27 @@ public:
 		}
 	}
 
-	void ToggleOriginalMemoryInstructions(bool nopInstructions)
+	void ToggleOriginalMemoryInstructions(bool restoreInstructions)
 	{
-		if (nopInstructions && !instructionsNoped)
+		if (!restoreInstructions && !instructionsNoped)
 		{
 			NopMemory(matrixInstructionsRotationAddresses);
 			NopMemory(matrixInstructionsPositionAddresses);
 			NopMemory(ingameCameraPositionInstructionsAddresses);
 			NopMemory(aimingForwardVectorInstructionsAddresses);
-			NopMemory(aimingUpVectorInstructionsAddresses);
+			//NopMemory(aimingUpVectorInstructionsAddresses);
 			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			NopMemory(sniperAimingVectorInstructionsAddresses);
 			NopMemory(carAimingVectorInstructionsAddresses);
 			instructionsNoped = true;
 		}
-		if (!nopInstructions && instructionsNoped)
+		if (restoreInstructions && instructionsNoped)
 		{
 			RestoreMemory(matrixInstructionsRotationAddresses);
 			RestoreMemory(matrixInstructionsPositionAddresses);
 			RestoreMemory(ingameCameraPositionInstructionsAddresses);
 			RestoreMemory(aimingForwardVectorInstructionsAddresses);
-			RestoreMemory(aimingUpVectorInstructionsAddresses);
+			//RestoreMemory(aimingUpVectorInstructionsAddresses);
 			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 			RestoreMemory(sniperAimingVectorInstructionsAddresses);
 			RestoreMemory(carAimingVectorInstructionsAddresses);
