@@ -651,7 +651,7 @@ public:
 				//case 18: // Molotov
 			case 22: //Pistol colt 45
 				point1Offsets = { 2.82819, -2.52103, 9.92684 };
-				point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				point2Offsets = { 21.7272, -3.89487, 12.9088 +0.2 };
 				break;
 			case 23: // PistolSilenced
 				point1Offsets = { 2.80735, -2.52308, 9.9193 };
@@ -675,11 +675,11 @@ public:
 				break;
 			case 28: // MicroUzi
 				point1Offsets = { -0.267532, -2.19868 , 10.2951 };
-				point2Offsets = { 12.9468 , -0.996034, 11.293 };
+				point2Offsets = { 12.9468 , -0.996034+0.4, 11.293+0.9 };
 				break;
 			case 29: // Mp5
 				point1Offsets = { 6.8924, -1.74509 , 19.3761 };
-				point2Offsets = { 21.3778 , 0.000536, 21.2535 };
+				point2Offsets = { 21.3778 , 0.000536+0.2, 21.2535+1 };
 				break;
 			case 30: //AK47
 				point1Offsets = { 3.8416 , -2.83908, 14.3539 };
@@ -691,7 +691,7 @@ public:
 				break;
 			case 32: // Tec9
 				point1Offsets = { 1.1631 , -3.60654, 11.7162 };
-				point2Offsets = { 24.9241 , -3.60654, 13.9038 - 1.5 };
+				point2Offsets = { 24.9241 , -3.60654, 13.9038 - 1 };
 				break;
 			case 33: //Rifle cuntgun
 				point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
@@ -715,7 +715,7 @@ public:
 				break;
 			case 38: // Minigun
 				point1Offsets = { 48.1025 , -2.9978 , 14.3878 };
-				point2Offsets = { 86.6453 , 0.429413 , 35.9644 };
+				point2Offsets = { 86.6453 , 0.429413 -0.5 , 35.9644 - 0.5 };
 				break;
 				//case 39: // Satchel
 				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
