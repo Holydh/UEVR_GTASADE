@@ -8,14 +8,15 @@
 #include "uevr/Plugin.hpp"
 #include <windows.h>
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <vector>
 #include <unordered_map>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "MemoryManager.h"
 
-
-DWORD PID;
 
 using namespace uevr;
 
@@ -28,128 +29,7 @@ using namespace uevr;
 
 class GTASA_VRmod : public uevr::Plugin {
 private:
-
-	//Addresses & offsets
-	uintptr_t baseAddressGameEXE = 0;
-
-	std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsRotationAddresses = {
-		{0x111DE7E, 7}, {0x111DE85, 1},
-		{0x111DECC, 7}, {0x111DED3, 1},
-		{0x111DED9, 7}, {0x111DEE0, 1},
-		{0x111DE5C, 7}, {0x111DE63, 1}, {0x111DE64, 1},
-		{0x111DE3B, 7}, {0x111DE42, 1},
-		{0x111DE68, 7}, {0x111DE6F, 1},
-		{0x111DE75, 7},	{0x111DE7C, 1},	{0x111DE7D, 1},
-		{0x111DE8F, 7},	{0x111DE96, 1},	{0x111DE97, 1},
-		{0x111DE98, 7},	{0x111DE9F, 1},	{0x111DEA0, 1}
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> matrixInstructionsPositionAddresses = {
-		{0x111DEA5, 7},	{0x111DEAC, 1},	{0x111DEAD, 1},	{0x111DF57, 7},	{0x111DF5E, 1},
-		{0x111DEB3, 7},	{0x111DEBA, 1},	{0x111DF72, 7},	{0x111DF79, 1},
-		{0x111DEBE, 7},	{0x111DEC5, 1},	{0x111DEC6, 1},	{0x111DF8D, 7},	{0x111DF94, 1},
-	};
-	
-	std::vector<std::pair<uintptr_t, size_t>> ingameCameraPositionInstructionsAddresses = {
-		{0x1109F20, 3},	{0x1109F23, 1},
-		{0x1109F96, 3},	{0x1109F99, 1},
-		{0x110A28E, 3},	{0x110A291, 1},
-		{0x11255AB, 3},	{0x11255AE, 1},
-		{0x11070E2, 3},	{0x11070E5, 1},
-		{0x110A3BD, 3},	{0x110A3C0, 1},
-		{0x11080C6, 7},
-		{0x1109F24, 3},
-		{0x1109FBC, 5},
-		{0x110A252, 5},	{0x110A257, 1},
-		{0x110A2C0, 5},
-		{0x11255B4, 5},
-		{0x11070FF, 5},
-		{0x110A3DD, 5},
-		{0x1108165, 5},	{0x110816A, 1},
-		{0x1109FA4, 5},
-		{0x110A29C, 5},
-		{0x11255B3, 5},
-		{0x11070F0, 5},
-		{0x110A3CB, 5}
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> aimingForwardVectorInstructionsAddresses = {
-		{0x11090E8, 5},
-		{0xAE0410, 5},
-		{0x1109EA5, 5},
-		{0x1105AAC, 7},	{0x1105AB3, 1},
-		{0x1107E3B, 7},	{0x1107E42, 1},
-		{0x1108E75, 5},
-		{0xAE0406, 5},
-		{0x11090ED, 3},	{0x11090F0, 1},
-		{0xAE040B, 5},
-		{0x1109EAA, 3},	{0x1109EAD, 1},
-		{0x1105AC9, 5},	{0x1105ACE, 1},
-		{0x1107E43, 5},	{0x1107E48, 1},
-		{0x1108E7A, 3},	{0x1108E7D, 1}
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> aimingUpVectorInstructionsAddresses = {
-		{0x1105840, 5}, {0x1105845, 3},
-		{0x1105A00, 5}, {0x1105A05, 3},
-		{0x1105854, 5}, {0x1105859, 1},
-		{0x1105A08, 5}, {0x1105A0D, 1},
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> rocketLauncherAimingVectorInstructionsAddresses = {
-		{0x110E71D, 5},	{0x110E722, 1},
-		{0x110E70B, 7},	{0x110E712, 1}
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> sniperAimingVectorInstructionsAddresses = {
-		{0x110E19E, 5},	{0x110E1A3, 1},
-		{0x110E196, 7},	{0x110E19D, 1}
-	};
-
-	std::vector<std::pair<uintptr_t, size_t>> carAimingVectorInstructionsAddresses = {
-		{0x110BB78, 3},	{0x110BB7B, 1},
-		{0x110C5A4, 3},	{0x110C5A7, 1},
-		{0x110C59E, 5},	{0x110C5A3, 1},
-		{0x110BB68, 5},	{0x110BB6D, 1},
-		{0x110CE81, 3},
-		{0x110CE7A, 3}, {0x110CE7D, 1}
-	};
-
-
-	uintptr_t cameraMatrixAddresses[16] = {
-		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
-		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
-		0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
-		0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
-	};
-	uintptr_t aimForwardVectorAddresses[3] // x, y, z
-	{
-		0x53E2668, 0x53E266C, 0x53E2670
-	};
-	uintptr_t aimUpVectorAddresses[3] // x, y, z
-	{
-		0x53E268C, 0x53E2690, 0x53E2694
-	};
-
-	uintptr_t cameraPositionAddresses[3] // x, y, z
-	{
-		0x53E2674, 0x53E2678, 0x53E267C
-	};
-
-	uintptr_t weaponWheelOpenAddress = 0x507C580;
-
-	//borrowed empty addresses
-	uintptr_t fpsCamInitializedAddress = 0x53DACC6;
-	uintptr_t equippedWeaponAddress = 0x53DACC7;
-	uintptr_t characterIsDuckingAddress = 0x53DAD11;
-	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
-	uintptr_t characterHeadingAddress = 0x53DACF1;
-	uintptr_t characterIsInCarAddress = 0x53DACCE;
-	uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-
-	uintptr_t characterIsShootingAddress = 0x53DACE1;
-	uintptr_t cameraModeAddress = 0x53E2580;
-
+	MemoryManager memoryManager;
 
 	//variables
 	float initialCameraYoffset = 0.0f;
@@ -209,24 +89,40 @@ public:
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
-		baseAddressGameEXE = GetModuleBaseAddress(nullptr);
-		AdjustAddresses();
-		StoreOriginalMemoryInstructions();
+
+		// Log originalBytes before adjustment
+		//API::get()->log_info("%s", "OriginalBytes before adjustment:");
+		//LogOriginalBytes(memoryManager.originalBytes);
+		
+
+		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
+		
+		memoryManager.AdjustAddresses();
+		// Log originalBytes after adjustment
+		//API::get()->log_info("%s", "OriginalBytes after adjustment:");
+		//LogOriginalBytes(memoryManager.originalBytes);
 	}
+
+	void LogOriginalBytes(const std::unordered_map<uintptr_t, OriginalByte>& originalBytes) {
+    for (const auto& [address, originalByte] : originalBytes) {
+        API::get()->log_info("Address: 0x%08X, Value: 0x%02X", address, originalByte.value);
+    }
+}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		FetchRequiredUObjects();		
 		
-		fpsCamInitialized = *(reinterpret_cast<byte*>(fpsCamInitializedAddress)) > 0;
-
+		fpsCamInitialized = *(reinterpret_cast<uint8_t*>(memoryManager.fpsCamInitializedAddress));
+		API::get()->log_info("fpsCamInitialized = %i",*(reinterpret_cast<uint8_t*>(memoryManager.fpsCamInitializedAddress)));
+		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
 		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
 
-		bool weaponWheelOpen = *(reinterpret_cast<int*>(weaponWheelOpenAddress)) > 30;
-		characterIsGettingInACar = *(reinterpret_cast<byte*>(characterIsGettingInACarAddress)) > 0;
-		characterIsInCar = *(reinterpret_cast<byte*>(characterIsInCarAddress)) > 0;
-		cameraMode = *(reinterpret_cast<int*>(cameraModeAddress));
+		bool weaponWheelOpen = *(reinterpret_cast<int*>(memoryManager.weaponWheelOpenAddress)) > 30;
+		characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;
+		characterIsInCar = *(reinterpret_cast<byte*>(memoryManager.characterIsInCarAddress)) > 0;
+		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
 
@@ -235,7 +131,7 @@ public:
 		{
 			camResetRequested = characterIsInCar ? false: true;
 			HandleCutscenes(true);
-			ToggleOriginalMemoryInstructions(false);
+			memoryManager.ToggleAllMemoryInstructions(false);
 			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
 		}
 		else
@@ -244,26 +140,18 @@ public:
 		if (!fpsCamInitialized && fpsCamWasInitialized)
 		{
 			HandleCutscenes(false);
-			ToggleOriginalMemoryInstructions(true);
+			memoryManager.ToggleAllMemoryInstructions(true);
 			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
 		}
 
 		if (fpsCamInitialized && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
 		{
-			RestoreMemory(matrixInstructionsPositionAddresses);
-			RestoreMemory(ingameCameraPositionInstructionsAddresses);
-			RestoreMemory(aimingForwardVectorInstructionsAddresses);
-			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			RestoreMemory(sniperAimingVectorInstructionsAddresses);
+			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
 		if (fpsCamInitialized && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
 		{
-			NopMemory(matrixInstructionsPositionAddresses);
-			NopMemory(ingameCameraPositionInstructionsAddresses);
-			NopMemory(aimingForwardVectorInstructionsAddresses);
-			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			NopMemory(sniperAimingVectorInstructionsAddresses);
+			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 
 		
@@ -378,14 +266,14 @@ public:
 
 		// Write the modified matrix back to memory
 		for (int i = 0; i < 12; ++i) {
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[i])) = cameraMatrixValues[i];
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 		}
 
 		//If player loads a save or after a cinematic, reset the camera to the camera heading direction
 		if (camResetRequested) {
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[0])) = -1;
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[5])) = 1;
-			*(reinterpret_cast<float*>(cameraMatrixAddresses[10])) = 1;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[0])) = -1;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[5])) = 1;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[10])) = 1;
 		}
 
 		// Update the camera position based on the head's socket location
@@ -399,9 +287,9 @@ public:
 		//fix audio listener unaligned with original game
 		glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
 
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
-		*(reinterpret_cast<float*>(cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
+		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
+		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
+		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
 		actualPlayerPositionUE = socketLocation_params.Location;
 	}
 
@@ -525,7 +413,7 @@ public:
 			return;
 		}
 
-		bool isShooting = *(reinterpret_cast<uint8_t*>(characterIsShootingAddress)) > 0;
+		bool isShooting = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsShootingAddress)) > 0;
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 
 
@@ -566,8 +454,8 @@ public:
 		//duck
 		//Ducking -----------------------------
 		// Check if the player is crouching
-		bool isDucking = *(reinterpret_cast<uint8_t*>(characterIsDuckingAddress)) > 0;
-		float currentDuckOffset = *(reinterpret_cast<float*>(currentDuckOffsetAddress));
+		bool isDucking = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsDuckingAddress)) > 0;
+		float currentDuckOffset = *(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress));
 
 		if (isDucking && currentDuckOffset > -maxDuckOffset) {
 			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
@@ -576,11 +464,11 @@ public:
 			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
 			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
+			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
 		}
 		else if (isDucking && currentDuckOffset <= -maxDuckOffset)
 		{
-			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = -maxDuckOffset;
+			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = -maxDuckOffset;
 			/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
 		}
 
@@ -592,11 +480,11 @@ public:
 			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
 			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
+			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
 		}
 		else if (!isDucking && currentDuckOffset >= 0.0f)
 		{
-			*(reinterpret_cast<float*>(currentDuckOffsetAddress)) = 0.0f;
+			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = 0.0f;
 		}
 
 		//// Update the previous crouch state
@@ -835,9 +723,9 @@ public:
 
 
 				////forward vector
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[0])) = cameraMatrixValues[4];
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[0])) = cameraMatrixValues[4];
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
 
 				////forward vector
 				//*(reinterpret_cast<float*>(aimUpVectorAddresses[0])) = cameraMatrixValues[8];
@@ -847,13 +735,13 @@ public:
 			else
 			{
 				//Apply new values to memory
-				*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = point1Position.x * 0.01f;
-				*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
-				*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = point1Position.z * 0.01f;
+				*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[0])) = point1Position.x * 0.01f;
+				*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
+				*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[2])) = point1Position.z * 0.01f;
 
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[0])) = aimingDirection.x;
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[1])) = -aimingDirection.y;
-				*(reinterpret_cast<float*>(aimForwardVectorAddresses[2])) = aimingDirection.z;
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[0])) = aimingDirection.x;
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[1])) = -aimingDirection.y;
+				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = aimingDirection.z;
 			}
 		}
 		else
@@ -873,7 +761,7 @@ public:
 	}
 
 	void UpdateWeaponMeshOnChange() {
-		int actualWeaponIndex = *(reinterpret_cast<int*>(equippedWeaponAddress));
+		int actualWeaponIndex = *(reinterpret_cast<int*>(memoryManager.equippedWeaponAddress));
 		if (equippedWeaponIndex != actualWeaponIndex) {
 			UpdateActualWeaponMesh();
 			equippedWeaponIndex = actualWeaponIndex;
@@ -917,41 +805,6 @@ public:
 		}
 	}
 
-	void StoreOriginalMemoryInstructions()
-	{
-		StoreOriginalBytes(matrixInstructionsRotationAddresses);
-		StoreOriginalBytes(matrixInstructionsPositionAddresses);
-		StoreOriginalBytes(ingameCameraPositionInstructionsAddresses);
-		StoreOriginalBytes(aimingForwardVectorInstructionsAddresses);
-		StoreOriginalBytes(rocketLauncherAimingVectorInstructionsAddresses);
-		StoreOriginalBytes(sniperAimingVectorInstructionsAddresses);
-		StoreOriginalBytes(carAimingVectorInstructionsAddresses);
-	}
-
-	void ToggleOriginalMemoryInstructions(bool restoreInstructions)
-	{
-		if (!restoreInstructions)
-		{
-			NopMemory(matrixInstructionsRotationAddresses);
-			NopMemory(matrixInstructionsPositionAddresses);
-			NopMemory(ingameCameraPositionInstructionsAddresses);
-			NopMemory(aimingForwardVectorInstructionsAddresses);
-			NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			NopMemory(sniperAimingVectorInstructionsAddresses);
-			NopMemory(carAimingVectorInstructionsAddresses);
-		}
-		if (restoreInstructions)
-		{
-			RestoreMemory(matrixInstructionsRotationAddresses);
-			RestoreMemory(matrixInstructionsPositionAddresses);
-			RestoreMemory(ingameCameraPositionInstructionsAddresses);
-			RestoreMemory(aimingForwardVectorInstructionsAddresses);
-			RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
-			RestoreMemory(sniperAimingVectorInstructionsAddresses);
-			RestoreMemory(carAimingVectorInstructionsAddresses);
-		}
-	}
-
 	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
 	{
 		// Apply the offsets along the local axes
@@ -963,102 +816,7 @@ public:
 		return pointWorldPosition;
 	}
 
-	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName) {
-		HMODULE hModule = GetModuleHandle(moduleName);
-		if (hModule == nullptr) {
-			API::get()->log_info("Failed to get the base address of the module.");
-			return 0;
-		}
-		return reinterpret_cast<uintptr_t>(hModule);
-	}
-
-	void AdjustAddresses() {
-		for (auto& [address, size] : matrixInstructionsRotationAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : matrixInstructionsPositionAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : ingameCameraPositionInstructionsAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : aimingForwardVectorInstructionsAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : aimingUpVectorInstructionsAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : rocketLauncherAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : sniperAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
-		for (auto& [address, size] : carAimingVectorInstructionsAddresses) {address += baseAddressGameEXE;}
-
-		for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
-		for (auto& address : aimForwardVectorAddresses) address += baseAddressGameEXE;
-		for (auto& address : aimUpVectorAddresses) address += baseAddressGameEXE;
-		for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
-
-		fpsCamInitializedAddress += baseAddressGameEXE;
-
-		equippedWeaponAddress += baseAddressGameEXE;
-		characterHeadingAddress += baseAddressGameEXE;
-		characterIsInCarAddress += baseAddressGameEXE;
-		characterIsGettingInACarAddress += baseAddressGameEXE;
-		characterIsShootingAddress += baseAddressGameEXE;
-
-		characterIsDuckingAddress += baseAddressGameEXE;
-		currentDuckOffsetAddress += baseAddressGameEXE;
-
-		weaponWheelOpenAddress += baseAddressGameEXE;
-
-		cameraModeAddress += baseAddressGameEXE;
-	}
-
-	// Structure to store original bytes and their addresses
-	struct OriginalByte {
-		uintptr_t address;
-		uint8_t value;
-	};
-
-	// Map to store original bytes for each address
-	std::unordered_map<uintptr_t, OriginalByte> originalBytes;
-
-	// Function to NOP a batch of addresses
-	void NopMemory(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
-		for (const auto& [address, size] : addresses) {
-			DWORD oldProtect;
-			VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-			for (size_t i = 0; i < size; ++i) {
-				uintptr_t currentAddr = address + i;
-				*reinterpret_cast<uint8_t*>(currentAddr) = 0x90; // Write NOP
-			}
-
-			VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
-		}
-	}
-
-	// Function to restore original bytes for a batch of addresses
-	void RestoreMemory(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
-		for (const auto& [address, size] : addresses) {
-			DWORD oldProtect;
-			VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-			for (size_t i = 0; i < size; ++i) {
-				uintptr_t currentAddr = address + i;
-				if (originalBytes.find(currentAddr) != originalBytes.end()) {
-					*reinterpret_cast<uint8_t*>(currentAddr) = originalBytes[currentAddr].value; // Restore original byte
-				}
-			}
-
-			VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
-		}
-	}
-
-	void StoreOriginalBytes(const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
-    for (const auto& [address, size] : addresses) {
-        DWORD oldProtect;
-        VirtualProtect((LPVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-        for (size_t i = 0; i < size; ++i) {
-            uintptr_t currentAddr = address + i;
-            if (originalBytes.find(currentAddr) == originalBytes.end()) { // Avoid overwriting stored bytes
-                originalBytes[currentAddr] =  { currentAddr, *reinterpret_cast<uint8_t*>(currentAddr) };
-            }
-        }
-
-        VirtualProtect((LPVOID)address, size, oldProtect, &oldProtect);
-    }
-}
+	
 
 
 	struct FQuat {
