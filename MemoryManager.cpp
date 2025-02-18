@@ -239,10 +239,10 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : aimForwardVectorAddresses) address += baseAddressGameEXE;
 	for (auto& address : aimUpVectorAddresses) address += baseAddressGameEXE;
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
+	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
 	playerIsPlaying += baseAddressGameEXE;
 
-	equippedWeaponAddress += baseAddressGameEXE;
 	characterHeadingAddress += baseAddressGameEXE;
 	characterIsInCarAddress += baseAddressGameEXE;
 	characterIsGettingInACarAddress += baseAddressGameEXE;

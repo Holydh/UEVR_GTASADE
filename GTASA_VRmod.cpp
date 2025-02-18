@@ -113,7 +113,7 @@ public:
 		if (playerIsPlaying && !playerWasPlaying)
 		{
 			camResetRequested = characterIsInCar ? false: true;
-			HandleCutscenes(true);
+			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(false);
 			API::get()->log_info("playerIsPlaying = %i", playerIsPlaying);
 		}
@@ -122,9 +122,9 @@ public:
 		
 		if (!playerIsPlaying && playerWasPlaying)
 		{
-			HandleCutscenes(false);
+			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(true);
-			API::get()->log_info("fpsCamInitialized = %i", playerIsPlaying);
+			API::get()->log_info("playerIsPlaying = %i", playerIsPlaying);
 		}
 
 		if (playerIsPlaying && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
@@ -753,17 +753,9 @@ public:
 		UpdateActualWeaponMesh();
 	}
 
-	void UpdateWeaponMeshOnChange() {
-		int actualWeaponIndex = *(reinterpret_cast<int*>(memoryManager.equippedWeaponAddress));
-		if (equippedWeaponIndex != actualWeaponIndex) {
-			UpdateActualWeaponMesh();
-			equippedWeaponIndex = actualWeaponIndex;
-		}
-	}
-
-	void HandleCutscenes(bool fpsCamInitialized)
+	void HandleCutscenes()
 	{
-		if (fpsCamInitialized)
+		if (playerIsPlaying)
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 			uevr::API::UObjectHook::set_disabled(true);
