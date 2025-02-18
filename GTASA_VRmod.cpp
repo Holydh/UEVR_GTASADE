@@ -69,8 +69,8 @@ private:
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 	int boneIndex = 0;
 
-	bool fpsCamInitialized = false;
-	bool fpsCamWasInitialized = false;
+	bool playerIsPlaying = true;
+	bool playerWasPlaying = false;
 	bool camResetRequested = false;
 	int cameraMode = 0;
 	int cameraModeWas = 0;
@@ -90,31 +90,14 @@ public:
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
 
-		// Log originalBytes before adjustment
-		//API::get()->log_info("%s", "OriginalBytes before adjustment:");
-		//LogOriginalBytes(memoryManager.originalBytes);
-		
-
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
-		
 		memoryManager.AdjustAddresses();
-		// Log originalBytes after adjustment
-		//API::get()->log_info("%s", "OriginalBytes after adjustment:");
-		//LogOriginalBytes(memoryManager.originalBytes);
 	}
-
-	void LogOriginalBytes(const std::unordered_map<uintptr_t, OriginalByte>& originalBytes) {
-    for (const auto& [address, originalByte] : originalBytes) {
-        API::get()->log_info("Address: 0x%08X, Value: 0x%02X", address, originalByte.value);
-    }
-}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		FetchRequiredUObjects();		
+		playerIsPlaying = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsPlaying));
 		
-		fpsCamInitialized = *(reinterpret_cast<uint8_t*>(memoryManager.fpsCamInitializedAddress));
-		API::get()->log_info("fpsCamInitialized = %i",*(reinterpret_cast<uint8_t*>(memoryManager.fpsCamInitializedAddress)));
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
 		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
@@ -125,48 +108,52 @@ public:
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
+		//API::get()->log_info("cameraMode = %i",cameraMode);
 
-
-		if (fpsCamInitialized && !fpsCamWasInitialized)
+		if (playerIsPlaying && !playerWasPlaying)
 		{
 			camResetRequested = characterIsInCar ? false: true;
 			HandleCutscenes(true);
 			memoryManager.ToggleAllMemoryInstructions(false);
-			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
+			API::get()->log_info("playerIsPlaying = %i", playerIsPlaying);
 		}
 		else
 			camResetRequested = false;
 		
-		if (!fpsCamInitialized && fpsCamWasInitialized)
+		if (!playerIsPlaying && playerWasPlaying)
 		{
 			HandleCutscenes(false);
 			memoryManager.ToggleAllMemoryInstructions(true);
-			API::get()->log_info("fpsCamInitialized = %i", fpsCamInitialized);
+			API::get()->log_info("fpsCamInitialized = %i", playerIsPlaying);
 		}
 
-		if (fpsCamInitialized && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
+		if (playerIsPlaying && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
-		if (fpsCamInitialized && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
+		if (playerIsPlaying && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 
-		
-
-		if (fpsCamInitialized && !weaponWheelOpen)
+		if (playerIsPlaying)
 		{
-			UpdateCameraMatrix(delta, camResetRequested);
-			UpdateAimingVectors();
-			UpdateWeaponMeshOnChange();
-			FixWeaponVisibility();
-			WeaponHandling(delta);
-			PlayerDucking();
+			FetchRequiredUObjects();
+			if (!weaponWheelOpen)
+			{
+				UpdateCameraMatrix(delta, camResetRequested);
+				UpdateAimingVectors();
+				PlayerDucking();
+			}
+			if (weaponMesh != nullptr)
+			{
+				FixWeaponVisibility();
+				WeaponHandling(delta);
+			}
 		}
 
-		fpsCamWasInitialized = fpsCamInitialized;
+		playerWasPlaying = playerIsPlaying;
 		characterWasInCar = characterIsInCar;
 		cameraModeWas = cameraMode;
 	}
@@ -744,9 +731,15 @@ public:
 				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = aimingDirection.z;
 			}
 		}
-		else
+		else //unarmed
 		{
-			API::get()->log_info("%s", "mesh not found");
+			*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[1])) = -actualPlayerPositionUE.y * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager.cameraPositionAddresses[2])) = actualPlayerPositionUE.z * 0.01f;
+
+			*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[0])) = cameraMatrixValues[4];
+			*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
+			*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
 		}
 	}
 

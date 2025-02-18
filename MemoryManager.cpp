@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 
+
 DWORD PID;
 
 
@@ -205,40 +206,6 @@ void RestoreMemory(const std::vector<MemoryBlock>& memoryBlocks) {
 	}
 }
 
-uintptr_t baseAddressGameEXE;
-uintptr_t cameraMatrixAddresses[16] = {
-0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
-0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
-0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
-0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
-};
-uintptr_t aimForwardVectorAddresses[3] // x, y, z
-{
-	0x53E2668, 0x53E266C, 0x53E2670
-};
-uintptr_t aimUpVectorAddresses[3] // x, y, z
-{
-	0x53E268C, 0x53E2690, 0x53E2694
-};
-
-uintptr_t cameraPositionAddresses[3] // x, y, z
-{
-	0x53E2674, 0x53E2678, 0x53E267C
-};
-
-uintptr_t weaponWheelOpenAddress = 0x507C580;
-
-//borrowed empty addresses
-uintptr_t fpsCamInitializedAddress = 0x53DACC6;
-uintptr_t equippedWeaponAddress = 0x53DACCA;
-uintptr_t characterIsDuckingAddress = 0x53DAD11;
-uintptr_t currentDuckOffsetAddress = 0x53DACDA;
-uintptr_t characterHeadingAddress = 0x53DACF1;
-uintptr_t characterIsInCarAddress = 0x53DACCE;
-uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-
-uintptr_t characterIsShootingAddress = 0x53DACE1;
-uintptr_t cameraModeAddress = 0x53E2580;
 // Public method to print the original bytes
 //void MemoryManager::PrintOriginalBytes() const {
 //    for (const auto& [offset, originalByte] : originalBytes) {
@@ -273,7 +240,7 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : aimUpVectorAddresses) address += baseAddressGameEXE;
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 
-	fpsCamInitializedAddress += baseAddressGameEXE;
+	playerIsPlaying += baseAddressGameEXE;
 
 	equippedWeaponAddress += baseAddressGameEXE;
 	characterHeadingAddress += baseAddressGameEXE;
