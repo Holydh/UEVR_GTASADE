@@ -241,13 +241,12 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
-	playerIsPlaying += baseAddressGameEXE;
+	playerHasControl += baseAddressGameEXE;
 
-	characterHeadingAddress += baseAddressGameEXE;
 	characterIsInCarAddress += baseAddressGameEXE;
 	characterIsGettingInACarAddress += baseAddressGameEXE;
 	characterIsShootingAddress += baseAddressGameEXE;
-
+	equippedWeaponAddress += baseAddressGameEXE;
 	characterIsDuckingAddress += baseAddressGameEXE;
 	currentDuckOffsetAddress += baseAddressGameEXE;
 

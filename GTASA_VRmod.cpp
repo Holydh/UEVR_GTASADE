@@ -69,7 +69,7 @@ private:
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 	int boneIndex = 0;
 
-	bool playerIsPlaying = true;
+	bool playerHasControl = false;
 	bool playerWasPlaying = false;
 	bool camResetRequested = false;
 	int cameraMode = 0;
@@ -96,7 +96,7 @@ public:
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		playerIsPlaying = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsPlaying));
+		playerHasControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
 		
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
@@ -106,38 +106,40 @@ public:
 		characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;
 		characterIsInCar = *(reinterpret_cast<byte*>(memoryManager.characterIsInCarAddress)) > 0;
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
+		equippedWeaponIndex =  *(reinterpret_cast<int*>(memoryManager.equippedWeaponAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
 		//API::get()->log_info("cameraMode = %i",cameraMode);
 
-		if (playerIsPlaying && !playerWasPlaying)
+		if (playerHasControl && !playerWasPlaying)
 		{
-			camResetRequested = characterIsInCar ? false: true;
+			//camResetRequested = characterIsInCar ? false: true;
+			camResetRequested = true;
 			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(false);
-			API::get()->log_info("playerIsPlaying = %i", playerIsPlaying);
+			API::get()->log_info("playerIsPlaying = %i", playerHasControl);
 		}
 		else
 			camResetRequested = false;
 		
-		if (!playerIsPlaying && playerWasPlaying)
+		if (!playerHasControl && playerWasPlaying)
 		{
 			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(true);
-			API::get()->log_info("playerIsPlaying = %i", playerIsPlaying);
+			API::get()->log_info("playerIsPlaying = %i", playerHasControl);
 		}
 
-		if (playerIsPlaying && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
+		if (playerHasControl && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerIsPlaying && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
+		if (playerHasControl && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerIsPlaying)
+		if (playerHasControl)
 		{
 			FetchRequiredUObjects();
 			if (!weaponWheelOpen)
@@ -146,6 +148,7 @@ public:
 				UpdateAimingVectors();
 				PlayerDucking();
 			}
+			
 			if (weaponMesh != nullptr)
 			{
 				FixWeaponVisibility();
@@ -153,7 +156,7 @@ public:
 			}
 		}
 
-		playerWasPlaying = playerIsPlaying;
+		playerWasPlaying = playerHasControl;
 		characterWasInCar = characterIsInCar;
 		cameraModeWas = cameraMode;
 	}
@@ -282,6 +285,7 @@ public:
 
 	void WeaponHandling(float delta)
 	{
+		
 		if (characterIsInCar && !characterWasInCar)
 		{
 			UpdateActualWeaponMesh();
@@ -295,7 +299,6 @@ public:
 		if (characterIsInCar && cameraMode != 55)
 			return;
 			
-
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 		glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
 		switch (equippedWeaponIndex)
@@ -402,7 +405,7 @@ public:
 
 		bool isShooting = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsShootingAddress)) > 0;
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-
+		
 
 		if (isShooting)
 		{
@@ -755,7 +758,7 @@ public:
 
 	void HandleCutscenes()
 	{
-		if (playerIsPlaying)
+		if (playerHasControl)
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 			uevr::API::UObjectHook::set_disabled(true);

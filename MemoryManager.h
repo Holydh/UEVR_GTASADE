@@ -62,7 +62,7 @@ public:
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
 
 	//without Cleo delete
-	uintptr_t playerIsPlaying = 0x5038BC0;
+	uintptr_t playerHasControl = 0x53E8840;
 	uintptr_t cameraModeAddress = 0x53E2580;
 
 	//borrowed empty addresses
@@ -71,13 +71,10 @@ public:
 
 	//Cleo set address
 	uintptr_t characterIsDuckingAddress = 0x53DAD11;
-	
-	uintptr_t characterHeadingAddress = 0x53DACF1;
 	uintptr_t characterIsInCarAddress = 0x53DACCE;
 	uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-
 	uintptr_t characterIsShootingAddress = 0x53DACE1;
-
+	uintptr_t equippedWeaponAddress = 0x53DACC7;
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
