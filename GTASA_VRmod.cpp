@@ -1,20 +1,9 @@
-#include <memory>
-
 #include "glm/glm.hpp"
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/quaternion.hpp>
 #define GLM_FORCE_QUAT_DATA_XYZW
 #include "uevr/Plugin.hpp"
-#include <windows.h>
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <vector>
-#include <unordered_map>
 #define _USE_MATH_DEFINES
 #include <math.h>
-
 #include "MemoryManager.h"
 
 
@@ -32,23 +21,14 @@ private:
 	MemoryManager memoryManager;
 
 	//variables
-	float initialCameraYoffset = 0.0f;
-	float currentDuckOffset = 0.0f;
-	float lastWrittenOffset = 0.0f;
 	float maxDuckOffset = 60.0f;  // Maximum offset when crouching
 	float duckSpeed = 2.5f;     // Speed per frame adjustment
 
 	float cameraMatrixValues[16] = { 0.0f };
-	float newAimingVector[3] = { 0.0f, 0.0f, 0.0f };
-	float newCameraPositionVector[3] = { 0.0f, 0.0f, 0.0f };
-	float yawOffsetDegrees = 0.0f;
 	float xAxisSensitivity = 125.0f;
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
-	float characterHeading = 0.0f;
 	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
-	float characterHeadingOffset = 0.0f;
-	float previousHeading = 0.0f;
 
 	bool characterIsGettingInACar = false;
 	bool characterIsInCar = false;
@@ -59,15 +39,7 @@ private:
 	uevr::API::UObject* weapon;
 	uevr::API::UObject* weaponMesh;
 
-	float pitchOffset = 0.0f;
-	float yawOffset = 0.0f;
-
-	float forwardOffset = 0.0f;
-	float upOffset = 0.0f;
-	float rightOffset = 0.0f;
-
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
-	int boneIndex = 0;
 
 	bool playerHasControl = false;
 	bool playerWasPlaying = false;
@@ -75,6 +47,7 @@ private:
 	int cameraMode = 0;
 	int cameraModeWas = 0;
 
+	//recoil
 	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
 	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
@@ -218,7 +191,8 @@ public:
 		}
 		if ((!characterIsInCar && characterWasInCar) || (!characterIsInCar && camResetRequested))
 		{
-			camResetRequested = true;
+			//camResetRequested = true;
+			accumulatedJoystickRotation = glm::mat4(1.0f);
 			baseHeadRotation = headRotationMatrix;
 		}
 
@@ -229,7 +203,7 @@ public:
 
 		// Apply joystick input to adjust the local yaw rotation
 		const float DEADZONE = 0.1f;
-		joystickYaw = 0.0f;
+		joystickYaw = /*camResetRequested ? 180.0f : */0.0f;
 		if (abs(rightJoystick.x) > DEADZONE) {
 			joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
 		}
@@ -761,7 +735,10 @@ public:
 		if (playerHasControl)
 			uevr::API::UObjectHook::set_disabled(false);
 		else
+		{
+			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 			uevr::API::UObjectHook::set_disabled(true);
+		}
 	}
 
 	void UpdateActualWeaponMesh()
@@ -773,7 +750,7 @@ public:
 			if (child->is_a(gta_weapon_c)) {
 				weapon = child;
 				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
 				break;
 			}
 		}
@@ -791,6 +768,10 @@ public:
 		{
 			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 		}
+		//if (!weaponMesh->is_a(gta_weapon_c))
+		//{
+		//	uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+		//}
 	}
 
 	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)
