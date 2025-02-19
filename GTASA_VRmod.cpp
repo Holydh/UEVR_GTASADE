@@ -21,7 +21,7 @@ private:
 	MemoryManager memoryManager;
 
 	//variables
-	float maxDuckOffset = 60.0f;  // Maximum offset when crouching
+	float maxCrouchOffset = 60.0f;  // Maximum offset when crouching
 	float duckSpeed = 2.5f;     // Speed per frame adjustment
 
 	float cameraMatrixValues[16] = { 0.0f };
@@ -41,8 +41,8 @@ private:
 
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 
-	bool playerHasControl = false;
-	bool playerWasPlaying = false;
+	bool playerIsInControl = false;
+	bool playerWasInControl = false;
 	bool camResetRequested = false;
 	int cameraMode = 0;
 	int cameraModeWas = 0;
@@ -65,11 +65,14 @@ public:
 
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
+		
+		memoryManager.HookCrouchFunction();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		playerHasControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
+		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
+
 		
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
@@ -84,42 +87,43 @@ public:
 
 		//API::get()->log_info("cameraMode = %i",cameraMode);
 
-		if (playerHasControl && !playerWasPlaying)
+		if (playerIsInControl)
+			FetchRequiredUObjects();
+		
+		HandleCutscenes();
+
+		if (playerIsInControl && !playerWasInControl)
 		{
-			//camResetRequested = characterIsInCar ? false: true;
 			camResetRequested = true;
-			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(false);
-			API::get()->log_info("playerIsPlaying = %i", playerHasControl);
 		}
 		else
 			camResetRequested = false;
 		
-		if (!playerHasControl && playerWasPlaying)
+		if (!playerIsInControl && playerWasInControl)
 		{
-			HandleCutscenes();
 			memoryManager.ToggleAllMemoryInstructions(true);
-			API::get()->log_info("playerIsPlaying = %i", playerHasControl);
+			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
 
-		if (playerHasControl && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
+		if (playerIsInControl && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerHasControl && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
+		if (playerIsInControl && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerHasControl)
+		if (playerIsInControl)
 		{
-			FetchRequiredUObjects();
+			
 			if (!weaponWheelOpen)
 			{
-				UpdateCameraMatrix(delta, camResetRequested);
+				UpdateCameraMatrix(delta);
 				UpdateAimingVectors();
-				PlayerDucking();
+				PlayerCrouching();
 			}
 			
 			if (weaponMesh != nullptr)
@@ -129,13 +133,16 @@ public:
 			}
 		}
 
-		playerWasPlaying = playerHasControl;
+		playerWasInControl = playerIsInControl;
 		characterWasInCar = characterIsInCar;
 		cameraModeWas = cameraMode;
+		memoryManager.ResetCrouchStatus();
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
+
+		//API::get()->log_info("crouch status after reset : %i", memoryManager.playerIsCrouching);
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
@@ -154,7 +161,7 @@ public:
 		weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 	}
 
-	void UpdateCameraMatrix(float delta, bool camResetRequested) {
+	void UpdateCameraMatrix(float delta) {
 		struct {
 			glm::fvec3 ForwardVector;
 		} forwardVector_params;
@@ -413,42 +420,42 @@ public:
 
 	}
 
-	void PlayerDucking()
+	void PlayerCrouching()
 	{
 		//duck
 		//Ducking -----------------------------
 		// Check if the player is crouching
-		bool isDucking = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsDuckingAddress)) > 0;
-		float currentDuckOffset = *(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress));
+		bool isCrouching = memoryManager.playerIsCrouching;
+		float currentCrouchOffset = *(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress));
 
-		if (isDucking && currentDuckOffset > -maxDuckOffset) {
+		if (isCrouching && currentCrouchOffset > -maxCrouchOffset) {
 			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
 			addLocalOffset_params.bSweep = false;
 			addLocalOffset_params.bTeleport = true;
 			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
 			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = currentDuckOffset - duckSpeed;
+			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = currentCrouchOffset - duckSpeed;
 		}
-		else if (isDucking && currentDuckOffset <= -maxDuckOffset)
+		else if (isCrouching && currentCrouchOffset <= -maxCrouchOffset)
 		{
-			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = -maxDuckOffset;
+			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = -maxCrouchOffset;
 			/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
 		}
 
 
-		if (!isDucking && currentDuckOffset < 0.0f) {
+		if (!isCrouching && currentCrouchOffset < 0.0f) {
 			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
 			addLocalOffset_params.bSweep = false;
 			addLocalOffset_params.bTeleport = true;
 			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
 			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
 
-			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = currentDuckOffset + duckSpeed;
+			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = currentCrouchOffset + duckSpeed;
 		}
-		else if (!isDucking && currentDuckOffset >= 0.0f)
+		else if (!isCrouching && currentCrouchOffset >= 0.0f)
 		{
-			*(reinterpret_cast<float*>(memoryManager.currentDuckOffsetAddress)) = 0.0f;
+			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = 0.0f;
 		}
 
 		//// Update the previous crouch state
@@ -723,20 +730,35 @@ public:
 	void FetchRequiredUObjects()
 	{
 		playerController = API::get()->get_player_controller(0);
+		if (playerController == nullptr)
+			return;
+
+		static auto gta_playerActor_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAPlayerActor");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		const auto& playerCharacter = children.data[3];
-		playerHead = playerCharacter->get_property<API::UObject*>(L"head");
-		//API::get()->log_info("%ls", playerHead->get_full_name().c_str());
+		for (auto child : children) {
+			if (child->is_a(gta_playerActor_c)) {
+				auto playerActor = child;
+				playerHead = playerActor->get_property<API::UObject*>(L"head");
+				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				break;
+			}
+		};
+				
+
+		//const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		//const auto& playerCharacter = children.data[3];
+		//playerHead = playerCharacter->get_property<API::UObject*>(L"head");
+		////API::get()->log_info("%ls", playerHead->get_full_name().c_str());
 		UpdateActualWeaponMesh();
 	}
 
 	void HandleCutscenes()
 	{
-		if (playerHasControl)
+		if (playerIsInControl)
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 		{
-			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+			uevr::API::UObjectHook::remove_all_motion_controller_states();
 			uevr::API::UObjectHook::set_disabled(true);
 		}
 	}
@@ -745,33 +767,30 @@ public:
 	{
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-
 		for (auto child : children) {
 			if (child->is_a(gta_weapon_c)) {
 				weapon = child;
 				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-				API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+
+				if (!characterIsInCar || cameraMode == 55)
+				{
+					auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+					glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+					UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+					motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+					motionState->set_hand(1);
+					motionState->set_permanent(true);
+				}
+				if ((characterIsGettingInACar || characterIsInCar) && cameraMode != 55)
+				{
+					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+				}
 				break;
 			}
+			else
+				weaponMesh = nullptr;
 		}
-
-		if (!characterIsInCar || cameraMode == 55)
-		{
-			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-			motionState->set_hand(1);
-			motionState->set_permanent(true);
-		}
-		if ((characterIsGettingInACar || characterIsInCar) && cameraMode != 55)
-		{
-			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-		}
-		//if (!weaponMesh->is_a(gta_weapon_c))
-		//{
-		//	uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-		//}
 	}
 
 	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)

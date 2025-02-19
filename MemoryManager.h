@@ -66,7 +66,7 @@ public:
 	uintptr_t cameraModeAddress = 0x53E2580;
 
 	//borrowed empty addresses
-	uintptr_t currentDuckOffsetAddress = 0x53DACDA;
+	uintptr_t currentCrouchOffsetAddress = 0x53DACDA;
 
 
 	//Cleo set address
@@ -76,7 +76,14 @@ public:
 	uintptr_t characterIsShootingAddress = 0x53DACE1;
 	uintptr_t equippedWeaponAddress = 0x53DACC7;
 
+	//Without Cleo
+	uintptr_t crouchInstructionAddress = 0x1368515;
+
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
+
+	static bool playerIsCrouching;
+	void HookCrouchFunction();
+	void ResetCrouchStatus();
 
     void AdjustAddresses();
 	void NopVehicleRelatedMemoryInstructions();

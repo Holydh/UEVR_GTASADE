@@ -2,6 +2,9 @@
 #include <windows.h>
 #include <fstream>
 #include <iomanip>
+#include <MinHook.h>
+#include <thread>
+#include <chrono>
 
 
 DWORD PID;
@@ -177,6 +180,61 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
+bool MemoryManager::playerIsCrouching = false;
+bool hookInstructionRunning = false;
+
+
+// Define function pointer for the original function
+typedef void(*OriginalFunctionType)();
+OriginalFunctionType originalFunction = nullptr;
+
+// Hook function
+void __stdcall HookFunction() {
+	hookInstructionRunning = true;
+    MemoryManager::playerIsCrouching = true;
+    std::cout << "Crouch detected!" << std::endl;
+
+    // Call the original function
+    if (originalFunction) {
+        originalFunction();
+    }
+	hookInstructionRunning = false;
+}
+
+// Hook setup function
+void MemoryManager::HookCrouchFunction() {
+    // Target function address (replace with actual address)
+    BYTE* targetAddress = (BYTE*)MemoryManager::crouchInstructionAddress;
+
+    // Initialize MinHook
+    if (MH_Initialize() != MH_OK) {
+        std::cerr << "MinHook initialization failed!" << std::endl;
+        return;
+    }
+
+    // Create hook
+    if (MH_CreateHook((LPVOID)targetAddress, &HookFunction, (LPVOID*)&originalFunction) != MH_OK) {
+        std::cerr << "Failed to create hook!" << std::endl;
+        return;
+    }
+
+    // Enable the hook
+    if (MH_EnableHook((LPVOID)targetAddress) != MH_OK) {
+        std::cerr << "Failed to enable hook!" << std::endl;
+        return;
+    }
+
+    std::cout << "Crouch function hooked!" << std::endl;
+}
+
+void MemoryManager::ResetCrouchStatus()
+{
+	while (hookInstructionRunning) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+	MemoryManager::playerIsCrouching = false;
+}
+
 // Function to NOP a batch of addresses
 void NopMemory(const std::vector<MemoryBlock>& memoryBlocks) {
 	for (const auto& [address, size, bytes] : memoryBlocks) {
@@ -248,11 +306,13 @@ void MemoryManager::AdjustAddresses() {
 	characterIsShootingAddress += baseAddressGameEXE;
 	equippedWeaponAddress += baseAddressGameEXE;
 	characterIsDuckingAddress += baseAddressGameEXE;
-	currentDuckOffsetAddress += baseAddressGameEXE;
+	currentCrouchOffsetAddress += baseAddressGameEXE;
 
 	weaponWheelOpenAddress += baseAddressGameEXE;
 
 	cameraModeAddress += baseAddressGameEXE;
+
+	crouchInstructionAddress += baseAddressGameEXE;
 }
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()
