@@ -23,6 +23,7 @@ private:
 	//variables
 	float maxCrouchOffset = 60.0f;  // Maximum offset when crouching
 	float duckSpeed = 2.5f;     // Speed per frame adjustment
+	bool isCrouching;
 
 	float cameraMatrixValues[16] = { 0.0f };
 	float xAxisSensitivity = 125.0f;
@@ -30,15 +31,15 @@ private:
 	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
 
-	bool characterIsGettingInACar = false;
+	//bool characterIsGettingInACar = false;
 	bool characterIsInCar = false;
 	bool characterWasInCar = false;
 	int equippedWeaponIndex = 0;
-	uevr::API::UObject* playerController;
-	uevr::API::UObject* playerHead;
-	uevr::API::UObject* weapon;
-	uevr::API::UObject* weaponMesh;
-	uevr::API::UObject* weaponStaticMesh;
+	uevr::API::UObject* playerController = nullptr;
+	uevr::API::UObject* playerHead = nullptr;
+	uevr::API::UObject* weapon = nullptr;
+	uevr::API::UObject* weaponMesh = nullptr;
+	uevr::API::UObject* weaponStaticMesh = nullptr;
 
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 
@@ -55,6 +56,7 @@ private:
 	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
+	bool isShooting = false;
 
 	std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed
@@ -114,42 +116,55 @@ public:
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
 		
+
+		if (memoryManager.InitializeMinhook() == 0)
+		{
+			API::get()->log_info("MinHook Initialization failed");
+			return;
+		}
+		
 		memoryManager.HookCrouchFunction();
+		memoryManager.HookShootFunction();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
-
-		
+		isShooting = memoryManager.playerIsShooting;
+		memoryManager.ResetShootStatus();
+		isCrouching = memoryManager.playerIsCrouching;
+		memoryManager.ResetCrouchStatus();
+	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
 		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
 
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(memoryManager.weaponWheelOpenAddress)) > 30;
-		characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;
-		characterIsInCar = *(reinterpret_cast<byte*>(memoryManager.characterIsInCarAddress)) > 0;
+		/*characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;*/
+		
+		characterIsInCar = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsInCarAddress)) > 0;
+		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
 		//API::get()->log_info("cameraMode = %i",cameraMode);
-
+		
 		if (playerIsInControl)
 			FetchRequiredUObjects();
 		
-		HandleCutscenes();
-
 		if (playerIsInControl && !playerWasInControl)
 		{
 			camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
+			HandleCutscenes();
 		}
 		else
 			camResetRequested = false;
-		
+
 		if (!playerIsInControl && playerWasInControl)
 		{
 			memoryManager.ToggleAllMemoryInstructions(true);
+			HandleCutscenes();
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
 
@@ -183,7 +198,6 @@ public:
 		playerWasInControl = playerIsInControl;
 		characterWasInCar = characterIsInCar;
 		cameraModeWas = cameraMode;
-		memoryManager.ResetCrouchStatus();
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -313,7 +327,6 @@ public:
 
 	void WeaponHandling(float delta)
 	{
-		
 		if (characterIsInCar && !characterWasInCar)
 		{
 			UpdateActualWeaponMesh();
@@ -324,7 +337,7 @@ public:
 			UpdateActualWeaponMesh();
 		}
 
-		if (characterIsInCar && cameraMode != 55)
+		if (!isShooting || (characterIsInCar && cameraMode != 55))
 			return;
 			
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
@@ -431,7 +444,6 @@ public:
 			return;
 		}
 
-		bool isShooting = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsShootingAddress)) > 0;
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 		
 
@@ -472,7 +484,6 @@ public:
 		//duck
 		//Ducking -----------------------------
 		// Check if the player is crouching
-		bool isCrouching = memoryManager.playerIsCrouching;
 		float currentCrouchOffset = *(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress));
 
 		if (isCrouching && currentCrouchOffset > -maxCrouchOffset) {
@@ -786,7 +797,7 @@ public:
 			if (child->is_a(gta_playerActor_c)) {
 				auto playerActor = child;
 				playerHead = playerActor->get_property<API::UObject*>(L"head");
-				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				//API::get()->log_info("playerHead : %ls", playerHead->get_full_name().c_str());
 				break;
 			}
 		};
@@ -805,7 +816,7 @@ public:
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 		{
-			uevr::API::UObjectHook::remove_all_motion_controller_states();
+			//uevr::API::UObjectHook::remove_all_motion_controller_states();
 			uevr::API::UObjectHook::set_disabled(true);
 		}
 	}
@@ -814,12 +825,15 @@ public:
 	{
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		/*API::get()->log_info("children = %ls", children.data[0]->get_full_name().c_str());*/
 		for (auto child : children) {
+			//API::get()->log_info("child = %ls", child->get_full_name().c_str());
 			if (child->is_a(gta_weapon_c)) {
 				weapon = child;
 				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+				/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
 				weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
-				//API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());
+				/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
 
 				if (!characterIsInCar || cameraMode == 55)
 				{
@@ -830,19 +844,19 @@ public:
 					motionState->set_hand(1);
 					motionState->set_permanent(true);
 				}
-				if ((characterIsGettingInACar || characterIsInCar) && cameraMode != 55)
+				if ((/*characterIsGettingInACar || */characterIsInCar) && cameraMode != 55)
 				{
 					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 				}
 				break;
-			}
-			else
-				weaponMesh = nullptr;
+			}	
 		}
 
-		if (weaponMesh = nullptr)
+		if (weaponMesh == nullptr)
+		{
+			equippedWeaponIndex = 0;
 			return;
-
+		}
 		
 		std::wstring weaponName = weaponStaticMesh->get_full_name();
 		
@@ -851,13 +865,13 @@ public:
 		if (lastDot != std::wstring::npos) {
 			weaponName = weaponName.substr(lastDot + 1);
 		}
-		API::get()->log_info("%ls", weaponName.c_str());
+		/*API::get()->log_info("%ls", weaponName.c_str());*/
 		// Look up the weapon in the map
 		auto it = weaponNameToIndex.find(weaponName);
 		if (it != weaponNameToIndex.end()) {
 			equippedWeaponIndex = it->second;
 		}
-		API::get()->log_info("%i", equippedWeaponIndex);
+		/*API::get()->log_info("%i", equippedWeaponIndex);*/
 	}
 
 	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)

@@ -64,26 +64,35 @@ public:
 	//without Cleo delete
 	uintptr_t playerHasControl = 0x53E8840;
 	uintptr_t cameraModeAddress = 0x53E2580;
+	uintptr_t characterIsInCarAddress = 0x51B39D4;
 
 	//borrowed empty addresses
 	uintptr_t currentCrouchOffsetAddress = 0x53DACDA;
 
 
 	//Cleo set address
-	uintptr_t characterIsDuckingAddress = 0x53DAD11;
-	uintptr_t characterIsInCarAddress = 0x53DACCE;
-	uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-	uintptr_t characterIsShootingAddress = 0x53DACE1;
-	uintptr_t equippedWeaponAddress = 0x53DACC7;
+	//uintptr_t characterIsDuckingAddress = 0x53DAD11;
+	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
+	
+
+	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 
 	//Without Cleo
 	uintptr_t crouchInstructionAddress = 0x1368515;
+	uintptr_t characterIsShootingInstructionAddress = 0x13EE170;
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
-	static bool playerIsCrouching;
+	int InitializeMinhook();
+	
+	static std::atomic<bool> playerIsCrouching;
 	void HookCrouchFunction();
+
+	static std::atomic<bool> playerIsShooting;
+	void HookShootFunction();
+
 	void ResetCrouchStatus();
+	void ResetShootStatus();
 
     void AdjustAddresses();
 	void NopVehicleRelatedMemoryInstructions();

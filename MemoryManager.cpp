@@ -5,7 +5,7 @@
 #include <MinHook.h>
 #include <thread>
 #include <chrono>
-
+#include <atomic>
 
 DWORD PID;
 
@@ -180,25 +180,64 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-bool MemoryManager::playerIsCrouching = false;
-bool hookInstructionRunning = false;
-
+int MemoryManager::InitializeMinhook()
+{
+	    // Initialize MinHook
+	if (MH_Initialize() != MH_OK) {
+		return 0;
+	}
+	else return 1;
+}
 
 // Define function pointer for the original function
-typedef void(*OriginalFunctionType)();
-OriginalFunctionType originalFunction = nullptr;
+typedef void( __thiscall *OriginalShootingFunctionType)();
+
+std::atomic<bool>  MemoryManager::playerIsShooting = false;
+bool hookShootingInstructionRunning = false;
+
+OriginalShootingFunctionType originalShootingFunction = nullptr;
 
 // Hook function
-void __stdcall HookFunction() {
-	hookInstructionRunning = true;
-    MemoryManager::playerIsCrouching = true;
-    std::cout << "Crouch detected!" << std::endl;
+void __fastcall ReplacementShootingFunction() {
+	originalShootingFunction();
 
-    // Call the original function
-    if (originalFunction) {
-        originalFunction();
+	//hookShootingInstructionRunning = true;
+    MemoryManager::playerIsShooting = true;
+
+	//hookShootingInstructionRunning = false;
+}
+
+// Hook setup function
+void MemoryManager::HookShootFunction() {
+    // Target function address (replace with actual address)
+    BYTE* targetAddress = (BYTE*)MemoryManager::characterIsShootingInstructionAddress;
+
+    // Create hook
+    if (MH_CreateHook((LPVOID)targetAddress, &ReplacementShootingFunction, (LPVOID*)&originalShootingFunction) != MH_OK) {
+        return;
     }
-	hookInstructionRunning = false;
+
+    // Enable the hook
+    if (MH_EnableHook((LPVOID)targetAddress) != MH_OK) {
+        return;
+    }
+}
+
+typedef void( __thiscall  *OriginalCrouchingFunctionType)();
+
+std::atomic<bool> MemoryManager::playerIsCrouching = false;
+bool hookCrouchingInstructionRunning = false;
+
+OriginalCrouchingFunctionType originalCrouchingFunction = nullptr;
+
+
+// Hook function
+void __fastcall ReplacementCrouchingFunction() {
+	originalCrouchingFunction();
+	//hookCrouchingInstructionRunning = true;
+    MemoryManager::playerIsCrouching = true;
+
+	//hookCrouchingInstructionRunning = false;
 }
 
 // Hook setup function
@@ -206,33 +245,25 @@ void MemoryManager::HookCrouchFunction() {
     // Target function address (replace with actual address)
     BYTE* targetAddress = (BYTE*)MemoryManager::crouchInstructionAddress;
 
-    // Initialize MinHook
-    if (MH_Initialize() != MH_OK) {
-        std::cerr << "MinHook initialization failed!" << std::endl;
-        return;
-    }
-
     // Create hook
-    if (MH_CreateHook((LPVOID)targetAddress, &HookFunction, (LPVOID*)&originalFunction) != MH_OK) {
-        std::cerr << "Failed to create hook!" << std::endl;
+    if (MH_CreateHook((LPVOID)targetAddress, &ReplacementCrouchingFunction, (LPVOID*)&originalCrouchingFunction) != MH_OK) {
         return;
     }
 
     // Enable the hook
     if (MH_EnableHook((LPVOID)targetAddress) != MH_OK) {
-        std::cerr << "Failed to enable hook!" << std::endl;
         return;
     }
-
-    std::cout << "Crouch function hooked!" << std::endl;
 }
 
 void MemoryManager::ResetCrouchStatus()
 {
-	while (hookInstructionRunning) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
 	MemoryManager::playerIsCrouching = false;
+}
+
+void MemoryManager::ResetShootStatus()
+{
+	MemoryManager::playerIsShooting = false;
 }
 
 // Function to NOP a batch of addresses
@@ -300,14 +331,9 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
 	playerHasControl += baseAddressGameEXE;
-
-	characterIsInCarAddress += baseAddressGameEXE;
-	characterIsGettingInACarAddress += baseAddressGameEXE;
-	characterIsShootingAddress += baseAddressGameEXE;
-	equippedWeaponAddress += baseAddressGameEXE;
-	characterIsDuckingAddress += baseAddressGameEXE;
+	characterIsShootingInstructionAddress += baseAddressGameEXE;
 	currentCrouchOffsetAddress += baseAddressGameEXE;
-
+	characterIsInCarAddress += baseAddressGameEXE;
 	weaponWheelOpenAddress += baseAddressGameEXE;
 
 	cameraModeAddress += baseAddressGameEXE;
