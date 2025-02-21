@@ -1,5 +1,6 @@
 ﻿#include "MemoryManager.h"
 #include <windows.h>
+#include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <thread>
@@ -182,94 +183,107 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 uintptr_t MemoryManager::crouchInstructionAddress = 0x1368515;
 uintptr_t MemoryManager::shootInstructionAddress = 0x13EE170;
 
-std::atomic<bool> MemoryManager::playerIsCrouching = false;
-static BYTE crouchOriginalByte = 0; 
-std::atomic<bool> MemoryManager::playerIsShooting = false;
-static BYTE shootOriginalByte = 0; 
+bool MemoryManager::isCrouching = false;
+bool MemoryManager::isShooting = false;
 
-LONG WINAPI MemoryManager::CrouchExceptionHandler(EXCEPTION_POINTERS* pException) {
-    if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT) {
-		BYTE* instructionAddress = (BYTE*)crouchInstructionAddress;
-        if ((BYTE*)pException->ExceptionRecord->ExceptionAddress == instructionAddress) {
-            // Breakpoint triggered! Update your variable
-            playerIsCrouching = true;
-            std::cout << "Crouch detected!" << std::endl;
+// Struct for each breakpoint
+struct BreakpointInfo {
+    void* address;
+    bool* flag;  // Pointer to the boolean variable to update
+};
 
-            // Restore the original byte
-            DWORD oldProtect;
-            VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
-            *reinterpret_cast<BYTE*>(instructionAddress) = crouchOriginalByte;  // Restore the original instruction
-            VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
+// Global breakpoints
+BreakpointInfo breakpoints[4];  // DR0-DR3, we'll use DR0 and DR1
 
-            // Continue execution
-            pException->ContextRecord->Rip = (DWORD)instructionAddress;  // Set Rip to continue execution
-            return EXCEPTION_CONTINUE_EXECUTION;
-        }
+bool MemoryManager::SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag) {
+    if (index < 0 || index > 3) return false;  // DR0-DR3 are valid
+
+    CONTEXT ctx = { 0 };
+    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+
+    if (!GetThreadContext(hThread, &ctx)) return false;
+
+    // Assign the correct debug register (DR0 - DR3)
+    switch (index) {
+        case 0: ctx.Dr0 = (DWORD64)address; break;
+        case 1: ctx.Dr1 = (DWORD64)address; break;
+        case 2: ctx.Dr2 = (DWORD64)address; break;
+        case 3: ctx.Dr3 = (DWORD64)address; break;
+        default: return false;
     }
-    return EXCEPTION_CONTINUE_SEARCH;
+
+    // Enable the corresponding debug control bits
+    ctx.Dr7 |= (1ULL << (index * 2)); // Enable breakpoint (L0, L1, L2, L3)
+
+    if (!SetThreadContext(hThread, &ctx)) return false;
+
+    // Store the breakpoint information
+    breakpoints[index] = { address, flag };
+
+    return true;
 }
 
-LONG WINAPI MemoryManager::ShootExceptionHandler(EXCEPTION_POINTERS* pException) {
-    if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT) {
-		BYTE* instructionAddress = (BYTE*)shootInstructionAddress;
-        if ((BYTE*)pException->ExceptionRecord->ExceptionAddress == instructionAddress) {
-            // Breakpoint triggered! Update your variable
-            playerIsShooting = true;
-            std::cout << "Shoot detected!" << std::endl;
+LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
+    if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {  
+        uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
-            // Restore the original byte
-            DWORD oldProtect;
-            VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
-            *reinterpret_cast<BYTE*>(instructionAddress) = shootOriginalByte;  // Restore the original instruction
-            VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
-
-            // Continue execution
-            pException->ContextRecord->Rip = (DWORD)instructionAddress;  // Set Rip to continue execution
-            return EXCEPTION_CONTINUE_EXECUTION;
+        if (instructionAddress == MemoryManager::crouchInstructionAddress) {
+            MemoryManager::isCrouching = true;
+        } 
+        else if (instructionAddress == MemoryManager::shootInstructionAddress) {
+            MemoryManager::isShooting = true;
         }
+
+		// Set Resume Flag (RF) to prevent infinite breakpoint triggering
+        pException->ContextRecord->EFlags |= (1 << 16);  // Set RF bit in EFLAGS
+
+        // Move execution to the next instruction to avoid freezing
+        return EXCEPTION_CONTINUE_EXECUTION;
     }
-    return EXCEPTION_CONTINUE_SEARCH;
+
+    return EXCEPTION_CONTINUE_SEARCH; // Let other handlers process it if it's not our breakpoint
 }
 
-void MemoryManager::HookCrouchFunction() {
-	BYTE* instructionAddress = (BYTE*)crouchInstructionAddress;
-	   // Save the original byte
-    crouchOriginalByte = *instructionAddress;
+void MemoryManager::InstallBreakpoints() {
+    HANDLE hThread = GetCurrentThread();
 
-    // Replace it with INT3 (0xCC)
-    DWORD oldProtect;
-    VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
-    *instructionAddress = 0xCC;
-    VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
+    // Set the breakpoints
+    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::crouchInstructionAddress, &MemoryManager::isCrouching);
+    SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
 
-    // Install the exception handler
-    AddVectoredExceptionHandler(1, CrouchExceptionHandler);
+    // Install exception handler
+    exceptionHandlerHandle = AddVectoredExceptionHandler(1, ExceptionHandler);
 }
 
-void MemoryManager::HookShootFunction() {
-	BYTE* instructionAddress = (BYTE*)shootInstructionAddress;
-	   // Save the original byte
-    crouchOriginalByte = *instructionAddress;
+void MemoryManager::RemoveBreakpoints() {
+ // Clear hardware breakpoints
+    CONTEXT ctx = { 0 };
+    ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
 
-    // Replace it with INT3 (0xCC)
-    DWORD oldProtect;
-    VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
-    *instructionAddress = 0xCC;
-    VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
+    HANDLE hThread = GetCurrentThread();  // Only applies to current thread (set for all if needed)
+    GetThreadContext(hThread, &ctx);
 
-    // Install the exception handler
-    AddVectoredExceptionHandler(1, CrouchExceptionHandler);
+    // Remove breakpoints by clearing DR0, DR1, and their control bits
+    ctx.Dr0 = 0;
+    ctx.Dr1 = 0;
+    ctx.Dr7 &= ~(1 << 0); // Clear enable bit for DR0
+    ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
+
+    SetThreadContext(hThread, &ctx);
+
+    // Remove the exception handler
+    if (exceptionHandlerHandle) {
+        RemoveVectoredExceptionHandler(exceptionHandlerHandle);
+        exceptionHandlerHandle = nullptr;  // Prevent accidental double removal
+    }
 }
 
-
-void MemoryManager::ResetCrouchStatus()
-{
-	MemoryManager::playerIsCrouching = false;
-}
-
-void MemoryManager::ResetShootStatus()
-{
-	MemoryManager::playerIsShooting = false;
+void MemoryManager::RemoveExceptionHandler() {
+    static PVOID handler = nullptr;  // Store handler pointer globally
+    if (handler) {
+        RemoveVectoredExceptionHandler(handler);
+        handler = nullptr;
+    }
 }
 
 // Function to NOP a batch of addresses

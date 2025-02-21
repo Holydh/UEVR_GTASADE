@@ -116,18 +116,21 @@ public:
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
 		
-		
-		//memoryManager.HookCrouchFunction();
-		memoryManager.HookShootFunction();
+		//HANDLE hThread = GetCurrentThread();
+		//memoryManager.InstallBreakpoints();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
-		//isShooting = memoryManager.playerIsShooting;
-		//memoryManager.ResetShootStatus();
-	/*	isCrouching = memoryManager.playerIsCrouching;
-		memoryManager.ResetCrouchStatus();*/
+		isShooting = memoryManager.isShooting;
+		memoryManager.isShooting = false;
+		/*memoryManager.ResetShootStatus();*/
+		isCrouching = memoryManager.isCrouching;
+		memoryManager.isCrouching = false;
+	/*	memoryManager.ResetCrouchStatus();*/
+
+
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
@@ -151,6 +154,8 @@ public:
 			camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
 			HandleCutscenes();
+			HANDLE hThread = GetCurrentThread();
+			memoryManager.InstallBreakpoints();
 		}
 		else
 			camResetRequested = false;
@@ -159,6 +164,10 @@ public:
 		{
 			memoryManager.ToggleAllMemoryInstructions(true);
 			HandleCutscenes();
+			// Remove hardware breakpoints
+			memoryManager.RemoveBreakpoints();
+			memoryManager.RemoveExceptionHandler();
+			API::get()->log_info("RemoveBreakpoints");
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
 
@@ -174,14 +183,13 @@ public:
 
 		if (playerIsInControl)
 		{
-			
 			if (!weaponWheelOpen)
 			{
 				UpdateCameraMatrix(delta);
 				UpdateAimingVectors();
 				PlayerCrouching();
 			}
-			
+
 			if (weaponMesh != nullptr)
 			{
 				FixWeaponVisibility();

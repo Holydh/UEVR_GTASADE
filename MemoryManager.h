@@ -32,6 +32,9 @@ struct MemoryBlock {
 
 // MemoryManager class
 class MemoryManager {
+private:
+	void* exceptionHandlerHandle = nullptr;  // Store the handler so we can remove it later
+
 public:
     uintptr_t baseAddressGameEXE;
 	std::array<uintptr_t, 16> cameraMatrixAddresses = {
@@ -84,17 +87,16 @@ public:
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
 	
-	static std::atomic<bool> playerIsCrouching;
-	static std::atomic<bool> playerIsShooting;
+	static bool isCrouching;
+	static bool isShooting;
 
-	static LONG WINAPI CrouchExceptionHandler(EXCEPTION_POINTERS* pException);
-	static LONG WINAPI ShootExceptionHandler(EXCEPTION_POINTERS* pException);
+	void InstallBreakpoints();
+	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
+	void RemoveBreakpoints();
+	void RemoveExceptionHandler();
 
-	void HookCrouchFunction();
-	void HookShootFunction();
-
-	void ResetCrouchStatus();
-	void ResetShootStatus();
+	//void ResetCrouchStatus();
+	//void ResetShootStatus();
 
     void AdjustAddresses();
 	void NopVehicleRelatedMemoryInstructions();
