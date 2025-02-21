@@ -1,8 +1,7 @@
-#include "MemoryManager.h"
+﻿#include "MemoryManager.h"
 #include <windows.h>
 #include <fstream>
 #include <iomanip>
-#include <MinHook.h>
 #include <thread>
 #include <chrono>
 #include <atomic>
@@ -180,81 +179,88 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-int MemoryManager::InitializeMinhook()
-{
-	    // Initialize MinHook
-	if (MH_Initialize() != MH_OK) {
-		return 0;
-	}
-	else return 1;
-}
-
-// Define function pointer for the original function
-typedef void( __thiscall *OriginalShootingFunctionType)();
-
-std::atomic<bool>  MemoryManager::playerIsShooting = false;
-bool hookShootingInstructionRunning = false;
-
-OriginalShootingFunctionType originalShootingFunction = nullptr;
-
-// Hook function
-void __fastcall ReplacementShootingFunction() {
-	originalShootingFunction();
-
-	//hookShootingInstructionRunning = true;
-    MemoryManager::playerIsShooting = true;
-
-	//hookShootingInstructionRunning = false;
-}
-
-// Hook setup function
-void MemoryManager::HookShootFunction() {
-    // Target function address (replace with actual address)
-    BYTE* targetAddress = (BYTE*)MemoryManager::characterIsShootingInstructionAddress;
-
-    // Create hook
-    if (MH_CreateHook((LPVOID)targetAddress, &ReplacementShootingFunction, (LPVOID*)&originalShootingFunction) != MH_OK) {
-        return;
-    }
-
-    // Enable the hook
-    if (MH_EnableHook((LPVOID)targetAddress) != MH_OK) {
-        return;
-    }
-}
-
-typedef void( __thiscall  *OriginalCrouchingFunctionType)();
+uintptr_t MemoryManager::crouchInstructionAddress = 0x1368515;
+uintptr_t MemoryManager::shootInstructionAddress = 0x13EE170;
 
 std::atomic<bool> MemoryManager::playerIsCrouching = false;
-bool hookCrouchingInstructionRunning = false;
+static BYTE crouchOriginalByte = 0; 
+std::atomic<bool> MemoryManager::playerIsShooting = false;
+static BYTE shootOriginalByte = 0; 
 
-OriginalCrouchingFunctionType originalCrouchingFunction = nullptr;
+LONG WINAPI MemoryManager::CrouchExceptionHandler(EXCEPTION_POINTERS* pException) {
+    if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT) {
+		BYTE* instructionAddress = (BYTE*)crouchInstructionAddress;
+        if ((BYTE*)pException->ExceptionRecord->ExceptionAddress == instructionAddress) {
+            // Breakpoint triggered! Update your variable
+            playerIsCrouching = true;
+            std::cout << "Crouch detected!" << std::endl;
 
+            // Restore the original byte
+            DWORD oldProtect;
+            VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
+            *reinterpret_cast<BYTE*>(instructionAddress) = crouchOriginalByte;  // Restore the original instruction
+            VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
 
-// Hook function
-void __fastcall ReplacementCrouchingFunction() {
-	originalCrouchingFunction();
-	//hookCrouchingInstructionRunning = true;
-    MemoryManager::playerIsCrouching = true;
-
-	//hookCrouchingInstructionRunning = false;
+            // Continue execution
+            pException->ContextRecord->Rip = (DWORD)instructionAddress;  // Set Rip to continue execution
+            return EXCEPTION_CONTINUE_EXECUTION;
+        }
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 
-// Hook setup function
+LONG WINAPI MemoryManager::ShootExceptionHandler(EXCEPTION_POINTERS* pException) {
+    if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT) {
+		BYTE* instructionAddress = (BYTE*)shootInstructionAddress;
+        if ((BYTE*)pException->ExceptionRecord->ExceptionAddress == instructionAddress) {
+            // Breakpoint triggered! Update your variable
+            playerIsShooting = true;
+            std::cout << "Shoot detected!" << std::endl;
+
+            // Restore the original byte
+            DWORD oldProtect;
+            VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
+            *reinterpret_cast<BYTE*>(instructionAddress) = shootOriginalByte;  // Restore the original instruction
+            VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
+
+            // Continue execution
+            pException->ContextRecord->Rip = (DWORD)instructionAddress;  // Set Rip to continue execution
+            return EXCEPTION_CONTINUE_EXECUTION;
+        }
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
 void MemoryManager::HookCrouchFunction() {
-    // Target function address (replace with actual address)
-    BYTE* targetAddress = (BYTE*)MemoryManager::crouchInstructionAddress;
+	BYTE* instructionAddress = (BYTE*)crouchInstructionAddress;
+	   // Save the original byte
+    crouchOriginalByte = *instructionAddress;
 
-    // Create hook
-    if (MH_CreateHook((LPVOID)targetAddress, &ReplacementCrouchingFunction, (LPVOID*)&originalCrouchingFunction) != MH_OK) {
-        return;
-    }
+    // Replace it with INT3 (0xCC)
+    DWORD oldProtect;
+    VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
+    *instructionAddress = 0xCC;
+    VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
 
-    // Enable the hook
-    if (MH_EnableHook((LPVOID)targetAddress) != MH_OK) {
-        return;
-    }
+    // Install the exception handler
+    AddVectoredExceptionHandler(1, CrouchExceptionHandler);
 }
+
+void MemoryManager::HookShootFunction() {
+	BYTE* instructionAddress = (BYTE*)shootInstructionAddress;
+	   // Save the original byte
+    crouchOriginalByte = *instructionAddress;
+
+    // Replace it with INT3 (0xCC)
+    DWORD oldProtect;
+    VirtualProtect(instructionAddress, 1, PAGE_EXECUTE_READWRITE, &oldProtect);
+    *instructionAddress = 0xCC;
+    VirtualProtect(instructionAddress, 1, oldProtect, &oldProtect);
+
+    // Install the exception handler
+    AddVectoredExceptionHandler(1, CrouchExceptionHandler);
+}
+
 
 void MemoryManager::ResetCrouchStatus()
 {
@@ -313,8 +319,7 @@ uintptr_t MemoryManager::GetModuleBaseAddress(LPCTSTR moduleName) {
 }
 
 void MemoryManager::AdjustAddresses() {
-	
-	//for (auto& [key, value] : originalBytes) { value.address += baseAddressGameEXE; }
+		//for (auto& [key, value] : originalBytes) { value.address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : matrixInstructionsRotationAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : matrixInstructionsPositionAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : ingameCameraPositionInstructionsAddresses) { address += baseAddressGameEXE; }
@@ -331,7 +336,7 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
 	playerHasControl += baseAddressGameEXE;
-	characterIsShootingInstructionAddress += baseAddressGameEXE;
+	shootInstructionAddress += baseAddressGameEXE;
 	currentCrouchOffsetAddress += baseAddressGameEXE;
 	characterIsInCarAddress += baseAddressGameEXE;
 	weaponWheelOpenAddress += baseAddressGameEXE;

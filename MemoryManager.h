@@ -78,17 +78,19 @@ public:
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 
 	//Without Cleo
-	uintptr_t crouchInstructionAddress = 0x1368515;
-	uintptr_t characterIsShootingInstructionAddress = 0x13EE170;
+	static uintptr_t crouchInstructionAddress;
+	static uintptr_t shootInstructionAddress;
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
-	int InitializeMinhook();
 	
 	static std::atomic<bool> playerIsCrouching;
-	void HookCrouchFunction();
-
 	static std::atomic<bool> playerIsShooting;
+
+	static LONG WINAPI CrouchExceptionHandler(EXCEPTION_POINTERS* pException);
+	static LONG WINAPI ShootExceptionHandler(EXCEPTION_POINTERS* pException);
+
+	void HookCrouchFunction();
 	void HookShootFunction();
 
 	void ResetCrouchStatus();

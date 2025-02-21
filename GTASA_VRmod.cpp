@@ -116,24 +116,18 @@ public:
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
 		
-
-		if (memoryManager.InitializeMinhook() == 0)
-		{
-			API::get()->log_info("MinHook Initialization failed");
-			return;
-		}
 		
-		memoryManager.HookCrouchFunction();
+		//memoryManager.HookCrouchFunction();
 		memoryManager.HookShootFunction();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
-		isShooting = memoryManager.playerIsShooting;
-		memoryManager.ResetShootStatus();
-		isCrouching = memoryManager.playerIsCrouching;
-		memoryManager.ResetCrouchStatus();
+		//isShooting = memoryManager.playerIsShooting;
+		//memoryManager.ResetShootStatus();
+	/*	isCrouching = memoryManager.playerIsCrouching;
+		memoryManager.ResetCrouchStatus();*/
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
