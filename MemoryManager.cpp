@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include "uevr/API.hpp"
 
 DWORD PID;
 
@@ -232,6 +233,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
         } 
         else if (instructionAddress == MemoryManager::shootInstructionAddress) {
             MemoryManager::isShooting = true;
+			/*uevr::API::get()->log_info("Shooting");*/
         }
 
 		// Set Resume Flag (RF) to prevent infinite breakpoint triggering
@@ -249,7 +251,7 @@ void MemoryManager::InstallBreakpoints() {
 
     // Set the breakpoints
     SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::crouchInstructionAddress, &MemoryManager::isCrouching);
-    //SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
+    SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler
     exceptionHandlerHandle = AddVectoredExceptionHandler(1, ExceptionHandler);
@@ -265,9 +267,9 @@ void MemoryManager::RemoveBreakpoints() {
 
     // Remove breakpoints by clearing DR0, DR1, and their control bits
     ctx.Dr0 = 0;
-    //ctx.Dr1 = 0;
+    ctx.Dr1 = 0;
     ctx.Dr7 &= ~(1 << 0); // Clear enable bit for DR0
-    //ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
+    ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
 
     SetThreadContext(hThread, &ctx);
 
