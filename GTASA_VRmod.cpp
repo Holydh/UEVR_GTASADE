@@ -151,15 +151,16 @@ public:
 			camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
 			HandleCutscenes();
-			HANDLE hThread = GetCurrentThread();
+			//HANDLE hThread = GetCurrentThread();
 			//Not the right memory address for crouch instructions. Inconsistent one
-			memoryManager.InstallBreakpoints();
+			//memoryManager.InstallBreakpoints();
 
 			HookFunction(L"Class /Script/GTABase.GTAWeapon",
 				L"SetFlashAmount", 
-				(UEVR_UFunction_NativePreFn)mod_onfire_pre,
 				NULL,
+				(UEVR_UFunction_NativePostFn)mod_onfire_post,
 				true);
+			API::get()->log_info("FunctionHooked");
 		}
 		else
 			camResetRequested = false;
@@ -169,8 +170,8 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(true);
 			HandleCutscenes();
 			// Remove hardware breakpoints
-			memoryManager.RemoveBreakpoints();
-			memoryManager.RemoveExceptionHandler();
+			//memoryManager.RemoveBreakpoints();
+			//memoryManager.RemoveExceptionHandler();
 			API::get()->log_info("RemoveBreakpoints");
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
@@ -220,7 +221,7 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-	bool HookFunction(std::wstring_view class_name, std::wstring_view fn_name, bool* pre, bool* post, bool use_native)
+	bool HookFunction(std::wstring_view class_name, std::wstring_view fn_name, UEVR_UFunction_NativePreFn pre, UEVR_UFunction_NativePostFn post, bool use_native)
 	{
 		API::get()->log_info("Entering hook_bp_fn");
 		auto obj = (API::UClass*)API::get()->find_uobject(class_name);
@@ -256,7 +257,7 @@ public:
 		API::get()->param()->sdk->ufunction->hook_ptr((UEVR_UFunctionHandle)fn, (UEVR_UFunction_NativePreFn)pre, (UEVR_UFunction_NativePostFn)post);
 	}
 
-	UEVR_UFunction_NativePreFn mod_onfire_pre(API::UFunction* fn, API::UObject* obj, void* locals, void* result)
+	static bool mod_onfire_post(API::UFunction* fn, API::UObject* obj, void* locals, void* result)
 	{
 		API::get()->log_info("In mod_onfire_post");
 		if (obj != nullptr)
