@@ -108,7 +108,12 @@ private:
 public:
 	GTASA_VRmod() = default;
 
-	void on_dllmain() override {}
+	void on_dllmain_attach() override {}
+
+	void on_dllmain_detach() override {
+		memoryManager.RemoveBreakpoints();
+		memoryManager.RemoveExceptionHandler();
+	}
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
@@ -151,16 +156,9 @@ public:
 			camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
 			HandleCutscenes();
-			//HANDLE hThread = GetCurrentThread();
-			//Not the right memory address for crouch instructions. Inconsistent one
-			//memoryManager.InstallBreakpoints();
 
-			HookFunction(L"Class /Script/GTABase.GTAWeapon",
-				L"SetFlashAmount", 
-				NULL,
-				(UEVR_UFunction_NativePostFn)mod_onfire_post,
-				true);
-			API::get()->log_info("FunctionHooked");
+			//Not the right memory address for crouch instructions. Inconsistent one
+			memoryManager.InstallBreakpoints();
 		}
 		else
 			camResetRequested = false;
@@ -170,8 +168,8 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(true);
 			HandleCutscenes();
 			// Remove hardware breakpoints
-			//memoryManager.RemoveBreakpoints();
-			//memoryManager.RemoveExceptionHandler();
+			memoryManager.RemoveBreakpoints();
+			memoryManager.RemoveExceptionHandler();
 			API::get()->log_info("RemoveBreakpoints");
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
@@ -219,60 +217,6 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-	}
-
-	bool HookFunction(std::wstring_view class_name, std::wstring_view fn_name, UEVR_UFunction_NativePreFn pre, UEVR_UFunction_NativePostFn post, bool use_native)
-	{
-		API::get()->log_info("Entering hook_bp_fn");
-		auto obj = (API::UClass*)API::get()->find_uobject(class_name);
-
-		if (obj == nullptr) {
-			API::get()->log_info("Failed to find %ls", class_name.data());
-			return false;
-		}
-
-		auto fn = obj->find_function(fn_name);
-
-		if (fn == nullptr) {
-			API::get()->log_info("Failed to find %ls", fn_name.data());
-			return false;
-		}
-
-		API::get()->log_info("getting function flags");
-		uint32_t flags = fn->get_function_flags();
-
-		if (use_native)
-		{
-			flags = flags | 0x400;
-		}
-		else
-		{
-			flags = flags & ~0x400;
-		}
-
-		API::get()->log_info("Setting function flags to 0x%08x", flags);
-		fn->set_function_flags(flags);
-
-		API::get()->log_info("Calling hook_ptr for %ls", fn_name.data());
-		API::get()->param()->sdk->ufunction->hook_ptr((UEVR_UFunctionHandle)fn, (UEVR_UFunction_NativePreFn)pre, (UEVR_UFunction_NativePostFn)post);
-	}
-
-	static bool mod_onfire_post(API::UFunction* fn, API::UObject* obj, void* locals, void* result)
-	{
-		API::get()->log_info("In mod_onfire_post");
-		if (obj != nullptr)
-		{
-			const auto objname = obj->get_full_name();
-			API::get()->log_info("mod_onfire_post - Current Weapon: %ls", objname.c_str());
-		}
-
-		if (locals != nullptr)
-		{
-			float* params = (float*)locals;
-		}
-
-		API::get()->log_info("mod_onfire_post returning false");
-		return false;
 	}
 
 	void FixWeaponVisibility()

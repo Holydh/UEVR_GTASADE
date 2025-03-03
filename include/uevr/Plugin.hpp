@@ -50,7 +50,8 @@ public:
     virtual ~Plugin() = default;
 
     // Main plugin callbacks
-    virtual void on_dllmain() {}
+    virtual void on_dllmain_attach() {}
+    virtual void on_dllmain_detach() {}
     virtual void on_initialize() {}
     virtual void on_present() {}
     virtual void on_post_render_vr_framework_dx11(ID3D11DeviceContext* context, ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv) {}
@@ -157,7 +158,11 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
 
 BOOL APIENTRY DllMain(HANDLE handle, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
-        uevr::detail::g_plugin->on_dllmain();
+        uevr::detail::g_plugin->on_dllmain_attach();
+    }
+    if (reason == DLL_PROCESS_DETACH)
+    {
+        uevr::detail::g_plugin->on_dllmain_detach();
     }
 
     return TRUE;
