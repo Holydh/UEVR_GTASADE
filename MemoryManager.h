@@ -67,7 +67,7 @@ public:
 	//without Cleo delete
 	uintptr_t playerHasControl = 0x53E8840;
 	uintptr_t cameraModeAddress = 0x53E2580;
-	uintptr_t characterIsInCarAddress = 0x51B39D4;
+	uintptr_t characterIsInVehicleAddress = 0x51B39D4;
 
 	//borrowed empty addresses
 	uintptr_t currentCrouchOffsetAddress = 0x53DACDA;

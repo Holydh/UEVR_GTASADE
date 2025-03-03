@@ -352,7 +352,7 @@ void MemoryManager::AdjustAddresses() {
 	playerHasControl += baseAddressGameEXE;
 	shootInstructionAddress += baseAddressGameEXE;
 	currentCrouchOffsetAddress += baseAddressGameEXE;
-	characterIsInCarAddress += baseAddressGameEXE;
+	characterIsInVehicleAddress += baseAddressGameEXE;
 	weaponWheelOpenAddress += baseAddressGameEXE;
 
 	cameraModeAddress += baseAddressGameEXE;

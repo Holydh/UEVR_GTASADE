@@ -32,8 +32,8 @@ private:
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
 
 	//bool characterIsGettingInACar = false;
-	bool characterIsInCar = false;
-	bool characterWasInCar = false;
+	bool characterIsInVehicle = false;
+	bool characterWasInVehicle = false;
 	int equippedWeaponIndex = 0;
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
@@ -125,13 +125,6 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
-		isShooting = memoryManager.isShooting;
-		memoryManager.isShooting = false;
-
-		isCrouching = memoryManager.isCrouching;
-		memoryManager.isCrouching = false;
-
-
 
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
@@ -141,12 +134,17 @@ public:
 		bool weaponWheelOpen = *(reinterpret_cast<int*>(memoryManager.weaponWheelOpenAddress)) > 30;
 		/*characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;*/
 		
-		characterIsInCar = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsInCarAddress)) > 0;
+		characterIsInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsInVehicleAddress)) > 0;
 		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
-		//API::get()->log_info("cameraMode = %i",cameraMode);
+		isShooting = memoryManager.isShooting;
+		memoryManager.isShooting = false;
+
+		isCrouching = characterIsInVehicle ? false : memoryManager.isCrouching;
+		memoryManager.isCrouching = false;
+
 		
 		if (playerIsInControl)
 			FetchRequiredUObjects();
@@ -174,12 +172,12 @@ public:
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
 
-		if (playerIsInControl && ((characterIsInCar && !characterWasInCar) || (characterIsInCar && cameraMode != 55 && cameraModeWas == 55)))
+		if (playerIsInControl && ((characterIsInVehicle && !characterWasInVehicle) || (characterIsInVehicle && cameraMode != 55 && cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerIsInControl && ((!characterIsInCar && characterWasInCar) || (characterIsInCar && cameraMode == 55 && cameraModeWas != 55)))
+		if (playerIsInControl && ((!characterIsInVehicle && characterWasInVehicle) || (characterIsInVehicle && cameraMode == 55 && cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
@@ -201,7 +199,7 @@ public:
 		}
 
 		playerWasInControl = playerIsInControl;
-		characterWasInCar = characterIsInCar;
+		characterWasInVehicle = characterIsInVehicle;
 		cameraModeWas = cameraMode;
 	}
 
@@ -258,11 +256,11 @@ public:
 
 		float joystickYaw = 0.0f;
 
-		if (characterIsInCar && !characterWasInCar)
+		if (characterIsInVehicle && !characterWasInVehicle)
 		{
 			accumulatedJoystickRotation = glm::mat4(1.0f);
 		}
-		if ((!characterIsInCar && characterWasInCar) || (!characterIsInCar && camResetRequested))
+		if ((!characterIsInVehicle && characterWasInVehicle) || (!characterIsInVehicle && camResetRequested))
 		{
 			//camResetRequested = true;
 			accumulatedJoystickRotation = glm::mat4(1.0f);
@@ -272,7 +270,7 @@ public:
 		// Calculate the delta rotation matrix. 
 		// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
 		// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
-		glm::mat4 deltaRotationMatrix = characterIsInCar && cameraMode != 55 ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
+		glm::mat4 deltaRotationMatrix = characterIsInVehicle && cameraMode != 55 ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
 
 		// Apply joystick input to adjust the local yaw rotation
 		const float DEADZONE = 0.1f;
@@ -332,17 +330,17 @@ public:
 
 	void WeaponHandling(float delta)
 	{
-		if (characterIsInCar && !characterWasInCar)
+		if (characterIsInVehicle && !characterWasInVehicle)
 		{
 			UpdateActualWeaponMesh();
 		}
 
-		if (!characterIsInCar && characterWasInCar)
+		if (!characterIsInVehicle && characterWasInVehicle)
 		{
 			UpdateActualWeaponMesh();
 		}
 
-		if (!isShooting || (characterIsInCar && cameraMode != 55))
+		if (!isShooting || (characterIsInVehicle && cameraMode != 55))
 			return;
 			
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
@@ -748,7 +746,7 @@ public:
 
 
 
-			if (characterIsInCar && cameraMode != 55)
+			if (characterIsInVehicle && cameraMode != 55)
 			{
 				// Apply new values to memory - This messes up the aiming vector
 				//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
@@ -840,7 +838,7 @@ public:
 				weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
 				/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
 
-				if (!characterIsInCar || cameraMode == 55)
+				if (!characterIsInVehicle || cameraMode == 55)
 				{
 					auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 					glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
@@ -849,7 +847,7 @@ public:
 					motionState->set_hand(1);
 					motionState->set_permanent(true);
 				}
-				if ((/*characterIsGettingInACar || */characterIsInCar) && cameraMode != 55)
+				if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
 				{
 					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 				}
