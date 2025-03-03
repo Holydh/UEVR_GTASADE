@@ -340,8 +340,8 @@ public:
 			UpdateActualWeaponMesh();
 		}
 
-		if (!isShooting || (characterIsInVehicle && cameraMode != 55))
-			return;
+	/*	if ((characterIsInVehicle && cameraMode != 55))
+			return;*/
 			
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 		glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
