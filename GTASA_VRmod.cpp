@@ -115,9 +115,6 @@ public:
 
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
-		
-		//HANDLE hThread = GetCurrentThread();
-		//memoryManager.InstallBreakpoints();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -125,10 +122,10 @@ public:
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
 		isShooting = memoryManager.isShooting;
 		memoryManager.isShooting = false;
-		/*memoryManager.ResetShootStatus();*/
+
 		isCrouching = memoryManager.isCrouching;
 		memoryManager.isCrouching = false;
-	/*	memoryManager.ResetCrouchStatus();*/
+
 
 
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
@@ -155,7 +152,14 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(false);
 			HandleCutscenes();
 			HANDLE hThread = GetCurrentThread();
+			//Not the right memory address for crouch instructions. Inconsistent one
 			memoryManager.InstallBreakpoints();
+
+			HookFunction(L"Class /Script/GTABase.GTAWeapon",
+				L"SetFlashAmount", 
+				(UEVR_UFunction_NativePreFn)mod_onfire_pre,
+				NULL,
+				true);
 		}
 		else
 			camResetRequested = false;
@@ -214,6 +218,60 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	bool HookFunction(std::wstring_view class_name, std::wstring_view fn_name, bool* pre, bool* post, bool use_native)
+	{
+		API::get()->log_info("Entering hook_bp_fn");
+		auto obj = (API::UClass*)API::get()->find_uobject(class_name);
+
+		if (obj == nullptr) {
+			API::get()->log_info("Failed to find %ls", class_name.data());
+			return false;
+		}
+
+		auto fn = obj->find_function(fn_name);
+
+		if (fn == nullptr) {
+			API::get()->log_info("Failed to find %ls", fn_name.data());
+			return false;
+		}
+
+		API::get()->log_info("getting function flags");
+		uint32_t flags = fn->get_function_flags();
+
+		if (use_native)
+		{
+			flags = flags | 0x400;
+		}
+		else
+		{
+			flags = flags & ~0x400;
+		}
+
+		API::get()->log_info("Setting function flags to 0x%08x", flags);
+		fn->set_function_flags(flags);
+
+		API::get()->log_info("Calling hook_ptr for %ls", fn_name.data());
+		API::get()->param()->sdk->ufunction->hook_ptr((UEVR_UFunctionHandle)fn, (UEVR_UFunction_NativePreFn)pre, (UEVR_UFunction_NativePostFn)post);
+	}
+
+	UEVR_UFunction_NativePreFn mod_onfire_pre(API::UFunction* fn, API::UObject* obj, void* locals, void* result)
+	{
+		API::get()->log_info("In mod_onfire_post");
+		if (obj != nullptr)
+		{
+			const auto objname = obj->get_full_name();
+			API::get()->log_info("mod_onfire_post - Current Weapon: %ls", objname.c_str());
+		}
+
+		if (locals != nullptr)
+		{
+			float* params = (float*)locals;
+		}
+
+		API::get()->log_info("mod_onfire_post returning false");
+		return false;
 	}
 
 	void FixWeaponVisibility()
