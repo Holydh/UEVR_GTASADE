@@ -155,7 +155,6 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(false);
 			HandleCutscenes();
 
-			//Not the right memory address for crouch instructions. Inconsistent one
 			memoryManager.InstallBreakpoints();
 		}
 		else
@@ -165,10 +164,10 @@ public:
 		{
 			memoryManager.ToggleAllMemoryInstructions(true);
 			HandleCutscenes();
-			// Remove hardware breakpoints
+
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
-			API::get()->log_info("RemoveBreakpoints");
+			//API::get()->log_info("RemoveBreakpoints");
 			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
 		}
 
@@ -205,8 +204,6 @@ public:
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-
-		//API::get()->log_info("crouch status after reset : %i", memoryManager.playerIsCrouching);
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
@@ -340,7 +337,7 @@ public:
 			UpdateActualWeaponMesh();
 		}
 
-	/*	if ((characterIsInVehicle && cameraMode != 55))
+	/*	if ((characterIsInVehicle && cameraMode != 55)) //check a shooting on car scenario before deleting
 			return;*/
 			
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
