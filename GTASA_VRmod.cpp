@@ -124,6 +124,8 @@ public:
 	void on_dllmain_detach() override {
 		memoryManager.RemoveBreakpoints();
 		memoryManager.RemoveExceptionHandler();
+		memoryManager.ToggleAllMemoryInstructions(true);
+		HandleCutscenes();
 	}
 
 	void on_initialize() override {

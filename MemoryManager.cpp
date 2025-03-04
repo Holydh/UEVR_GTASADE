@@ -102,7 +102,16 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1107E43, 5, 0x8987180100},
 	{0x1107E48, 1, 0x00},
 	{0x1108E7A, 3, 0x418947},
-	{0x1108E7D, 1, 0x08}
+	{0x1108E7D, 1, 0x08},
+	//Fix extinguisher, spraycan, flamethrower up and down aiming
+	{0x1105A60, 7, 0xc741180000F041},
+	{0x1108D75, 7, 0xc7431800007a44},
+	{0x1105A4F, 3, 0x668941},
+	{0x1105A52, 1, 0x28},
+	{0x11202A4, 7, 0x6689ac38b00100},
+	{0x11202AB, 1, 0x00},
+	{0x11205DB, 7, 0x6689ac38b00100},
+	{0x11205E2, 1, 0x00},
 };
 std::vector<MemoryBlock> aimingUpVectorInstructionsAddresses = {
 	{0x1105840, 5, 0xf20f118134}, 
