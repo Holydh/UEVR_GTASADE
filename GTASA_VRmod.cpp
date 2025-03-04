@@ -161,7 +161,7 @@ public:
 		isShooting = memoryManager.isShooting;
 		memoryManager.isShooting = false;
 
-		isCrouching = characterIsInVehicle ? false : memoryManager.isCrouching;
+		isCrouching = characterIsInVehicle || cameraMode == 55 ? false : memoryManager.isCrouching;
 		memoryManager.isCrouching = false;
 
 		
