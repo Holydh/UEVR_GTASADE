@@ -47,6 +47,8 @@ public:
 	{
 		0x53E2668, 0x53E266C, 0x53E2670
 	};
+	uintptr_t xAxisSpraysAimAddress = 0x53E2558;
+
 	std::array<uintptr_t, 3> aimUpVectorAddresses // x, y, z
 	{
 		0x53E268C, 0x53E2690, 0x53E2694

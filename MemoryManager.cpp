@@ -104,14 +104,18 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1108E7A, 3, 0x418947},
 	{0x1108E7D, 1, 0x08},
 	//Fix extinguisher, spraycan, flamethrower up and down aiming
-	{0x1105A60, 7, 0xc741180000F041},
-	{0x1108D75, 7, 0xc7431800007a44},
-	{0x1105A4F, 3, 0x668941},
-	{0x1105A52, 1, 0x28},
-	{0x11202A4, 7, 0x6689ac38b00100},
-	{0x11202AB, 1, 0x00},
-	{0x11205DB, 7, 0x6689ac38b00100},
-	{0x11205E2, 1, 0x00},
+	//{0x1105A60, 7, 0xc741180000F041},
+	//{0x1108D75, 7, 0xc7431800007a44},
+	//{0x1105A4F, 3, 0x668941},
+	//{0x1105A52, 1, 0x28},
+	//{0x11202A4, 7, 0x6689ac38b00100},
+	//{0x11202AB, 1, 0x00},
+	//{0x11205DB, 7, 0x6689ac38b00100},
+	//{0x11205E2, 1, 0x00},
+	//Fix extinguisher, spraycan, flamethrower up and down aiming
+	{0x11077C9, 3, 0xf30f11},
+	{0x11077CC, 1, 0x07},
+	{0x1107C9B, 5, 0xf3440f110f}
 };
 std::vector<MemoryBlock> aimingUpVectorInstructionsAddresses = {
 	{0x1105840, 5, 0xf20f118134}, 
@@ -369,6 +373,8 @@ void MemoryManager::AdjustAddresses() {
 	cameraModeAddress += baseAddressGameEXE;
 
 	crouchInstructionAddress += baseAddressGameEXE;
+
+	xAxisSpraysAimAddress += baseAddressGameEXE;
 }
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()

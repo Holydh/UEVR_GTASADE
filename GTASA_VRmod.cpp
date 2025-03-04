@@ -562,6 +562,7 @@ public:
 			glm::fvec3 point1Offsets = { 0.0f, 0.0f, 0.0f };
 			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
 			bool socketAvailable = true;
+			bool sprayWeapon = false;
 
 			//mesh alignement weapon offsets
 			switch (equippedWeaponIndex)
@@ -648,10 +649,11 @@ public:
 			case 37: // Flamethrower
 				point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
 				point2Offsets = { 76.7885, 0.537026 , 31.6837 };
+				sprayWeapon = true;
 				break;
 			case 38: // Minigun
 				point1Offsets = { 48.1025 , -2.9978 , 14.3878 };
-				point2Offsets = { 86.6453 , 0.429413 -0.5 , 35.9644 - 0.5 };
+				point2Offsets = { 86.6453 , 0.429413 - 0.5 , 35.9644 - 0.5 };
 				break;
 				//case 39: // Satchel
 				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
@@ -661,14 +663,22 @@ public:
 				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
 				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
 				//	break;
-				//case 41: // SprayCan
-				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-				//	break;
-				//case 42: // Extinguisher
-				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-				//	break;
+			case 41: // SprayCan
+				/*point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				point2Offsets = { 21.7272, -3.89487, 12.9088 };*/
+				point1Offsets = { 0.0f , 0.0f, 0.0f };
+				point2Offsets = { 0.0f , 0.0f, 0.0f };
+				sprayWeapon = true;
+				socketAvailable = false;
+				break;
+			case 42: // Extinguisher
+				/*point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				point2Offsets = { 21.7272, -3.89487, 12.9088 };*/
+				point1Offsets = { 0.0f , 0.0f, 0.0f };
+				point2Offsets = { 0.0f , 0.0f, 0.0f };
+				sprayWeapon = true;
+				socketAvailable = false;
+				break;
 				//case 43: // Camera
 				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
 				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
@@ -790,6 +800,10 @@ public:
 				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[0])) = aimingDirection.x;
 				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[1])) = -aimingDirection.y;
 				*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = aimingDirection.z;
+			}
+			if (sprayWeapon)
+			{
+				*(reinterpret_cast<float*>(memoryManager.xAxisSpraysAimAddress)) = aimingDirection.z;
 			}
 		}
 		else //unarmed
