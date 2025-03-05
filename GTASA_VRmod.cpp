@@ -859,31 +859,50 @@ public:
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
 		/*API::get()->log_info("children = %ls", children.data[0]->get_full_name().c_str());*/
-		for (auto child : children) {
-			//API::get()->log_info("child = %ls", child->get_full_name().c_str());
-			if (child->is_a(gta_weapon_c)) {
-				weapon = child;
-				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-				/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
-				weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
-				/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
+		weapon = children.data[4];
 
-				if (!characterIsInVehicle || cameraMode == 55)
-				{
-					auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-					glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-					UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-					motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-					motionState->set_hand(1);
-					motionState->set_permanent(true);
-				}
-				if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
-				{
-					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-				}
-				break;
-			}	
+		//API::get()->log_info("child = %ls", child->get_full_name().c_str());
+		if (weapon->is_a(gta_weapon_c)) {
+			weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+			/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
+
+
+			auto test = weaponMesh->get_property<API::UObject*>(L"AttachParent");
+			API::get()->log_info("%ls", test->get_full_name().c_str());
+
+			struct SceneComponent_GetAllSocketNames {
+				API::TArray<API::FName> ReturnValue;
+			};
+			SceneComponent_GetAllSocketNames allSocketNames_params;
+			test->call_function(L"GetAllSocketNames", &allSocketNames_params);
+
+			if (allSocketNames_params.ReturnValue.count > 0) {
+				API::get()->log_info("%ls", "found somethin");
+			}
+			else {
+				API::get()->log_info("No socket names found.");
+			}
+
+
+
+			weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
+			/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
+
+			if (!characterIsInVehicle || cameraMode == 55)
+			{
+				auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+				glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+				UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+				motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+				motionState->set_hand(1);
+				motionState->set_permanent(true);
+			}
+			if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
+			{
+				uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+			}
 		}
+		
 
 		if (weaponMesh == nullptr)
 		{
