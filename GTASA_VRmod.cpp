@@ -121,7 +121,7 @@ public:
 		memoryManager.RemoveBreakpoints();
 		memoryManager.RemoveExceptionHandler();
 		memoryManager.ToggleAllMemoryInstructions(true);
-		HandleCutscenes();
+		ToggleUObjectHooks(false);
 	}
 
 	void on_initialize() override {
@@ -139,8 +139,8 @@ public:
 
 		UpdateSettingsIfModified(configFilePath);
 
-		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControl)) == 0;
-
+		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
+		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
@@ -157,30 +157,27 @@ public:
 		isShooting = memoryManager.isShooting;
 		memoryManager.isShooting = false;
 
+		FetchRequiredUObjects();
 		
-		if (playerIsInControl)
-			FetchRequiredUObjects();
-		
+
 		if (playerIsInControl && !playerWasInControl)
 		{
+		/*	API::get()->log_info("playerIsInControl");*/
 			camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
-			HandleCutscenes();
-
 			memoryManager.InstallBreakpoints();
+			ToggleUObjectHooks(true);
 		}
 		else
 			camResetRequested = false;
 
 		if (!playerIsInControl && playerWasInControl)
 		{
+			//API::get()->log_info("player NOT InControl");
 			memoryManager.ToggleAllMemoryInstructions(true);
-			HandleCutscenes();
-
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
-			//API::get()->log_info("RemoveBreakpoints");
-			/*API::get()->log_info("playerHasControl = %i", playerIsInControl);*/
+			ToggleUObjectHooks(false);
 		}
 
 		if (playerIsInControl && ((characterIsInVehicle && !characterWasInVehicle) || (characterIsInVehicle && cameraMode != 55 && cameraModeWas == 55)))
@@ -192,7 +189,7 @@ public:
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
-
+	
 		if (playerIsInControl)
 		{
 			if (!weaponWheelOpen)
@@ -787,9 +784,10 @@ public:
 		playerController = API::get()->get_player_controller(0);
 		if (playerController == nullptr)
 			return;
-
+		
 		static auto gta_playerActor_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAPlayerActor");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
+		
 		for (auto child : children) {
 			if (child->is_a(gta_playerActor_c)) {
 				auto playerActor = child;
@@ -804,12 +802,13 @@ public:
 		//const auto& playerCharacter = children.data[3];
 		//playerHead = playerCharacter->get_property<API::UObject*>(L"head");
 		////API::get()->log_info("%ls", playerHead->get_full_name().c_str());
-		UpdateActualWeaponMesh();
+		if (playerIsInControl)
+			UpdateActualWeaponMesh();
 	}
 
-	void HandleCutscenes()
+	void ToggleUObjectHooks(bool enable)
 	{
-		if (playerIsInControl)
+		if (enable)
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 		{
@@ -822,6 +821,9 @@ public:
 			setRelativeLocation_params.bTeleport = true;
 			setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 			playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+
+			if (weaponMesh == nullptr)
+				return;
 			weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 			SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 			setRelativeRotation_params.bSweep = false;
@@ -834,34 +836,44 @@ public:
 	void UpdateActualWeaponMesh()
 	{
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
+		static auto gta_BPweapon_c = API::get()->find_uobject<API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
+		//API::get()->log_info("gta_BPweapon_c = %ls", gta_BPweapon_c->get_full_name().c_str());
+
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
-		/*API::get()->log_info("children = %ls", children.data[0]->get_full_name().c_str());*/
+		//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
 
-		weapon = children.data[4]; // Some random game assets seems to wtfuckly inherit GTABase.GTAWeapon in this game. So iterating through all the children with a is_a() sometimes puts trees and random asset in hand.
 
-		//API::get()->log_info("child = %ls", child->get_full_name().c_str());
-		if (weapon->is_a(gta_weapon_c)) {
-			weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
-			/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
+		for (auto child : children){
+			//API::get()->log_info("child = %ls", child->get_full_name().c_str());
+			if (child->is_a(gta_weapon_c) && child == children.data[4]) {
+				weapon = child;
+				weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
+				/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
+				weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
+				/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
 
-			weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
-			/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
-
-			if (!characterIsInVehicle || cameraMode == 55)
-			{
-				auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-				glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-				UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-				motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-				motionState->set_hand(1);
-				motionState->set_permanent(true);
+				if (!characterIsInVehicle || cameraMode == 55)
+				{
+					auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+					glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+					UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+					motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+					motionState->set_hand(1);
+					motionState->set_permanent(true);
+				}
+				if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
+				{
+					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+				}
+				break;
 			}
-			if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
+			else
 			{
-				uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+				weaponMesh = nullptr;
+				weaponStaticMesh = nullptr;
 			}
 		}
-		
+
 
 		if (weaponMesh == nullptr)
 		{

@@ -68,29 +68,18 @@ public:
 	uintptr_t weaponWheelOpenAddress = 0x507C580;
 
 	//without Cleo delete
-	uintptr_t playerHasControl = 0x53E8840;
+	uintptr_t playerHasControlAddress = 0x53E8840;
 	uintptr_t cameraModeAddress = 0x53E2580;
 	uintptr_t characterIsInVehicleAddress = 0x51B39D4;
 
 	//Cleo set address
 	//uintptr_t characterIsDuckingAddress = 0x53DAD11;
 	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-	
-
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
-
-	//Without Cleo
 	static uintptr_t shootInstructionAddress;
 
+
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
-
-	
-	static bool isShooting;
-
-	void InstallBreakpoints();
-	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
-	void RemoveBreakpoints();
-	void RemoveExceptionHandler();
 
 	//void ResetShootStatus();
 
@@ -98,6 +87,13 @@ public:
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
 	void ToggleAllMemoryInstructions(bool restoreInstructions);
+	
+	static bool isShooting;
+
+	void InstallBreakpoints();
+	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
+	void RemoveBreakpoints();
+	void RemoveExceptionHandler();
 
 	//void GetAllBytes();
 	//void WriteBytesToIniFile(const char* header, const std::vector<std::pair<uintptr_t, size_t>>& addresses);

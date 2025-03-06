@@ -197,7 +197,6 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 uintptr_t MemoryManager::shootInstructionAddress = 0x19B4310;
 
 bool MemoryManager::isShooting = false;
-bool wasShooting = false;
 
 // Struct for each breakpoint
 struct BreakpointInfo {
@@ -241,8 +240,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
         uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
         if (instructionAddress == MemoryManager::shootInstructionAddress) {
-            MemoryManager::isShooting = wasShooting ? false : true;
-			wasShooting = MemoryManager::isShooting;
+            MemoryManager::isShooting = true;
 			/*uevr::API::get()->log_info("Shooting");*/
         }
 
@@ -296,6 +294,7 @@ void MemoryManager::RemoveExceptionHandler() {
         handler = nullptr;
     }
 }
+
 
 // Function to NOP a batch of addresses
 void NopMemory(const std::vector<MemoryBlock>& memoryBlocks) {
@@ -360,8 +359,7 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
-	playerHasControl += baseAddressGameEXE;
-	shootInstructionAddress += baseAddressGameEXE;
+	playerHasControlAddress += baseAddressGameEXE;
 
 	characterIsInVehicleAddress += baseAddressGameEXE;
 	weaponWheelOpenAddress += baseAddressGameEXE;
@@ -369,6 +367,8 @@ void MemoryManager::AdjustAddresses() {
 	cameraModeAddress += baseAddressGameEXE;
 
 	xAxisSpraysAimAddress += baseAddressGameEXE;
+
+	shootInstructionAddress += baseAddressGameEXE;
 }
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()
