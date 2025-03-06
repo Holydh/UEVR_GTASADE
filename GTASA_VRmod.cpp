@@ -859,7 +859,8 @@ public:
 		static auto gta_weapon_c = API::get()->find_uobject<API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		const auto& children = playerController->get_property<API::TArray<API::UObject*>>(L"Children");
 		/*API::get()->log_info("children = %ls", children.data[0]->get_full_name().c_str());*/
-		weapon = children.data[4];
+
+		weapon = children.data[4]; // Some random game assets seems to wtfuckly inherit GTABase.GTAWeapon in this game. So iterating through all the children with a is_a() sometimes puts trees and random asset in hand.
 
 		//API::get()->log_info("child = %ls", child->get_full_name().c_str());
 		if (weapon->is_a(gta_weapon_c)) {

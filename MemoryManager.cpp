@@ -194,11 +194,12 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-uintptr_t MemoryManager::crouchInstructionAddress = 0x1368515;
-uintptr_t MemoryManager::shootInstructionAddress = 0x13EE170;
+uintptr_t MemoryManager::crouchInstructionAddress = 0x110A194; //0x110A1AF, 0x110A20E, 0x115A889, 0x1258DF0, 0x125910E, 0x1362C00, 0x1362C75
+uintptr_t MemoryManager::shootInstructionAddress = 0x19B4310;
 
 bool MemoryManager::isCrouching = false;
 bool MemoryManager::isShooting = false;
+bool wasShooting = false;
 
 // Struct for each breakpoint
 struct BreakpointInfo {
@@ -245,7 +246,8 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
             MemoryManager::isCrouching = true;
         } 
         else if (instructionAddress == MemoryManager::shootInstructionAddress) {
-            MemoryManager::isShooting = true;
+            MemoryManager::isShooting = wasShooting ? false : true;
+			wasShooting = MemoryManager::isShooting;
 			/*uevr::API::get()->log_info("Shooting");*/
         }
 
