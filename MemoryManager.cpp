@@ -194,10 +194,8 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-uintptr_t MemoryManager::crouchInstructionAddress = 0x110A194; //0x110A1AF, 0x110A20E, 0x115A889, 0x1258DF0, 0x125910E, 0x1362C00, 0x1362C75
 uintptr_t MemoryManager::shootInstructionAddress = 0x19B4310;
 
-bool MemoryManager::isCrouching = false;
 bool MemoryManager::isShooting = false;
 bool wasShooting = false;
 
@@ -242,10 +240,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
     if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {  
         uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
-        if (instructionAddress == MemoryManager::crouchInstructionAddress) {
-            MemoryManager::isCrouching = true;
-        } 
-        else if (instructionAddress == MemoryManager::shootInstructionAddress) {
+        if (instructionAddress == MemoryManager::shootInstructionAddress) {
             MemoryManager::isShooting = wasShooting ? false : true;
 			wasShooting = MemoryManager::isShooting;
 			/*uevr::API::get()->log_info("Shooting");*/
@@ -265,8 +260,7 @@ void MemoryManager::InstallBreakpoints() {
     HANDLE hThread = GetCurrentThread();
 
     // Set the breakpoints
-    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::crouchInstructionAddress, &MemoryManager::isCrouching);
-    SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
+    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler
     exceptionHandlerHandle = AddVectoredExceptionHandler(1, ExceptionHandler);
@@ -282,9 +276,9 @@ void MemoryManager::RemoveBreakpoints() {
 
     // Remove breakpoints by clearing DR0, DR1, and their control bits
     ctx.Dr0 = 0;
-    ctx.Dr1 = 0;
+    //ctx.Dr1 = 0;
     ctx.Dr7 &= ~(1 << 0); // Clear enable bit for DR0
-    ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
+    //ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
 
     SetThreadContext(hThread, &ctx);
 
@@ -368,13 +362,11 @@ void MemoryManager::AdjustAddresses() {
 
 	playerHasControl += baseAddressGameEXE;
 	shootInstructionAddress += baseAddressGameEXE;
-	currentCrouchOffsetAddress += baseAddressGameEXE;
+
 	characterIsInVehicleAddress += baseAddressGameEXE;
 	weaponWheelOpenAddress += baseAddressGameEXE;
 
 	cameraModeAddress += baseAddressGameEXE;
-
-	crouchInstructionAddress += baseAddressGameEXE;
 
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 }

@@ -37,6 +37,7 @@ private:
 
 public:
     uintptr_t baseAddressGameEXE;
+
 	std::array<uintptr_t, 16> cameraMatrixAddresses = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -71,10 +72,6 @@ public:
 	uintptr_t cameraModeAddress = 0x53E2580;
 	uintptr_t characterIsInVehicleAddress = 0x51B39D4;
 
-	//borrowed empty addresses
-	uintptr_t currentCrouchOffsetAddress = 0x53DACDA;
-
-
 	//Cleo set address
 	//uintptr_t characterIsDuckingAddress = 0x53DAD11;
 	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
@@ -83,13 +80,11 @@ public:
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 
 	//Without Cleo
-	static uintptr_t crouchInstructionAddress;
 	static uintptr_t shootInstructionAddress;
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
 	
-	static bool isCrouching;
 	static bool isShooting;
 
 	void InstallBreakpoints();
@@ -97,7 +92,6 @@ public:
 	void RemoveBreakpoints();
 	void RemoveExceptionHandler();
 
-	//void ResetCrouchStatus();
 	//void ResetShootStatus();
 
     void AdjustAddresses();

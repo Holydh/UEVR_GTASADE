@@ -27,10 +27,6 @@ private:
 	MemoryManager memoryManager;
 
 	//variables
-	float maxCrouchOffset = 60.0f;  // Maximum offset when crouching
-	float duckSpeed = 2.5f;     // Speed per frame adjustment
-	bool isCrouching;
-
 	float cameraMatrixValues[16] = { 0.0f };
 	float xAxisSensitivity = 125.0f;
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
@@ -161,9 +157,6 @@ public:
 		isShooting = memoryManager.isShooting;
 		memoryManager.isShooting = false;
 
-		isCrouching = characterIsInVehicle || cameraMode == 55 ? false : memoryManager.isCrouching;
-		memoryManager.isCrouching = false;
-
 		
 		if (playerIsInControl)
 			FetchRequiredUObjects();
@@ -206,7 +199,7 @@ public:
 			{
 				UpdateCameraMatrix(delta);
 				UpdateAimingVectors();
-				PlayerCrouching();
+				ProcessHookedHeadPosition();
 			}
 
 			if (weaponMesh != nullptr)
@@ -498,46 +491,17 @@ public:
 
 	}
 
-	void PlayerCrouching()
+	//Fix the camera not following the crouch animation
+	void ProcessHookedHeadPosition()
 	{
-		//duck
-		//Ducking -----------------------------
-		// Check if the player is crouching
-		float currentCrouchOffset = *(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress));
-
-		if (isCrouching && currentCrouchOffset > -maxCrouchOffset) {
-			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-			addLocalOffset_params.bSweep = false;
-			addLocalOffset_params.bTeleport = true;
-			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, -duckSpeed);
-			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-
-			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = currentCrouchOffset - duckSpeed;
-		}
-		else if (isCrouching && currentCrouchOffset <= -maxCrouchOffset)
-		{
-			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = -maxCrouchOffset;
-			/*	*(reinterpret_cast<uint8_t*>(characterWasDuckingAddress)) = 1;*/
-		}
-
-
-		if (!isCrouching && currentCrouchOffset < 0.0f) {
-			SceneComponent_K2_AddLocalOffset addLocalOffset_params{};
-			addLocalOffset_params.bSweep = false;
-			addLocalOffset_params.bTeleport = true;
-			addLocalOffset_params.DeltaLocation = glm::fvec3(0.0f, 0.0f, duckSpeed);
-			playerHead->call_function(L"K2_AddLocalOffset", &addLocalOffset_params);
-
-			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = currentCrouchOffset + duckSpeed;
-		}
-		else if (!isCrouching && currentCrouchOffset >= 0.0f)
-		{
-			*(reinterpret_cast<float*>(memoryManager.currentCrouchOffsetAddress)) = 0.0f;
-		}
-
-		//// Update the previous crouch state
-		//wasDucking = isDucking;
-	}
+		if (characterIsInVehicle || cameraMode == 15)
+			return;
+		SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
+		setWorldLocation_params.bSweep = false;
+		setWorldLocation_params.bTeleport = true;
+		setWorldLocation_params.NewLocation = glm::fvec3(actualPlayerPositionUE.x, actualPlayerPositionUE.y, *(reinterpret_cast<float*>(memoryManager.playerHeadPositionAddresses[2]))*100);
+		playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
+	} 
 
 	void UpdateAimingVectors()
 	{
@@ -851,6 +815,19 @@ public:
 		{
 			//uevr::API::UObjectHook::remove_all_motion_controller_states();
 			uevr::API::UObjectHook::set_disabled(true);
+
+			//Reset head and weapon position and rotation during cutscene
+			SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+			setRelativeLocation_params.bSweep = false;
+			setRelativeLocation_params.bTeleport = true;
+			setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+			playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+			weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+			SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+			setRelativeRotation_params.bSweep = false;
+			setRelativeRotation_params.bTeleport = true;
+			setRelativeRotation_params.NewRotation = {0.0f, 0.0f, 0.0f};
+			weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 		}
 	}
 
@@ -866,25 +843,6 @@ public:
 		if (weapon->is_a(gta_weapon_c)) {
 			weaponMesh = weapon->get_property<API::UObject*>(L"WeaponMesh");
 			/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
-
-
-			auto test = weaponMesh->get_property<API::UObject*>(L"AttachParent");
-			API::get()->log_info("%ls", test->get_full_name().c_str());
-
-			struct SceneComponent_GetAllSocketNames {
-				API::TArray<API::FName> ReturnValue;
-			};
-			SceneComponent_GetAllSocketNames allSocketNames_params;
-			test->call_function(L"GetAllSocketNames", &allSocketNames_params);
-
-			if (allSocketNames_params.ReturnValue.count > 0) {
-				API::get()->log_info("%ls", "found somethin");
-			}
-			else {
-				API::get()->log_info("No socket names found.");
-			}
-
-
 
 			weaponStaticMesh = weaponMesh->get_property<API::UObject*>(L"StaticMesh");
 			/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
@@ -1079,6 +1037,14 @@ public:
 #pragma pack(pop)
 
 #pragma pack(push, 1)
+	struct FRotator {
+		float Pitch;
+		float Yaw;
+		float Roll;
+	};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 	struct SceneComponent_GetBoneTransformByName
 	{
 		API::FName BoneName;
@@ -1102,6 +1068,32 @@ public:
 	{
 	public:
 		glm::fvec3 DeltaLocation;
+		bool bSweep;
+		uint8_t Pad_D[3];
+		uint8_t Padding[0x8C];
+		bool bTeleport;
+		uint8_t Pad_9D[3];
+	};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+	struct SceneComponent_K2_SetWorldOrRelativeLocation final
+	{
+	public:
+		glm::fvec3 NewLocation;
+		bool bSweep;
+		uint8_t Pad_D[3];
+		uint8_t Padding[0x8C];
+		bool bTeleport;
+		uint8_t Pad_9D[3];
+	};
+#pragma pack(pop)
+
+	#pragma pack(push, 1)
+	struct SceneComponent_K2_SetWorldOrRelativeRotation final
+	{
+	public:
+		FRotator NewRotation;
 		bool bSweep;
 		uint8_t Pad_D[3];
 		uint8_t Padding[0x8C];
