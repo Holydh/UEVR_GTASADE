@@ -37,6 +37,7 @@ private:
 	bool characterIsInVehicle = false;
 	bool characterWasInVehicle = false;
 	int equippedWeaponIndex = 0;
+	int previousEquippedWeaponIndex = 0;
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
 	uevr::API::UObject* weapon = nullptr;
@@ -154,7 +155,7 @@ public:
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
-		isShooting = memoryManager.isShooting;
+		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager.isShooting : false;
 		memoryManager.isShooting = false;
 
 		FetchRequiredUObjects();
@@ -209,6 +210,7 @@ public:
 		playerWasInControl = playerIsInControl;
 		characterWasInVehicle = characterIsInVehicle;
 		cameraModeWas = cameraMode;
+		previousEquippedWeaponIndex = equippedWeaponIndex;
 	}
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -339,6 +341,7 @@ public:
 		if (characterIsInVehicle && !characterWasInVehicle)
 		{
 			UpdateActualWeaponMesh();
+			ResetWeaponMeshPosAndRot();
 		}
 
 		if (!characterIsInVehicle && characterWasInVehicle)
@@ -346,8 +349,8 @@ public:
 			UpdateActualWeaponMesh();
 		}
 
-	/*	if ((characterIsInVehicle && cameraMode != 55)) //check a shooting on car scenario before deleting
-			return;*/
+		if ((characterIsInVehicle && cameraMode != 55)) //check a shooting on car scenario before deleting
+			return;
 			
 		glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 		glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
@@ -453,7 +456,7 @@ public:
 			return;
 		}
 
-		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+		auto motionState = uevr::API::UObjectHook::get_motion_controller_state(weaponMesh);
 		
 
 		if (isShooting)
@@ -487,18 +490,6 @@ public:
 		}
 
 	}
-
-	//Fix the camera not following the crouch animation
-	void ProcessHookedHeadPosition()
-	{
-		if (characterIsInVehicle || cameraMode == 15)
-			return;
-		SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
-		setWorldLocation_params.bSweep = false;
-		setWorldLocation_params.bTeleport = true;
-		setWorldLocation_params.NewLocation = glm::fvec3(actualPlayerPositionUE.x, actualPlayerPositionUE.y, *(reinterpret_cast<float*>(memoryManager.playerHeadPositionAddresses[2]))*100);
-		playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
-	} 
 
 	void UpdateAimingVectors()
 	{
@@ -806,6 +797,26 @@ public:
 			UpdateActualWeaponMesh();
 	}
 
+	//Fix the camera not following the crouch animation
+	void ProcessHookedHeadPosition()
+	{
+		if (characterIsInVehicle || cameraMode == 15)
+		{
+			SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+			setRelativeLocation_params.bSweep = false;
+			setRelativeLocation_params.bTeleport = true;
+			setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 69.0f);
+			playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+			return;
+		}
+			
+		SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
+		setWorldLocation_params.bSweep = false;
+		setWorldLocation_params.bTeleport = true;
+		setWorldLocation_params.NewLocation = glm::fvec3(actualPlayerPositionUE.x, actualPlayerPositionUE.y, *(reinterpret_cast<float*>(memoryManager.playerHeadPositionAddresses[2]))*100);
+		playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
+	} 
+
 	void ToggleUObjectHooks(bool enable)
 	{
 		if (enable)
@@ -861,7 +872,7 @@ public:
 					motionState->set_hand(1);
 					motionState->set_permanent(true);
 				}
-				if ((/*characterIsGettingInACar || */characterIsInVehicle) && cameraMode != 55)
+				if ((characterIsInVehicle && !characterWasInVehicle) && cameraMode != 55)
 				{
 					uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 				}
@@ -895,6 +906,23 @@ public:
 			equippedWeaponIndex = it->second;
 		}
 		/*API::get()->log_info("%i", equippedWeaponIndex);*/
+	}
+
+	void ResetWeaponMeshPosAndRot()
+	{
+		if (weaponMesh == nullptr)
+				return;
+		SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+		setRelativeLocation_params.bSweep = false;
+		setRelativeLocation_params.bTeleport = true;
+		setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+		weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+
+		SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+		setRelativeRotation_params.bSweep = false;
+		setRelativeRotation_params.bTeleport = true;
+		setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
+		weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 	}
 
 	glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets)

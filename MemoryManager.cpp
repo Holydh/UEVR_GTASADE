@@ -194,7 +194,7 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-uintptr_t MemoryManager::shootInstructionAddress = 0x19B4310;
+uintptr_t MemoryManager::shootInstructionAddress = 0x11C6A7E;
 
 bool MemoryManager::isShooting = false;
 
