@@ -60,6 +60,7 @@ private:
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
 	bool isShooting = false;
+	bool playerShootInput = false;
 
 	std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed
@@ -121,7 +122,7 @@ public:
 	void on_dllmain_detach() override {
 		memoryManager.RemoveBreakpoints();
 		memoryManager.RemoveExceptionHandler();
-		memoryManager.ToggleAllMemoryInstructions(true);
+		memoryManager.RestoreAllMemoryInstructions(true);
 		ToggleUObjectHooks(false);
 	}
 
@@ -155,6 +156,7 @@ public:
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
+		playerShootInput = *(reinterpret_cast<float*>(memoryManager.playerShootInputAddress)) > 0;
 		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager.isShooting : false;
 		memoryManager.isShooting = false;
 
@@ -165,7 +167,7 @@ public:
 		{
 		/*	API::get()->log_info("playerIsInControl");*/
 			camResetRequested = true;
-			memoryManager.ToggleAllMemoryInstructions(false);
+			memoryManager.RestoreAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
 			ToggleUObjectHooks(true);
 		}
@@ -175,7 +177,7 @@ public:
 		if (!playerIsInControl && playerWasInControl)
 		{
 			//API::get()->log_info("player NOT InControl");
-			memoryManager.ToggleAllMemoryInstructions(true);
+			memoryManager.RestoreAllMemoryInstructions(true);
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
 			ToggleUObjectHooks(false);
@@ -196,8 +198,8 @@ public:
 			if (!weaponWheelOpen)
 			{
 				UpdateCameraMatrix(delta);
-				UpdateAimingVectors();
 				ProcessHookedHeadPosition();
+				UpdateAimingVectors();
 			}
 
 			if (weaponMesh != nullptr)
@@ -327,12 +329,17 @@ public:
 
 		playerHead->call_function(L"GetSocketLocation", &socketLocation_params);
 
-		//fix audio listener unaligned with original game
-		glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
+		//letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
+		// also keeps the original audio listener position. Attempt to mitigate it by disabling the overwrite only when shooting in car.
+		if (cameraMode == 55 || !characterIsInVehicle || !playerShootInput)
+		{
+			glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
 
-		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
-		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
-		*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager.cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
+		}
+
 		actualPlayerPositionUE = socketLocation_params.Location;
 	}
 
@@ -493,6 +500,9 @@ public:
 
 	void UpdateAimingVectors()
 	{
+		if (characterIsInVehicle)
+			return;
+
 		if (weaponMesh != nullptr) {
 			struct {
 				glm::fvec3 ForwardVector;
