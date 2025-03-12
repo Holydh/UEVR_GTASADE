@@ -159,7 +159,7 @@ public:
 		playerShootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
 		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager.isShooting : false;
-		
+		memoryManager.isShooting = false;
 
 		FetchRequiredUObjects();
 		
@@ -226,7 +226,6 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-		memoryManager.isShooting = false;
 	}
 
 	void FixWeaponVisibility()
