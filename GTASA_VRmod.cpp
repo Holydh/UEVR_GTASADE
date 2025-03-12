@@ -26,6 +26,8 @@ private:
 
 	MemoryManager memoryManager;
 
+	bool waterFixed = false;
+
 	//variables
 	float cameraMatrixValues[16] = { 0.0f };
 	float xAxisSensitivity = 125.0f;
@@ -123,7 +125,8 @@ public:
 		memoryManager.RemoveBreakpoints();
 		memoryManager.RemoveExceptionHandler();
 		memoryManager.RestoreAllMemoryInstructions(true);
-		ToggleUObjectHooks(false);
+		FixUnderwaterView(false);
+		ToggleAllUObjectHooks(false);
 	}
 
 	void on_initialize() override {
@@ -142,6 +145,9 @@ public:
 		UpdateSettingsIfModified(configFilePath);
 
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
+
+		if (!waterFixed && playerIsInControl)
+			FixUnderwaterView(true);
 		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
@@ -170,7 +176,7 @@ public:
 			camResetRequested = true;
 			memoryManager.RestoreAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
-			ToggleUObjectHooks(true);
+			ToggleAllUObjectHooks(true);
 		}
 		else
 			camResetRequested = false;
@@ -181,7 +187,7 @@ public:
 			memoryManager.RestoreAllMemoryInstructions(true);
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
-			ToggleUObjectHooks(false);
+			ToggleAllUObjectHooks(false);
 		}
 
 		if (playerIsInControl && ((characterIsInVehicle && !characterWasInVehicle) || (characterIsInVehicle && cameraMode != 55 && cameraModeWas == 55)))
@@ -453,15 +459,19 @@ public:
 			rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 			break;
 			//case 39: // Satchel
-			//case 40: // Detonator
-			//case 41: // SprayCan
-			//case 42: // Extinguisher
+			case 40: // Detonator
+				return;
+			case 41: // SprayCan
+				return;
+			case 42: // Extinguisher
+				return;
 			//case 43: // Camera
 			//case 44: // NightVision
 			//case 45: // Infrared
 			//case 46: // Parachute
 
 		default:
+			DisableMeleeWeaponsUObjectHooks();
 			return;
 		}
 
@@ -502,9 +512,6 @@ public:
 
 	void UpdateAimingVectors()
 	{
-		//if (characterIsInVehicle)
-		//	return;
-
 		if (weaponMesh != nullptr) {
 			struct {
 				glm::fvec3 ForwardVector;
@@ -527,6 +534,7 @@ public:
 			glm::fvec3 point2Offsets = { 0.0f, 0.0f, 0.0f };
 			bool socketAvailable = true;
 			bool sprayWeapon = false;
+			bool meleeWeapon = false;
 
 			//mesh alignement weapon offsets
 			switch (equippedWeaponIndex)
@@ -602,14 +610,20 @@ public:
 				point1Offsets = { 3.00373 , -3.05089 , 10.5162 };
 				point2Offsets = { 76.0552 , 4.39762, 17.8463 };
 				break;
-				//case 35: // RocketLauncher
-				//	point1Offsets = { 2.41748 , -3.88386 , 14.4056  };
-				//	point2Offsets = { 29.0589, -3.88386, 14.4056  };
-				//	break;
-				//case 36: // RocketLauncherHeatSeek
-				//	point1Offsets = { -57.665 , -3.74195 , 20.2618  };
-				//	point2Offsets = { 34.8035, -3.52085 , 20.1928   };
-				//	break;
+			case 35: // RocketLauncher
+				//point1Offsets = { 2.41748 , -3.88386 , 14.4056 };
+				//point2Offsets = { 29.0589, -3.88386, 14.4056 };
+				point1Offsets = { 0.0f , 0.0f, 0.0f };
+				point2Offsets = { 0.0f , 0.0f, 0.0f };
+				socketAvailable = false;
+				break;
+			case 36: // RocketLauncherHeatSeek
+				//point1Offsets = { -57.665 , -3.74195 , 20.2618 };
+				//point2Offsets = { 34.8035, -3.52085 , 20.1928 };
+				point1Offsets = { 0.0f , 0.0f, 0.0f };
+				point2Offsets = { 0.0f , 0.0f, 0.0f };
+				socketAvailable = false;
+				break;
 			case 37: // Flamethrower
 				point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
 				point2Offsets = { 76.7885, 0.537026 , 31.6837 };
@@ -643,10 +657,11 @@ public:
 				sprayWeapon = true;
 				socketAvailable = false;
 				break;
-				//case 43: // Camera
-				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-				//	break;
+			case 43: // Camera
+				point1Offsets = { 2.82819, -2.52103, 9.92684 };
+				point2Offsets = { 21.7272, -3.89487, 12.9088 };
+				socketAvailable = false;
+				break;
 				//case 44: // NightVision
 				//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
 				//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
@@ -664,6 +679,7 @@ public:
 				point1Offsets = { 0.0f , 0.0f, 0.0f };
 				point2Offsets = { 0.0f , 0.0f, 0.0f };
 				socketAvailable = false;
+				meleeWeapon = true;
 				break;
 			}
 
@@ -671,7 +687,7 @@ public:
 			glm::fvec3 point2Position = { 0.0f , 0.0f, 0.0f };
 			glm::fvec3 aimingDirection = { 0.0f , 0.0f, 0.0f };
 
-			if (socketAvailable)
+			if (socketAvailable && !meleeWeapon)
 			{
 				struct {
 					const struct API::FName& InSocketName = API::FName(L"gunflash");
@@ -736,7 +752,7 @@ public:
 
 
 
-			if (characterIsInVehicle && cameraMode != 55)
+			if (characterIsInVehicle && cameraMode != 55 || meleeWeapon)
 			{
 				// Apply new values to memory - This messes up the aiming vector
 				//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
@@ -780,6 +796,21 @@ public:
 			*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[1])) = cameraMatrixValues[5];
 			*(reinterpret_cast<float*>(memoryManager.aimForwardVectorAddresses[2])) = cameraMatrixValues[6];
 		}
+	}
+
+	void FixUnderwaterView(bool enableFix)
+	{
+		static auto underwaterMaterial = API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
+		/*API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());*/
+		underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
+
+	/*	const auto& scalarParameter = underwaterMaterial->get_property<API::TArray<API::UObject*>>(L"ScalarParameterValues");
+		const auto& test = scalarParameter.data[0];
+		API::get()->log_info("scalarParameter : %i", test->get_class());*/
+		//test->
+		/*API::get()->log_info("scalarParameter : %ls", scalarParameter.data[0].c_str());*/
+		//MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD
+		//Class /Script/Engine.MaterialInstanceConstant
 	}
 
 	void FetchRequiredUObjects()
@@ -829,7 +860,7 @@ public:
 		playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 	} 
 
-	void ToggleUObjectHooks(bool enable)
+	void ToggleAllUObjectHooks(bool enable)
 	{
 		if (enable)
 			uevr::API::UObjectHook::set_disabled(false);
@@ -854,6 +885,26 @@ public:
 			setRelativeRotation_params.NewRotation = {0.0f, 0.0f, 0.0f};
 			weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 		}
+	}
+
+	void DisableMeleeWeaponsUObjectHooks()
+	{
+		if (weaponMesh == nullptr)
+			return;
+		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+
+		//Reset weapon position and rotation for melee weapons
+		SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+		setRelativeLocation_params.bSweep = false;
+		setRelativeLocation_params.bTeleport = true;
+		setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+		weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+
+		SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+		setRelativeRotation_params.bSweep = false;
+		setRelativeRotation_params.bTeleport = true;
+		setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
+		weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 	}
 
 	void UpdateActualWeaponMesh()
