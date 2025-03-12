@@ -369,7 +369,7 @@ void MemoryManager::AdjustAddresses() {
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 
 	shootInstructionAddress += baseAddressGameEXE;
-	playerShootInputAddress += baseAddressGameEXE;
+	playerShootFromCarInputAddress += baseAddressGameEXE;
 }
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()
@@ -379,7 +379,7 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 	NopMemory(aimingForwardVectorInstructionsAddresses);
 	NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	NopMemory(sniperAimingVectorInstructionsAddresses);
-	NopMemory(carAimingVectorInstructionsAddresses);
+	//NopMemory(carAimingVectorInstructionsAddresses);
 };
 
 void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
@@ -389,7 +389,7 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	RestoreMemory(aimingForwardVectorInstructionsAddresses);
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
-	RestoreMemory(carAimingVectorInstructionsAddresses);
+	//RestoreMemory(carAimingVectorInstructionsAddresses);
 }
 
 void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)

@@ -60,7 +60,7 @@ private:
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
 	bool isShooting = false;
-	bool playerShootInput = false;
+	bool playerShootFromCarInput = false;
 
 	std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed
@@ -156,9 +156,10 @@ public:
 		cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
-		playerShootInput = *(reinterpret_cast<float*>(memoryManager.playerShootInputAddress)) > 0;
+		playerShootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
+		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
 		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager.isShooting : false;
-		memoryManager.isShooting = false;
+		
 
 		FetchRequiredUObjects();
 		
@@ -225,6 +226,7 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+		memoryManager.isShooting = false;
 	}
 
 	void FixWeaponVisibility()
@@ -331,7 +333,8 @@ public:
 
 		//letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
 		// also keeps the original audio listener position. Attempt to mitigate it by disabling the overwrite only when shooting in car.
-		if (cameraMode == 55 || !characterIsInVehicle || !playerShootInput)
+
+		if (cameraMode == 55 || !characterIsInVehicle || !playerShootFromCarInput)
 		{
 			glm::fvec3 offsetedPosition = OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
 
@@ -500,8 +503,8 @@ public:
 
 	void UpdateAimingVectors()
 	{
-		if (characterIsInVehicle)
-			return;
+		//if (characterIsInVehicle)
+		//	return;
 
 		if (weaponMesh != nullptr) {
 			struct {

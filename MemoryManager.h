@@ -77,7 +77,7 @@ public:
 	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 	static uintptr_t shootInstructionAddress;
-	uintptr_t playerShootInputAddress = 0x572BC90;
+	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
 
 
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
