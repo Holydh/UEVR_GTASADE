@@ -145,7 +145,7 @@ public:
 		UpdateSettingsIfModified(configFilePath);
 
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
-		API::get()->log_info("playerIsInControl %i", playerIsInControl);
+		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
 
 		if (!waterFixed && playerIsInControl)
 			FixUnderwaterView(true);
