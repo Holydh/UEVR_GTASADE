@@ -145,10 +145,12 @@ public:
 		UpdateSettingsIfModified(configFilePath);
 
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
+		API::get()->log_info("playerIsInControl %i", playerIsInControl);
 
 		if (!waterFixed && playerIsInControl)
 			FixUnderwaterView(true);
-		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
+			
+		
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
@@ -800,10 +802,11 @@ public:
 
 	void FixUnderwaterView(bool enableFix)
 	{
-		static auto underwaterMaterial = API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
-		/*API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());*/
+		//API::get()->log_info("fixing underwater");
+		auto underwaterMaterial = API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
+		//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());
 		underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
-
+		waterFixed = true;
 	/*	const auto& scalarParameter = underwaterMaterial->get_property<API::TArray<API::UObject*>>(L"ScalarParameterValues");
 		const auto& test = scalarParameter.data[0];
 		API::get()->log_info("scalarParameter : %i", test->get_class());*/
