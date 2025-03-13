@@ -145,7 +145,7 @@ public:
 		UpdateSettingsIfModified(configFilePath);
 
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
-		/*API::get()->log_info("playerIsInControl %i", playerIsInControl);*/
+		API::get()->log_info("playerIsInControl %i", playerIsInControl);
 
 		if (!waterFixed && playerIsInControl)
 			FixUnderwaterView(true);
@@ -972,10 +972,6 @@ public:
 			equippedWeaponIndex = it->second;
 		}
 		/*API::get()->log_info("%i", equippedWeaponIndex);*/
-		
-		float* test = (reinterpret_cast<float*>(API::get()->sdk()->uobject->get_property_data(weaponMesh->to_handle(), L"BoundsScale")));
-		*test = 0.8f;
-		API::get()->log_info("%f",*test);
 	}
 
 	void ResetWeaponMeshPosAndRot()
