@@ -163,11 +163,13 @@
     <ClInclude Include="..\plugin\include\uevr\API.hpp" />
     <ClInclude Include="..\plugin\include\uevr\Plugin.hpp" />
     <ClInclude Include="GTASA_VRmod.h" />
+    <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="MemoryManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GTASA_VRmod.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
+    <ClCompile Include="SettingsManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

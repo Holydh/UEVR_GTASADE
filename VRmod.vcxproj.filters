@@ -28,12 +28,18 @@
     <ClInclude Include="GTASA_VRmod.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="SettingsManager.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GTASA_VRmod.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MemoryManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SettingsManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

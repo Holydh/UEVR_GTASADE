@@ -5,9 +5,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "MemoryManager.h"
-#include <windows.h>
-#include <iostream>
-#include <string>
+#include "SettingsManager.h"
+
 
 
 using namespace uevr;
@@ -21,16 +20,14 @@ using namespace uevr;
 
 class GTASA_VRmod : public uevr::Plugin {
 private:
-	std::string configFilePath;
-	FILETIME lastWriteTime;
-
 	MemoryManager memoryManager;
+	SettingsManager settingsManager;
 
 	bool waterFixed = false;
 
 	//variables
 	float cameraMatrixValues[16] = { 0.0f };
-	float xAxisSensitivity = 125.0f;
+
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
@@ -114,11 +111,6 @@ private:
 public:
 	GTASA_VRmod() = default;
 
-	void UpdateSettings()
-	{
-		xAxisSensitivity = GetFloatValueFromFile(configFilePath, "VR_AimSpeed", 125.0f) * 10;
-	}
-
 	void on_dllmain_attach() override {}
 
 	void on_dllmain_detach() override {
@@ -131,8 +123,8 @@ public:
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
-		configFilePath = GetConfigFilePath();
-		API::get()->log_info("%s", configFilePath.c_str());
+		settingsManager.configFilePath = settingsManager.GetConfigFilePath();
+		API::get()->log_info("%s", settingsManager.configFilePath.c_str());
 		
 
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
@@ -142,7 +134,7 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 
-		UpdateSettingsIfModified(configFilePath);
+		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
 		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
@@ -295,7 +287,7 @@ public:
 		const float DEADZONE = 0.1f;
 		joystickYaw = /*camResetRequested ? 180.0f : */0.0f;
 		if (abs(rightJoystick.x) > DEADZONE) {
-			joystickYaw = -rightJoystick.x * delta * xAxisSensitivity;
+			joystickYaw = -rightJoystick.x * delta * settingsManager.xAxisSensitivity;
 		}
 
 		// Convert joystick yaw to radians
@@ -1001,117 +993,6 @@ public:
 
 		return pointWorldPosition;
 	}
-
-	
-	std::string GetDLLDirectory()
-	{
-		char path[MAX_PATH];
-		HMODULE hModule = GetModuleHandleA("VRmod.dll"); // Get handle to the loaded DLL
-
-		if (hModule)
-		{
-			GetModuleFileNameA(hModule, path, MAX_PATH); // Get full DLL path
-			std::string fullPath = path;
-
-			// Remove the DLL filename to get the directory
-			size_t pos = fullPath.find_last_of("\\/");
-			if (pos != std::string::npos)
-			{
-				return fullPath.substr(0, pos + 1); // Keep the trailing slash
-			}
-		}
-
-		return "Unknown";
-	}
-
-	std::string GetConfigFilePath()
-	{
-		std::string fullPath = GetDLLDirectory();
-
-		// Remove "SanAndreas\plugins\VRmod.dll" part, leaving "SanAndreas"
-		size_t pos = fullPath.find_last_of("\\/");
-		if (pos != std::string::npos)
-		{
-			fullPath = fullPath.substr(0, pos); // Remove "\plugins"
-			pos = fullPath.find_last_of("\\/");
-			if (pos != std::string::npos)
-			{
-				fullPath = fullPath.substr(0, pos + 1); // Keep "SanAndreas\"
-			}
-		}
-
-		return fullPath + "config.txt"; // Append "config.txt"
-	}
-
-	float GetFloatValueFromFile(const std::string& filePath, const std::string& key, float defaultValue)
-	{
-		HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE)
-		{
-			API::get()->log_info("%s", "Failed to open config.txt file");
-			return defaultValue;
-		}
-
-		DWORD bytesRead;
-		char buffer[1024];  // Buffer to read the file content
-		std::string fileContents;
-
-		// Read the file into memory
-		while (ReadFile(hFile, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
-		{
-			buffer[bytesRead] = '\0'; // Null terminate the string
-			fileContents.append(buffer);
-		}
-		CloseHandle(hFile);
-
-		// Look for the key in the file contents
-		size_t pos = fileContents.find(key);
-		if (pos != std::string::npos)
-		{
-			size_t equalPos = fileContents.find('=', pos);
-			if (equalPos != std::string::npos)
-			{
-				std::string valueStr = fileContents.substr(equalPos + 1);
-				try
-				{
-					return std::stof(valueStr); // Convert the string to float
-				}
-				catch (const std::invalid_argument&)
-				{
-					API::get()->log_info("%s","%s", "Error: Invalid float value for key: ", key.c_str());
-					return defaultValue;
-				}
-			}
-		}
-
-		return defaultValue;  // Return default if the key is not found
-	}
-
-	bool UpdateSettingsIfModified(const std::string& filePath)
-	{
-		HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (hFile == INVALID_HANDLE_VALUE)
-		{
-			API::get()->log_info("%s", "Failed to open config.txt file");
-			return false;
-		}
-
-		FILETIME currentWriteTime;
-		if (GetFileTime(hFile, NULL, NULL, &currentWriteTime))
-		{
-			if (CompareFileTime(&lastWriteTime, &currentWriteTime) != 0)
-			{
-				lastWriteTime = currentWriteTime;  // Update last write time
-				UpdateSettings();
-				CloseHandle(hFile);
-				return true;  // File has been modified
-			}
-		}
-
-		CloseHandle(hFile);
-		return false;  // No change
-	}
-
 
 	struct FQuat {
 		float x;
