@@ -416,6 +416,26 @@ void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
 	}
 }
 
+	//Finds address from pointer offsets found in cheat engine
+	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
+		uintptr_t addr = baseAddress;
+
+		for (size_t i = 0; i < offsets.size(); ++i) {
+			if (addr == 0) {
+				// If at any point the address is invalid, return 0
+				uevr::API::get()->log_error("%s", "Cant find gunflash socket address");
+				return 0;
+			}
+			// Dereference the pointer
+			addr = *reinterpret_cast<uintptr_t*>(addr);
+
+			// Add the offset
+			addr += offsets[i];
+		}
+		return addr;
+	}
+
+
 // Function to adjust addresses and store original bytes
 //void AdjustAddresses(std::vector<std::pair<uintptr_t, size_t>>& addresses) const {
 //	auto processAddresses = [&](std::vector<std::pair<uintptr_t, size_t>>& addresses) {

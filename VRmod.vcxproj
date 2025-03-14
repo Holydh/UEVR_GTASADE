@@ -162,14 +162,22 @@
     <ClInclude Include="..\plugin\include\uevr\API.h" />
     <ClInclude Include="..\plugin\include\uevr\API.hpp" />
     <ClInclude Include="..\plugin\include\uevr\Plugin.hpp" />
+    <ClInclude Include="CameraController.h" />
     <ClInclude Include="GTASA_VRmod.h" />
+    <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="MemoryManager.h" />
+    <ClInclude Include="Utilities.h" />
+    <ClInclude Include="WeaponManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="GTASA_VRmod.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
+    <ClCompile Include="PlayerManager.cpp" />
     <ClCompile Include="SettingsManager.cpp" />
+    <ClCompile Include="Utilities.cpp" />
+    <ClCompile Include="WeaponManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,5 @@
 #include "SettingsManager.h"
-#include <string>
-#include <windows.h>
-#include "uevr/API.hpp"
+
 
 void SettingsManager::UpdateSettings()
 {

@@ -3,6 +3,8 @@
 #define SETTINGSMANAGER_H
 #include <iostream>
 #include <windows.h>
+#include <string>
+#include "uevr/API.hpp"
 
 class SettingsManager {
 private:
