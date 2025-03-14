@@ -80,7 +80,6 @@ public:
 
 		playerManager.FetchPlayerUObjects();
 		
-
 		if (playerManager.playerIsInControl && !playerManager.playerWasInControl)
 		{
 		/*	API::get()->log_info("playerIsInControl");*/
@@ -123,10 +122,10 @@ public:
 
 			if (weaponManager.weaponMesh != nullptr)
 			{
-				weaponManager.FixWeaponVisibility();
 				weaponManager.WeaponHandling(delta);
 			}
 		}
+		weaponManager.HandleWeaponVisibility();
 
 		playerManager.playerWasInControl = playerManager.playerIsInControl;
 		playerManager.characterWasInVehicle = playerManager.characterIsInVehicle;

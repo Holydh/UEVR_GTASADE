@@ -87,7 +87,7 @@ public:
 
 	void UpdateActualWeaponMesh();
 	void UpdateAimingVectors();
-	void FixWeaponVisibility();
+	void HandleWeaponVisibility();
 	void WeaponHandling(float delta);
 	void DisableMeleeWeaponsUObjectHooks();
 	void ResetWeaponMeshPosAndRot();

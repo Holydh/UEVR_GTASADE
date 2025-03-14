@@ -404,7 +404,7 @@ void WeaponManager::UpdateAimingVectors()
 	}
 }
 
-void WeaponManager::FixWeaponVisibility()
+void WeaponManager::HandleWeaponVisibility()
 {
 	bool hideWeapon = false;
 	switch (equippedWeaponIndex)
@@ -467,9 +467,9 @@ void WeaponManager::FixWeaponVisibility()
 	struct {
 		bool ownerNoSee = false;
 	} setOwnerNoSee_params;
-	setOwnerNoSee_params.ownerNoSee = hideWeapon;
+	setOwnerNoSee_params.ownerNoSee = playerManager->playerIsInControl ? hideWeapon : false; //Enable visibility when in cutscenes
 	weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
-	weaponMesh->set_bool_property(L"bVisible", !hideWeapon);
+	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.ownerNoSee);
 }
 
 void WeaponManager::WeaponHandling(float delta)
