@@ -163,7 +163,7 @@
     <ClInclude Include="..\plugin\include\uevr\API.hpp" />
     <ClInclude Include="..\plugin\include\uevr\Plugin.hpp" />
     <ClInclude Include="CameraController.h" />
-    <ClInclude Include="GTASA_VRmod.h" />
+    <ClInclude Include="GTASADE_Plugin.h" />
     <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="MemoryManager.h" />
@@ -172,7 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraController.cpp" />
-    <ClCompile Include="GTASA_VRmod.cpp" />
+    <ClCompile Include="GTASADE_Plugin.cpp" />
     <ClCompile Include="MemoryManager.cpp" />
     <ClCompile Include="PlayerManager.cpp" />
     <ClCompile Include="SettingsManager.cpp" />

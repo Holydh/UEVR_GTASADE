@@ -1,10 +1,10 @@
 #include "uevr/Plugin.hpp"
+#include "GTASADE_plugin.h"
 #include "MemoryManager.h"
 #include "SettingsManager.h"
 #include "CameraController.h"
 #include "PlayerManager.h"
 #include "WeaponManager.h"
-
 
 
 using namespace uevr;
@@ -16,7 +16,7 @@ using namespace uevr;
         API::get()->log_info(__VA_ARGS__); \
     }}
 
-class GTASA_VRmod : public uevr::Plugin {
+class GTASADE_Plugin : public uevr::Plugin {
 private:
 	MemoryManager memoryManager;
 	SettingsManager settingsManager;
@@ -25,7 +25,7 @@ private:
 	WeaponManager weaponManager;
 
 public:
-	GTASA_VRmod() : cameraController(&memoryManager, &settingsManager, &playerManager),
+	GTASADE_Plugin() : cameraController(&memoryManager, &settingsManager, &playerManager),
           weaponManager(&playerManager, &cameraController, &memoryManager) {}
 
 	void on_dllmain_attach() override {}
@@ -164,4 +164,4 @@ public:
 
 // Actually creates the plugin. Very important that this global is created.
 // The fact that it's using std::unique_ptr is not important, as long as the constructor is called in some way.
-std::unique_ptr<GTASA_VRmod> g_plugin{ new GTASA_VRmod() };
+std::unique_ptr<GTASADE_Plugin> g_plugin{ new GTASADE_Plugin() };

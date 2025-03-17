@@ -25,7 +25,7 @@
     <ClInclude Include="MemoryManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="GTASA_VRmod.h">
+    <ClInclude Include="GTASADE_Plugin.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="SettingsManager.h">
@@ -45,7 +45,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GTASA_VRmod.cpp">
+    <ClCompile Include="GTASADE_Plugin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MemoryManager.cpp">
