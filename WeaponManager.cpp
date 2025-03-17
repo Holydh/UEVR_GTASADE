@@ -47,7 +47,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 		}
 	
 
-		if (!playerManager->characterIsInVehicle || cameraController->cameraMode == 55)
+		if (!playerManager->isInVehicle || cameraController->cameraModeIs == 55)
 		{
 			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
@@ -56,7 +56,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 			motionState->set_hand(1);
 			motionState->set_permanent(true);
 		}
-		if ((playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle) && cameraController->cameraMode != 55)
+		if ((playerManager->isInVehicle && !playerManager->wasInVehicle) && cameraController->cameraModeIs != 55)
 		{
 			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 		}
@@ -358,7 +358,7 @@ void WeaponManager::UpdateAimingVectors()
 
 
 
-		if (playerManager->characterIsInVehicle && cameraController->cameraMode != 55 || meleeWeapon)
+		if (playerManager->isInVehicle && cameraController->cameraModeIs != 55 || meleeWeapon)
 		{
 			// Apply new values to memory - This messes up the aiming vector
 			//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
@@ -467,25 +467,25 @@ void WeaponManager::HandleWeaponVisibility()
 	struct {
 		bool ownerNoSee = false;
 	} setOwnerNoSee_params;
-	setOwnerNoSee_params.ownerNoSee = playerManager->playerIsInControl ? hideWeapon : false; //Enable visibility when in cutscenes
+	setOwnerNoSee_params.ownerNoSee = playerManager->isInControl ? hideWeapon : false; //Enable visibility when in cutscenes
 	weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
 	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.ownerNoSee);
 }
 
 void WeaponManager::WeaponHandling(float delta)
 {
-	if (playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle)
+	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();
 		ResetWeaponMeshPosAndRot();
 	}
 
-	if (!playerManager->characterIsInVehicle && playerManager->characterWasInVehicle)
+	if (!playerManager->isInVehicle && playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();
 	}
 
-	if ((playerManager->characterIsInVehicle && cameraController->cameraMode != 55)) //check a shooting on car scenario before deleting
+	if ((playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
 		return;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };

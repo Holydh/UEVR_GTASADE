@@ -15,12 +15,12 @@ public:
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
-	bool playerIsInControl = false;
-	bool playerWasInControl = false;
-	bool characterIsInVehicle = false;
-	bool characterWasInVehicle = false;
+	bool isInControl = false;
+	bool wasInControl = false;
+	bool isInVehicle = false;
+	bool wasInVehicle = false;
 	bool isShooting = false;
-	bool playerShootFromCarInput = false;
+	bool shootFromCarInput = false;
 
 	void FetchPlayerUObjects();
 	void DisablePlayerUObjectsHook();

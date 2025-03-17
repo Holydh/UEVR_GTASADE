@@ -53,10 +53,10 @@ public:
 
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
-		playerManager.playerIsInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerHasControlAddress)) == 0;
+		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
 		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
 
-		if (!cameraController.waterViewFixed && playerManager.playerIsInControl)
+		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
 			
 		
@@ -65,22 +65,22 @@ public:
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
 		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
 
-		bool weaponWheelOpen = *(reinterpret_cast<int*>(memoryManager.weaponWheelOpenAddress)) > 30;
+		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
 		/*characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;*/
 		
-		playerManager.characterIsInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.characterIsInVehicleAddress)) > 0;
+		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
-		cameraController.cameraMode = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
+		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
 		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
 
-		playerManager.playerShootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
+		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
 		playerManager.isShooting = weaponManager.equippedWeaponIndex == weaponManager.previousEquippedWeaponIndex ? memoryManager.isShooting : false;
 		memoryManager.isShooting = false;
 
 		playerManager.FetchPlayerUObjects();
 		
-		if (playerManager.playerIsInControl && !playerManager.playerWasInControl)
+		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
 		/*	API::get()->log_info("playerIsInControl");*/
 			cameraController.camResetRequested = true;
@@ -91,7 +91,7 @@ public:
 		else
 			cameraController.camResetRequested = false;
 
-		if (!playerManager.playerIsInControl && playerManager.playerWasInControl)
+		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			//API::get()->log_info("player NOT InControl");
 			memoryManager.RestoreAllMemoryInstructions(true);
@@ -100,20 +100,20 @@ public:
 			ToggleAllUObjectHooks(false);
 		}
 
-		if (playerManager.playerIsInControl && ((playerManager.characterIsInVehicle && !playerManager.characterWasInVehicle) || (playerManager.characterIsInVehicle && cameraController.cameraMode != 55 && cameraController.cameraModeWas == 55)))
+		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs != 55 && cameraController.cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 
-		if (playerManager.playerIsInControl && ((!playerManager.characterIsInVehicle && playerManager.characterWasInVehicle) || (playerManager.characterIsInVehicle && cameraController.cameraMode == 55 && cameraController.cameraModeWas != 55)))
+		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs == 55 && cameraController.cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 	
-		if (playerManager.playerIsInControl)
+		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
-			if (!weaponWheelOpen)
+			if (!weaponWheelDisplayed)
 			{
 				cameraController.UpdateCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition();
@@ -127,9 +127,9 @@ public:
 		}
 		weaponManager.HandleWeaponVisibility();
 
-		playerManager.playerWasInControl = playerManager.playerIsInControl;
-		playerManager.characterWasInVehicle = playerManager.characterIsInVehicle;
-		cameraController.cameraModeWas = cameraController.cameraMode;
+		playerManager.wasInControl = playerManager.isInControl;
+		playerManager.wasInVehicle = playerManager.isInVehicle;
+		cameraController.cameraModeWas = cameraController.cameraModeIs;
 		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
 	}
 

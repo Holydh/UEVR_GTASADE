@@ -27,7 +27,7 @@ public:
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
 
 	bool camResetRequested = false;
-	int cameraMode = 0;
+	int cameraModeIs = 0;
 	int cameraModeWas = 0;
 
 	bool waterViewFixed = false;

@@ -359,10 +359,10 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
-	playerHasControlAddress += baseAddressGameEXE;
+	playerIsInControlAddress += baseAddressGameEXE;
 
-	characterIsInVehicleAddress += baseAddressGameEXE;
-	weaponWheelOpenAddress += baseAddressGameEXE;
+	playerIsInVehicleAddress += baseAddressGameEXE;
+	weaponWheelDisplayedAddress += baseAddressGameEXE;
 
 	cameraModeAddress += baseAddressGameEXE;
 

@@ -65,12 +65,12 @@ public:
 		0x58013D8, 0x58013DC, 0x58013E0
 	};
 
-	uintptr_t weaponWheelOpenAddress = 0x507C580;
+	uintptr_t weaponWheelDisplayedAddress = 0x507C580;
 
 	//without Cleo delete
-	uintptr_t playerHasControlAddress = 0x53E8840;
+	uintptr_t playerIsInControlAddress = 0x53E8840;
 	uintptr_t cameraModeAddress = 0x53E2580;
-	uintptr_t characterIsInVehicleAddress = 0x51B39D4;
+	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
 
 	//Cleo set address
 	//uintptr_t characterIsDuckingAddress = 0x53DAD11;

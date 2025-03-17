@@ -32,11 +32,11 @@ void CameraController::UpdateCameraMatrix(float delta) {
 
 		float joystickYaw = 0.0f;
 
-		if (playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle)
+		if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 		{
 			accumulatedJoystickRotation = glm::mat4(1.0f);
 		}
-		if ((!playerManager->characterIsInVehicle && playerManager->characterWasInVehicle) || (!playerManager->characterIsInVehicle && camResetRequested))
+		if ((!playerManager->isInVehicle && playerManager->wasInVehicle) || (!playerManager->isInVehicle && camResetRequested))
 		{
 			//camResetRequested = true;
 			accumulatedJoystickRotation = glm::mat4(1.0f);
@@ -46,7 +46,7 @@ void CameraController::UpdateCameraMatrix(float delta) {
 		// Calculate the delta rotation matrix. 
 		// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
 		// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
-		glm::mat4 deltaRotationMatrix = playerManager->characterIsInVehicle && cameraMode != 55 ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
+		glm::mat4 deltaRotationMatrix = playerManager->isInVehicle && cameraModeIs != 55 ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
 
 		// Apply joystick input to adjust the local yaw rotation
 		const float DEADZONE = 0.1f;
@@ -98,7 +98,7 @@ void CameraController::UpdateCameraMatrix(float delta) {
 		//letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
 		// also keeps the original audio listener position. Attempt to mitigate it by disabling the overwrite only when shooting in car.
 
-		if (cameraMode == 55 || !playerManager->characterIsInVehicle || !playerManager->playerShootFromCarInput)
+		if (cameraModeIs == 55 || !playerManager->isInVehicle || !playerManager->shootFromCarInput)
 		{
 			glm::fvec3 offsetedPosition = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, glm::fvec3(49.5, 0.0, 0.0));
 
@@ -113,7 +113,7 @@ void CameraController::UpdateCameraMatrix(float delta) {
 //Fix the camera not following the crouch animation
 void CameraController::ProcessHookedHeadPosition()
 {
-	if (playerManager->characterIsInVehicle || cameraMode == 15)
+	if (playerManager->isInVehicle || cameraModeIs == 15)
 	{
 		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 		setRelativeLocation_params.bSweep = false;
