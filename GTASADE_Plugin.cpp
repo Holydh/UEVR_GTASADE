@@ -23,6 +23,7 @@ private:
 	PlayerManager playerManager;
 	WeaponManager weaponManager;
 
+
 public:
 	GTASADE_Plugin() : cameraController(&memoryManager, &settingsManager, &playerManager),
           weaponManager(&playerManager, &cameraController, &memoryManager) {}
@@ -45,10 +46,14 @@ public:
 
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
+
+		weaponManager.InitScope();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
+
+		weaponManager.SpawnScope();
 
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 

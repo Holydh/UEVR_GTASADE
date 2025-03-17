@@ -668,6 +668,50 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
 
+void WeaponManager::InitScope()
+{
+	gameEngine_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.GameEngine");
+	uevr::API::get()->log_info("gameEngine_c = %ls", gameEngine_c->get_full_name().c_str());
+
+	statics_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.GameplayStatics");
+	uevr::API::get()->log_info("statics_c = %ls", statics_c->get_full_name().c_str());
+	kismetRendering_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.KismetRenderingLibrary");
+	uevr::API::get()->log_info("kismetRendering_c = %ls", kismetRendering_c->get_full_name().c_str());
+	kismetMaterialLibrary_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.KismetMaterialLibrary");
+	uevr::API::get()->log_info("kismetMaterialLibrary_c = %ls", kismetMaterialLibrary_c->get_full_name().c_str());
+	assetRegistryHelpers_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/AssetRegistry.AssetRegistryHelpers");
+	uevr::API::get()->log_info("assetRegistryHelpers_c = %ls", assetRegistryHelpers_c->get_full_name().c_str());
+	actor_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.Actor");
+	uevr::API::get()->log_info("actor_c = %ls", actor_c->get_full_name().c_str());
+	staticMeshComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMeshComponent");
+	uevr::API::get()->log_info("staticMeshComponent_c = %ls", staticMeshComponent_c->get_full_name().c_str());
+	staticMesh_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMesh");
+	uevr::API::get()->log_info("staticMesh_c = %ls", staticMesh_c->get_full_name().c_str());
+	sceneCaptureComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.SceneCaptureComponent2D");
+	uevr::API::get()->log_info("sceneCaptureComponent_c = %ls", sceneCaptureComponent_c->get_full_name().c_str());
+	skeletalMeshComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.SkeletalMeshComponent");
+	uevr::API::get()->log_info("skeletalMeshComponent_c = %ls", skeletalMeshComponent_c->get_full_name().c_str());
+	cameraManager_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.PlayerCameraManager");
+	uevr::API::get()->log_info("cameraManager_c = %ls", cameraManager_c->get_full_name().c_str());
+
+
+}
+
+void WeaponManager::SpawnScope()
+{
+	auto viewport = gameEngine_c->get_first_object_matching()->get_property<uevr::API::UObject*>(L"GameViewport");
+	uevr::API::get()->log_info("viewport = %ls", viewport->get_full_name().c_str());
+	auto world = viewport->get_property<uevr::API::UObject*>(L"World");
+	uevr::API::get()->log_info("world = %ls", world->get_full_name().c_str());
+
+	auto renderTarget = 
+}
+
+void GetRenderTarget()
+{
+
+}
+
 	//switch (equippedWeaponIndex)
 	//{
 	//	//case 0:  // Unarmed
