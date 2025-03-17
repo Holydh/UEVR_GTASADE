@@ -1,5 +1,4 @@
 #include "uevr/Plugin.hpp"
-#include "GTASADE_plugin.h"
 #include "MemoryManager.h"
 #include "SettingsManager.h"
 #include "CameraController.h"

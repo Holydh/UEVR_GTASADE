@@ -163,7 +163,6 @@
     <ClInclude Include="..\plugin\include\uevr\API.hpp" />
     <ClInclude Include="..\plugin\include\uevr\Plugin.hpp" />
     <ClInclude Include="CameraController.h" />
-    <ClInclude Include="GTASADE_Plugin.h" />
     <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="MemoryManager.h" />

@@ -25,9 +25,6 @@
     <ClInclude Include="MemoryManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="GTASADE_Plugin.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="SettingsManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
