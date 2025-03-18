@@ -17,18 +17,6 @@ private:
 	CameraController* cameraController;
 	MemoryManager* memoryManager;
 
-	uevr::API::UClass* gameEngine_c;
-	uevr::API::UClass* statics_c;
-	uevr::API::UClass* kismetRendering_c;
-	uevr::API::UClass* kismetMaterialLibrary_c;
-	uevr::API::UClass* assetRegistryHelpers_c;
-	uevr::API::UClass* actor_c;
-	uevr::API::UClass* staticMeshComponent_c;
-	uevr::API::UClass* staticMesh_c;
-	uevr::API::UClass* sceneCaptureComponent_c;
-	uevr::API::UClass* skeletalMeshComponent_c;
-	uevr::API::UClass* cameraManager_c;
-
 public:
 	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm) : playerManager(pm), cameraController(cc), memoryManager(mm) {}
 
@@ -103,9 +91,6 @@ public:
 	void WeaponHandling(float delta);
 	void DisableMeleeWeaponsUObjectHooks();
 	void ResetWeaponMeshPosAndRot();
-
-	void InitScope();
-	void SpawnScope();
 };
 
 #endif
