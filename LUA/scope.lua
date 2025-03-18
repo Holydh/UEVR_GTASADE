@@ -62,61 +62,64 @@ local function init_static_objects()
     -- Try to initialize all required objects
     ftransform_c = find_required_object("ScriptStruct /Script/CoreUObject.Transform")
     if not ftransform_c then return false end
-    
+    print(ftransform_c:get_full_name())
     flinearColor_c = find_required_object("ScriptStruct /Script/CoreUObject.LinearColor")
     if not flinearColor_c then return false end
-    
+    print(flinearColor_c:get_full_name())
     hitresult_c = find_required_object("ScriptStruct /Script/Engine.HitResult")
     if not hitresult_c then return false end
-    
+    print(hitresult_c:get_full_name())
     game_engine_class = find_required_object("Class /Script/Engine.GameEngine")
     if not game_engine_class then return false end
-    
+    print(game_engine_class:get_full_name())
     Statics = find_static_class("Class /Script/Engine.GameplayStatics")
     if not Statics then return false end
-    
+    print(Statics:get_full_name())
     Kismet = find_static_class("Class /Script/Engine.KismetRenderingLibrary")
     if not Kismet then return false end
-    
+    print(Kismet:get_full_name())
     KismetMaterialLibrary = find_static_class("Class /Script/Engine.KismetMaterialLibrary")
     if not KismetMaterialLibrary then return false end
-    
+    print(KismetMaterialLibrary:get_full_name())
     AssetRegistryHelpers = find_static_class("Class /Script/AssetRegistry.AssetRegistryHelpers")
     if not AssetRegistryHelpers then return false end
-    
+    print(AssetRegistryHelpers:get_full_name())
     actor_c = find_required_object("Class /Script/Engine.Actor")
     if not actor_c then return false end
-    
+    print(actor_c:get_full_name())
     staic_mesh_component_c = find_required_object("Class /Script/Engine.StaticMeshComponent")
     if not staic_mesh_component_c then return false end
-
+    print(staic_mesh_component_c:get_full_name())
     staic_mesh_c = find_required_object("Class /Script/Engine.StaticMesh")
     if not staic_mesh_c then return false end
-    
+    print(staic_mesh_c:get_full_name())
     scene_capture_component_c = find_required_object("Class /Script/Engine.SceneCaptureComponent2D")
     if not scene_capture_component_c then return false end
-    
+    print(scene_capture_component_c:get_full_name())
     MeshC = api:find_uobject("Class /Script/Engine.SkeletalMeshComponent")
     if not MeshC then return false end
-    
+    print(MeshC:get_full_name())
     StaticMeshC = api:find_uobject("Class /Script/Engine.StaticMeshComponent")
     if not StaticMeshC then return false end
-
-    CameraManager_c = find_required_object("Class /Script/Stalker2.CameraManager") -- Class Engine.PlayerController/ObjectProperty PlayerCameraManager
+    print(StaticMeshC:get_full_name())
+    CameraManager_c = find_required_object("Class /Script/Engine.PlayerCameraManager") -- Class Engine.PlayerController/ObjectProperty PlayerCameraManager
     if not CameraManager_c then return false end
+    print(CameraManager_c:get_full_name())
 
     -- Initialize reusable objects
     reusable_hit_result = StructObject.new(hitresult_c)
     if not reusable_hit_result then return false end
-    
+    --print(reusable_hit_result:get_full_name())
+
     zero_color = StructObject.new(flinearColor_c)
     if not zero_color then return false end
+    print(zero_color:get_full_name())
     
     zero_transform = StructObject.new(ftransform_c)
     if not zero_transform then return false end
     zero_transform.Rotation.W = 1.0
     zero_transform.Scale3D = temp_vec3:set(1.0, 1.0, 1.0)
-
+    print(zero_transform:get_full_name())
     return true
 end
 
@@ -446,12 +449,13 @@ local last_level = nil
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
         local viewport = engine.GameViewport
+        print(viewport:get_full_name())
         if viewport then
             local world = viewport.World
-    
+            print(world:get_full_name())
             if world then
                 local level = world.PersistentLevel
-    
+                print(level:get_full_name())
                 if last_level ~= level then
                     print("Level changed .. Reseting")
                     destroy_actor(scope_actor)
