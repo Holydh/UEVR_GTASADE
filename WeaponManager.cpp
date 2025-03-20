@@ -213,8 +213,8 @@ void WeaponManager::UpdateAimingVectors()
 			point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
 			break;
 		case 34: // Sniper
-			point1Offsets = { 3.00373 , -3.05089 , 10.5162 };
-			point2Offsets = { 76.0552 , 4.39762, 17.8463 };
+			point1Offsets = { 5.94806 , -2.75068, 13.2024 };
+			point2Offsets = { 30.6871 , -0.22823, 15.6848 };
 			break;
 		case 35: // RocketLauncher
 			//point1Offsets = { 2.41748 , -3.88386 , 14.4056 };
