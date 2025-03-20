@@ -1,3 +1,6 @@
+-- Script made by Mutar for Stalker 2
+-- Tweaked by Holydh
+
 local api = uevr.api
 local vr = uevr.params.vr
 
