@@ -586,7 +586,8 @@ void WeaponManager::WeaponHandling(float delta)
 		return;
 	case 42: // Extinguisher
 		return;
-		//case 43: // Camera
+	case 43: // Camera
+		return;
 		//case 44: // NightVision
 		//case 45: // Infrared
 		//case 46: // Parachute

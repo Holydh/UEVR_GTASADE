@@ -255,7 +255,7 @@ local function spawn_scope_plane(world, owner, pos, rt)
 
     print(wanted_mat:get_full_name())
 
-    local plane = find_required_object_no_cache(staic_mesh_c, "StaticMesh /Engine/BasicShapes/Cube.Cube")
+    local plane = find_required_object_no_cache(staic_mesh_c, "StaticMesh /Engine/BasicShapes/Plane.Plane")
     -- local plane = find_required_object("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
     -- local plane = find_required_object_no_cache("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
    
@@ -404,6 +404,7 @@ local function attach_components_to_weapon(weapon_mesh)
             true -- Weld simulated bodies
         )
         scene_capture_component:K2_SetRelativeRotation(temp_vec3:set(0, 0, 90), false, reusable_hit_result, false)
+        scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(19, -11.7, 0.6), false, reusable_hit_result, false)
         scene_capture_component:SetVisibility(false)
     end
     
@@ -422,9 +423,12 @@ local function attach_components_to_weapon(weapon_mesh)
             2, -- Scale rule
             true -- Weld simulated bodies
         )
-        scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(0, 90, 90), false, reusable_hit_result, false)
-        scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(0.22, 0, 0), false, reusable_hit_result, false)
-        scope_plane_component:SetWorldScale3D(temp_vec3:set(0.1, 0.025, 0.00001))
+        --scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(-90, 90, 90), false, reusable_hit_result, false)
+        
+        -- Numbers below ok for Camera weapon :
+        scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(-90, 90, 90), false, reusable_hit_result, false)
+        scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(3.8, -13, 1.7), false, reusable_hit_result, false)
+        scope_plane_component:SetWorldScale3D(temp_vec3:set(0.06, 0.085, 0))
         --scope_plane_component:SetWorldScale3D(temp_vec3:set(1, 1, 1))
        
         scope_plane_component:SetVisibility(false)
