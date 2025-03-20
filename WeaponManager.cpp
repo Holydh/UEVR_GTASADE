@@ -264,8 +264,8 @@ void WeaponManager::UpdateAimingVectors()
 			socketAvailable = false;
 			break;
 		case 43: // Camera
-			point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			point2Offsets = { 21.7272, -3.89487, 12.9088 };
+			point1Offsets = { 13.8476, -11.6162, 1.72577 };
+			point2Offsets = { 27.6432, -11.6162, 2.84382 };
 			socketAvailable = false;
 			break;
 			//case 44: // NightVision
