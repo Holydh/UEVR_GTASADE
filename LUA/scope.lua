@@ -5,7 +5,7 @@ local api = uevr.api
 local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
-local sniperFov = 10.0
+local sniperFov = 3.0
 local cameraFov = 35.0
 local actualFov = 10.0
 
@@ -20,20 +20,24 @@ local KismetStringLibrary = nil
 local KismetMathLibrary = nil
 local KismetRenderingLibrary = nil
 local KismetMaterialLibrary = nil
-local AssetRegistryHelpers = nil
+local KismetSystemLibrary = nil
 local actor_c = nil
 local static_mesh_component_c = nil
 local static_mesh_c = nil
+local texture2D_c = nil
 local scene_capture_component_c = nil
 local MeshC = nil
 local StaticMeshC = nil
 local CameraManager_c = nil
 local Weapon_c = nil
+local Cylinder = nil
 
 
 -- Instance variables
 local scope_actor = nil
 local scope_plane_component = nil
+local red_dot_plane_component = nil
+local scene_capture_component_mesh = nil
 local scene_capture_component = nil
 local cameraRenderTarget = nil
 local sniperRenderTarget = nil
@@ -99,9 +103,9 @@ local function init_static_objects()
     KismetMaterialLibrary = find_static_class("Class /Script/Engine.KismetMaterialLibrary")
     if not KismetMaterialLibrary then return false end
     print(KismetMaterialLibrary:get_full_name())
-    AssetRegistryHelpers = find_static_class("Class /Script/AssetRegistry.AssetRegistryHelpers")
-    if not AssetRegistryHelpers then return false end
-    print(AssetRegistryHelpers:get_full_name())
+    KismetSystemLibrary = find_static_class("Class /Script/Engine.KismetSystemLibrary")
+    if not KismetSystemLibrary then return false end
+    print(KismetSystemLibrary:get_full_name())
     actor_c = find_required_object("Class /Script/Engine.Actor")
     if not actor_c then return false end
     print(actor_c:get_full_name())
@@ -141,6 +145,16 @@ local function init_static_objects()
     if not zero_transform then return false end
     zero_transform.Rotation.W = 1.0
     zero_transform.Scale3D = temp_vec3:set(1.0, 1.0, 1.0)
+
+    
+    Cylinder = find_required_object("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+    if not Cylinder then return false end
+    print(Cylinder:get_full_name())
+
+    texture2D_c = find_required_object("Class /Script/Engine.Texture2D")
+    if not texture2D_c then return false end
+    print(texture2D_c:get_full_name())
+
     print("init done")
     return true
 end
@@ -153,7 +167,7 @@ local function reset_static_objects()
     Statics = nil
     KismetRenderingLibrary = nil
     KismetMaterialLibrary = nil
-    AssetRegistryHelpers = nil
+    AssetRegistry = nil
     actor_c = nil
     static_mesh_component_c = nil
     static_mesh_c = nil
@@ -254,6 +268,7 @@ end
 
 local function spawn_scope_plane(world, owner, pos, rt, isSniper)
     local local_scope_mesh = scope_actor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
+    local local_red_dot_mesh = scope_actor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
     if local_scope_mesh == nil then
         print("Failed to spawn scope mesh")
         return
@@ -273,42 +288,64 @@ local function spawn_scope_plane(world, owner, pos, rt, isSniper)
 
     print(wanted_mat:get_full_name())
 
-    local plane
+    local scopePlane
+    local redDotPlane
+    local redDotTexture
     if isSniper then
-        plane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
-        print("Cylinder spawning")
+        scopePlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+        redDotPlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+        redDotTexture = find_required_object_no_cache(texture2D_c, "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC")
     else
-        plane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Plane.Plane")
-        print("Plane spawning")
+        scopePlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Plane.Plane")
     end
 
-    if plane == nil then
+    if scopePlane == nil then
         print("Failed to find plane mesh")
         return
     end
     --print("plane" .. plane:get_full_name())
     
     
-    local_scope_mesh:SetStaticMesh(plane)
+    local_scope_mesh:SetStaticMesh(scopePlane)
     local_scope_mesh:SetVisibility(false)
     -- local_scope_mesh:SetHiddenInGame(false)
     local_scope_mesh:SetCollisionEnabled(0)
 
+    if isSniper then
+        local_red_dot_mesh:SetStaticMesh(redDotPlane)
+        local_red_dot_mesh:SetVisibility(false)
+        -- local_scope_mesh:SetHiddenInGame(false)
+        local_red_dot_mesh:SetCollisionEnabled(0)
+    end
 
-    local dynamic_material = local_scope_mesh:CreateAndSetMaterialInstanceDynamicFromMaterial(0, wanted_mat)
 
-    dynamic_material:SetTextureParameterValue(KismetStringLibrary:Conv_StringToName("LinearColor"), rt)
+    local scope_dynamic_material = local_scope_mesh:CreateAndSetMaterialInstanceDynamicFromMaterial(0, wanted_mat)
+    local red_dot_dynamic_material = local_red_dot_mesh:CreateAndSetMaterialInstanceDynamicFromMaterial(0, wanted_mat)
+
+    scope_dynamic_material:SetTextureParameterValue(KismetStringLibrary:Conv_StringToName("LinearColor"), rt)
     
     local color = StructObject.new(flinearColor_c)
     color.R = emissive_material_amplifier
     color.G = emissive_material_amplifier
     color.B = emissive_material_amplifier
     color.A = emissive_material_amplifier
-    dynamic_material:SetVectorParameterValue(KismetStringLibrary:Conv_StringToName("Color"), color)
+    scope_dynamic_material:SetVectorParameterValue(KismetStringLibrary:Conv_StringToName("Color"), color)
+
+    if isSniper then
+        red_dot_dynamic_material:SetTextureParameterValue(KismetStringLibrary:Conv_StringToName("LinearColor"), redDotTexture)
+        local redDotColor = StructObject.new(flinearColor_c)
+        redDotColor.R = 0.6
+        redDotColor.G = 0.6
+        redDotColor.B = 0.6
+        redDotColor.A = 0.6
+        red_dot_dynamic_material:SetVectorParameterValue(KismetStringLibrary:Conv_StringToName("Color"), redDotColor)
+    end
 
     scope_plane_component = local_scope_mesh
+    red_dot_plane_component = local_red_dot_mesh
     print("Scope plane spawned")
 end
+
 
 -- local function create_emissive_mat(component, materialSocketName)
 --     -- local wanted_mat = api:find_uobject(emissive_mesh_material_name)
@@ -329,14 +366,20 @@ end
 -- end
 
 local function spawn_scene_capture_component(world, owner, pos, fov, rt)
+    scene_capture_component_mesh = scope_actor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
     scene_capture_component = scope_actor:AddComponentByClass(scene_capture_component_c, false, zero_transform, false)
     if scene_capture_component == nil then
         print("Failed to spawn scene capture")
         return
     end
+    if scene_capture_component_mesh == nil then
+        print("Failed to spawn scene capture mesh")
+        return
+    end
     scene_capture_component.TextureTarget = rt
     scene_capture_component:SetVisibility(false)
-    scene_capture_component:CaptureScene()
+    scene_capture_component_mesh:SetVisibility(false)
+    --scene_capture_component:CaptureScene()
     --print(scene_capture_component:get_full_name())
     print("scene_capture_component spawned")
 end
@@ -365,6 +408,7 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
             if child:is_a(static_mesh_component_c) then
                 child:K2_DestroyComponent(child)
                 scope_plane_component = nil
+                red_dot_plane_component = nil
             end
         end
     end
@@ -376,7 +420,9 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
         rt = nil
         scope_actor = destroy_actor(scope_actor)
         scope_plane_component = nil
+        red_dot_plane_component = nil
         scene_capture_component = nil
+        scene_capture_component_mesh = nil
         return
     end
 
@@ -384,7 +430,9 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
     if not validate_object(scope_actor) then
         scope_actor = destroy_actor(scope_actor)
         scope_plane_component = nil
+        red_dot_plane_component = nil
         scene_capture_component = nil
+        scene_capture_component_mesh = nil
         scope_actor = spawn_actor(world, actor_c, temp_vec3:set(0, 0, 0), 1, nil)
         if scope_actor == nil then
             print("Failed to spawn scope actor")
@@ -421,12 +469,12 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
 
     print("rotation x = " .. rotation.x .. " rotation y = " .. rotation.y ..  " rotation z = " .. rotation.z)
     -- Attach scene capture to weapon
-    if scene_capture_component ~= nil then
+    if scene_capture_component ~= nil and scene_capture_component_mesh ~=  nil then
             
         -- scene_capture:DetachFromParent(true, false)
         -- "AimSocket"
         print("Attaching scene_capture_component to weapon:" .. weapon_mesh:get_fname():to_string())
-        scene_capture_component:K2_AttachToComponent(
+        scene_capture_component_mesh:K2_AttachToComponent(
             weapon_mesh,
             "gunflash",
             2, -- Location rule
@@ -437,14 +485,31 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
 
         if isSniper then
             
-            scene_capture_component:K2_SetRelativeRotation(rotation, false, reusable_hit_result, false)
-            scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(30.6871 , -0.22823, 15.6848), false, reusable_hit_result, false)
+            scene_capture_component_mesh:K2_SetRelativeRotation(rotation, false, reusable_hit_result, false)
+            scene_capture_component_mesh:K2_SetRelativeLocation(temp_vec3:set(30.6871 , -0.22823, 15.6848), false, reusable_hit_result, false)
+            scene_capture_component_mesh:SetVisibility(false)
+        else
+            local test = temp_vec3:set(rotation.x, rotation.y, rotation.z - 90)
+            scene_capture_component_mesh:K2_SetRelativeRotation( test, false, reusable_hit_result, false)
+            scene_capture_component_mesh:K2_SetRelativeLocation(temp_vec3:set(27.6432, -11.6162, 2.84382), false, reusable_hit_result, false)
+            scene_capture_component_mesh:SetVisibility(false)
+        end
+
+        scene_capture_component:K2_AttachToComponent(
+            scene_capture_component_mesh,
+            "gunflash",
+            2, -- Location rule
+            2, -- Rotation rule
+            0, -- Scale rule
+            true -- Weld simulated bodies
+        )
+
+        if isSniper then
+            --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(60.0000 , 0.0000, 0.0000), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
             actualFov = sniperFov
         else
-            local test = temp_vec3:set(rotation.x, rotation.y, rotation.z - 90)
-            scene_capture_component:K2_SetRelativeRotation( test, false, reusable_hit_result, false)
-            scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(27.6432, -11.6162, 2.84382), false, reusable_hit_result, false)
+            --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(27.6432, -11.6162, 2.84382), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
             actualFov = cameraFov
         end
@@ -466,6 +531,7 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
             2, -- Scale rule
             true -- Weld simulated bodies
         )
+
         --scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(-90, 90, 90), false, reusable_hit_result, false)
         if isSniper then
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
@@ -473,6 +539,16 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
             scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(5.91537, -2.75402, 13.1992), false, reusable_hit_result, false)
             scope_plane_component:SetWorldScale3D(temp_vec3:set(0.033, 0.033, 0.000001))
             --scope_plane_component:SetWorldScale3D(temp_vec3:set(0.1, 0.1, 0.000001))
+            red_dot_plane_component:K2_AttachToComponent(
+                scope_plane_component,
+                "gunflash",
+                2, -- Location rule
+                2, -- Rotation rule
+                2, -- Scale rule
+                true -- Weld simulated bodies
+            )
+            red_dot_plane_component:K2_SetRelativeLocation(temp_vec3:set(0, 0, 11000), false, reusable_hit_result, false)
+            red_dot_plane_component:SetWorldScale3D(temp_vec3:set(0.0018, 0.0018, 0.000001))
         else
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
             scope_plane_component:K2_SetRelativeRotation(test, false, reusable_hit_result, false)
@@ -481,6 +557,7 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
         end
        
         scope_plane_component:SetVisibility(false)
+        red_dot_plane_component:SetVisibility(false)
         print("Scope attached")
     end
 end
@@ -528,6 +605,9 @@ local function switch_scope_state(state)
     if scope_plane_component ~= nil then
         scope_plane_component:SetVisibility(state)
     end
+    if red_dot_plane_component ~= nil then
+        red_dot_plane_component:SetVisibility(state)
+    end
 end
 
 -- Initialize static objects when the script loads
@@ -540,6 +620,8 @@ local last_level = nil
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
+
+
         local viewport = engine.GameViewport
         if viewport then
             local world = viewport.World
@@ -549,12 +631,15 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     print("Level changed .. Reseting")
                     destroy_actor(scope_actor)
                     scope_plane_component = nil
+                    red_dot_plane_component = nil
                     scene_capture_component = nil
                     actual_render_target = nil
                     weapon_mesh = nil
                     reset_static_objects()
 
                     init_static_objects()
+
+                    -- KismetSystemLibrary:LoadAsset(world, )
                 end
                 --fix_effects(world)
                 last_level = level
@@ -574,6 +659,10 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 if (scope_plane_component ~= nil) then
                     scope_plane_component:K2_DestroyComponent(scope_plane_component)
                     scope_plane_component = nil
+                end
+                if (red_dot_plane_component ~= nil) then
+                    red_dot_plane_component:K2_DestroyComponent(scope_plane_component)
+                    red_dot_plane_component = nil
                 end
                 print("Weapon changed")
                 print("Previous weapon: " .. (current_weapon and current_weapon.StaticMesh:get_fname():to_string() or "none"))
@@ -617,12 +706,21 @@ uevr.sdk.callbacks.on_script_reset(function()
         scope_plane_component:K2_DestroyComponent(scope_plane_component)
     end
     scope_plane_component = nil
+    if red_dot_plane_component ~= nil then
+        red_dot_plane_component:K2_DestroyComponent(scope_plane_component)
+    end
+    red_dot_plane_component = nil
     if scene_capture_component ~= nil then
         scene_capture_component:K2_DestroyComponent(scene_capture_component)
     end
     scene_capture_component = nil
+    if scene_capture_component_mesh ~= nil then
+        scene_capture_component_mesh:K2_DestroyComponent(scene_capture_component_mesh)
+    end
+    scene_capture_component_mesh = nil
     actual_render_target = nil
     weapon_mesh = nil
     reset_static_objects()
-end)
+end
+)
 
