@@ -213,8 +213,9 @@ void WeaponManager::UpdateAimingVectors()
 			point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
 			break;
 		case 34: // Sniper
-			point1Offsets = { 5.94806 , -2.75068, 13.2024 };
-			point2Offsets = { 30.6871 , -0.22823, 15.6848 };
+			point1Offsets = { 5.94806 , -2.75068, 13.2024 /*+1*/ };
+			point2Offsets = { 30.6871 , -0.22823 - 0.025, 15.6848 /*+1 */};
+			socketAvailable = false;
 			break;
 		case 35: // RocketLauncher
 			//point1Offsets = { 2.41748 , -3.88386 , 14.4056 };
@@ -352,8 +353,13 @@ void WeaponManager::UpdateAimingVectors()
 				glm::fvec3 Location;
 			} componentToWorld_params;
 			weaponMesh->call_function(L"K2_GetComponentLocation", &componentToWorld_params);
-			point1Position = componentToWorld_params.Location;
-			aimingDirection = forwardVector_params.ForwardVector;
+			
+			point1Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
+			point2Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+
+			aimingDirection = glm::normalize(point2Position - point1Position);
+			//point1Position = componentToWorld_params.Location;
+			//aimingDirection = forwardVector_params.ForwardVector;
 		}
 
 

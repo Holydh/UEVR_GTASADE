@@ -6,7 +6,7 @@ local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
 local sniperFov = 10.0
-local cameraFov = 70.0
+local cameraFov = 35.0
 local actualFov = 10.0
 
 -- Static variables
@@ -35,7 +35,9 @@ local Weapon_c = nil
 local scope_actor = nil
 local scope_plane_component = nil
 local scene_capture_component = nil
-local render_target = nil
+local cameraRenderTarget = nil
+local sniperRenderTarget = nil
+local actual_render_target = nil
 local reusable_hit_result = nil
 local temp_vec3 = Vector3d.new(0, 0, 0)
 local temp_vec3f = Vector3f.new(0, 0, 0)
@@ -232,13 +234,22 @@ local function get_equipped_weapon(playerController)
     return weapon_mesh
 end
 
-local function get_render_target(world)
-    render_target = validate_object(render_target)
-    if render_target == nil then
-        render_target = KismetRenderingLibrary:CreateRenderTarget2D(world, 1024, 1024, 6, zero_color, false)
+local function get_render_target(world, isSniper)
+    sniperRenderTarget = validate_object(sniperRenderTarget)
+    cameraRenderTarget = validate_object(cameraRenderTarget)
+    if cameraRenderTarget == nil then
+        cameraRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, 720, 1280, 6, zero_color, false)
     end
-    print("Render Target Created " .. render_target:get_full_name())
-    return render_target
+    if sniperRenderTarget == nil then
+        sniperRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, 1024, 1024, 6, zero_color, false)
+    end
+    if isSniper then
+        actual_render_target = sniperRenderTarget
+    else
+        actual_render_target = cameraRenderTarget
+    end
+    print("Render Target Created " .. actual_render_target:get_full_name())
+    return actual_render_target
 end
 
 local function spawn_scope_plane(world, owner, pos, rt, isSniper)
@@ -358,7 +369,7 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
         end
     end
 
-    local rt = get_render_target(world)
+    local rt = get_render_target(world, isSniper)
 
     if rt == nil then
         print("Failed to get render target destroying actors")
@@ -391,6 +402,7 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
         spawn_scene_capture_component(world, nil, weaponPos, actualFov, rt)
     end
 
+    scene_capture_component.TextureTarget = rt
 end
 
 
@@ -458,14 +470,14 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
         if isSniper then
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
             scope_plane_component:K2_SetRelativeRotation(test, false, reusable_hit_result, false)
-            scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(5.94806 , -2.75068, 13.2024), false, reusable_hit_result, false)
-            scope_plane_component:SetWorldScale3D(temp_vec3:set(0.032, 0.032, 0.000001))
+            scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(5.91537, -2.75402, 13.1992), false, reusable_hit_result, false)
+            scope_plane_component:SetWorldScale3D(temp_vec3:set(0.033, 0.033, 0.000001))
             --scope_plane_component:SetWorldScale3D(temp_vec3:set(0.1, 0.1, 0.000001))
         else
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
             scope_plane_component:K2_SetRelativeRotation(test, false, reusable_hit_result, false)
-            scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(3.8, -13, 1.7), false, reusable_hit_result, false)
-            scope_plane_component:SetWorldScale3D(temp_vec3:set(0.06, 0.1, 0))
+            scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(4.1, -12.494, 1.537), false, reusable_hit_result, false)
+            scope_plane_component:SetWorldScale3D(temp_vec3:set(0.06, 0.106, 0))
         end
        
         scope_plane_component:SetVisibility(false)
@@ -538,7 +550,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     destroy_actor(scope_actor)
                     scope_plane_component = nil
                     scene_capture_component = nil
-                    render_target = nil
+                    actual_render_target = nil
                     weapon_mesh = nil
                     reset_static_objects()
 
@@ -609,7 +621,7 @@ uevr.sdk.callbacks.on_script_reset(function()
         scene_capture_component:K2_DestroyComponent(scene_capture_component)
     end
     scene_capture_component = nil
-    render_target = nil
+    actual_render_target = nil
     weapon_mesh = nil
     reset_static_objects()
 end)
