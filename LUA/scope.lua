@@ -547,7 +547,7 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
                 2, -- Scale rule
                 true -- Weld simulated bodies
             )
-            red_dot_plane_component:K2_SetRelativeLocation(temp_vec3:set(0, 0, 11000), false, reusable_hit_result, false)
+            red_dot_plane_component:K2_SetRelativeLocation(temp_vec3:set(0, 0, 11800), false, reusable_hit_result, false)
             red_dot_plane_component:SetWorldScale3D(temp_vec3:set(0.0018, 0.0018, 0.000001))
         else
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
@@ -653,16 +653,21 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         -- print(weapon_mesh:get_full_name())
         if weapon_mesh then
             -- fix_materials(weapon_mesh)
-            local weapon_changed = not current_weapon or weapon_mesh.StaticMesh ~= current_weapon.StaticMesh
+            local weapon_changed = not current_weapon or 
+            not weapon_mesh or 
+            not current_weapon or 
+            weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
+            scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
 
             if weapon_changed then
+                print(weapon_changed)
+                if (red_dot_plane_component ~= nil) then
+                    red_dot_plane_component:K2_DestroyComponent(red_dot_plane_component)
+                    red_dot_plane_component = nil
+                end
                 if (scope_plane_component ~= nil) then
                     scope_plane_component:K2_DestroyComponent(scope_plane_component)
                     scope_plane_component = nil
-                end
-                if (red_dot_plane_component ~= nil) then
-                    red_dot_plane_component:K2_DestroyComponent(scope_plane_component)
-                    red_dot_plane_component = nil
                 end
                 print("Weapon changed")
                 print("Previous weapon: " .. (current_weapon and current_weapon.StaticMesh:get_fname():to_string() or "none"))
