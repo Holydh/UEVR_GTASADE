@@ -5,9 +5,6 @@ local api = uevr.api
 local vr = uevr.params.vr
 
 local emissive_material_amplifier = 2.0 
-local sniperFov = 3.0
-local cameraFov = 35.0
-local actualFov = 10.0
 
 -- Static variables
 local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
@@ -47,6 +44,7 @@ local temp_vec3 = Vector3d.new(0, 0, 0)
 local temp_vec3f = Vector3f.new(0, 0, 0)
 local zero_color = nil
 local zero_transform = nil
+local isSniper = false
 
 local function find_required_object(name)
     local obj = uevr.api:find_uobject(name)
@@ -124,7 +122,7 @@ local function init_static_objects()
     StaticMeshC = api:find_uobject("Class /Script/Engine.StaticMeshComponent")
     if not StaticMeshC then return false end
     print(StaticMeshC:get_full_name())
-    CameraManager_c = find_required_object("Class /Script/Engine.PlayerCameraManager") -- Class Engine.PlayerController/ObjectProperty PlayerCameraManager
+    CameraManager_c = find_required_object("Class /Script/Engine.PlayerCameraManager")
     if not CameraManager_c then return false end
     print(CameraManager_c:get_full_name())
 
@@ -243,8 +241,10 @@ local function get_equipped_weapon(playerController)
             weapon = child
         end
     end
-    
-    local weapon_mesh = weapon.WeaponMesh
+    local weapon_mesh = nil
+    if weapon ~= nil then
+        weapon_mesh = weapon.WeaponMesh
+    end
     return weapon_mesh
 end
 
@@ -447,7 +447,7 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
 
     if not validate_object(scene_capture_component) then
         print("spawn_scene_capture_component is invalid -- recreating")
-        spawn_scene_capture_component(world, nil, weaponPos, actualFov, rt)
+        spawn_scene_capture_component(world, nil, weaponPos, rt)
     end
 
     scene_capture_component.TextureTarget = rt
@@ -507,13 +507,10 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
         if isSniper then
             --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(60.0000 , 0.0000, 0.0000), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
-            actualFov = sniperFov
         else
             --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(27.6432, -11.6162, 2.84382), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
-            actualFov = cameraFov
         end
-        scene_capture_component.FOVAngle = actualFov
     end
     
     -- Attach plane to weapon
@@ -610,6 +607,10 @@ local function switch_scope_state(state)
     end
 end
 
+local function mapRange(value, minSource, maxSource, minTarget, maxTarget)
+    return minTarget + ((value - minSource) / (maxSource - minSource)) * (maxTarget - minTarget)
+end
+
 -- Initialize static objects when the script loads
 if not init_static_objects() then
     print("Failed to initialize static objects")
@@ -678,10 +679,11 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 current_weapon = weapon_mesh
 
                 if currentWeaponString == "SM_camera" or currentWeaponString == "SM_sniper" then
-                    local isSniper = currentWeaponString == "SM_sniper"
+                    isSniper = currentWeaponString == "SM_sniper"
                     spawn_scope(engine, weapon_mesh, isSniper)
                     attach_components_to_weapon(weapon_mesh, isSniper)
                     switch_scope_state(true)
+                    --weapon_mesh:set_property("bHiddenInSceneCapture", true)
                 else
                     switch_scope_state(false)
                 end
@@ -689,6 +691,20 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 -- if (current_weapon.)
                 -- Attempt to attach components
               
+            end
+            if scene_capture_component ~= nil then
+                local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(CameraManager_c)
+                if game_camera_manager ~= nil then
+                    local actualFov = game_camera_manager.CameraCachePrivate.POV.FOV
+                    if actualFov >= 70 then
+                        actualFov = 70
+                    end
+                    if isSniper then
+                        scene_capture_component.FOVAngle = mapRange(actualFov, 12, 70, 0.75, 2.6) --remap fov range for better VR use
+                    else
+                        scene_capture_component.FOVAngle = mapRange(actualFov, 3, 70, 3, 50) --remap fov range for better VR use
+                    end
+                end
             end
         else
             -- Weapon was removed/unequipped

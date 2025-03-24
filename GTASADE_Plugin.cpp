@@ -81,7 +81,7 @@ public:
 		
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
-		/*	API::get()->log_info("playerIsInControl");*/
+			API::get()->log_info("playerIsInControl");
 			cameraController.camResetRequested = true;
 			memoryManager.RestoreAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
@@ -92,7 +92,7 @@ public:
 
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
-			//API::get()->log_info("player NOT InControl");
+			API::get()->log_info("player NOT InControl");
 			memoryManager.RestoreAllMemoryInstructions(true);
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
