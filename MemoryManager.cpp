@@ -82,6 +82,36 @@ std::vector<MemoryBlock> ingameCameraPositionInstructionsAddresses = {
 	{0x11070F0, 5, 0xf30f114304},
 	{0x110A3CB, 5, 0xf30f114604}
 };
+std::vector<MemoryBlock> ingameCameraPositionSniperAndCamWpnInstructionsAddresses = {
+	//{0x1109F20, 3, 0xf20f11},
+	//{0x1109F23, 1, 0x06},
+	//{0x1109F96, 3, 0xf30f11},
+	//{0x1109F99, 1, 0x06},
+	//{0x110A28E, 3, 0xf30f11},
+	//{0x110A291, 1, 0x06},
+	//{0x11255AB, 3, 0xf30f11},
+	//{0x11255AE, 1, 0x03},
+	//{0x11070E2, 3, 0xf30f11},
+	//{0x11070E5, 1, 0x03},
+	//{0x110A3BD, 3, 0xf30f11},
+	//{0x110A3C0, 1, 0x06},
+	//{0x11080C6, 7, 0xf20f1106894608},
+	//{0x1109F24, 3, 0x894608},
+	//{0x1109FBC, 5, 0xf30f114608},
+	//{0x110A252, 5, 0xf3440f1146},
+	//{0x110A257, 1, 0x08},
+	//{0x110A2C0, 5, 0xf30f114608},
+	//{0x11255B4, 5, 0xf30f114b08},
+	//{0x11070FF, 5, 0xf30f114308},
+	//{0x110A3DD, 5, 0xf30f114608},
+	//{0x1108165, 5, 0xf3440f115e},
+	//{0x110816A, 1, 0x08},
+	//{0x1109FA4, 5, 0xf30f114604},
+	//{0x110A29C, 5, 0xf30f114604},
+	//{0x11255B3, 5, 0x04f30f114b},
+	//{0x11070F0, 5, 0xf30f114304},
+	//{0x110A3CB, 5, 0xf30f114604}
+};
 std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x11090E8, 5, 0xf2410f1107},
 	{0xAE0410, 5, 0xf3440f1101},
@@ -347,6 +377,7 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& [address, size, bytes] : matrixInstructionsRotationAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : matrixInstructionsPositionAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : ingameCameraPositionInstructionsAddresses) { address += baseAddressGameEXE; }
+	for (auto& [address, size, bytes] : ingameCameraPositionSniperAndCamWpnInstructionsAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : aimingForwardVectorInstructionsAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : aimingUpVectorInstructionsAddresses) { address += baseAddressGameEXE; }
 	for (auto& [address, size, bytes] : rocketLauncherAimingVectorInstructionsAddresses) { address += baseAddressGameEXE; }
@@ -376,6 +407,7 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 {
 	NopMemory(matrixInstructionsPositionAddresses);
 	NopMemory(ingameCameraPositionInstructionsAddresses);
+	NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 	NopMemory(aimingForwardVectorInstructionsAddresses);
 	NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	NopMemory(sniperAimingVectorInstructionsAddresses);
@@ -386,6 +418,7 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 {
 	RestoreMemory(matrixInstructionsPositionAddresses);
 	RestoreMemory(ingameCameraPositionInstructionsAddresses);
+	RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 	RestoreMemory(aimingForwardVectorInstructionsAddresses);
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
@@ -399,6 +432,7 @@ void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
 		NopMemory(matrixInstructionsRotationAddresses);
 		NopMemory(matrixInstructionsPositionAddresses);
 		NopMemory(ingameCameraPositionInstructionsAddresses);
+		NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 		NopMemory(aimingForwardVectorInstructionsAddresses);
 		NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 		NopMemory(sniperAimingVectorInstructionsAddresses);
@@ -409,6 +443,7 @@ void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
 		RestoreMemory(matrixInstructionsRotationAddresses);
 		RestoreMemory(matrixInstructionsPositionAddresses);
 		RestoreMemory(ingameCameraPositionInstructionsAddresses);
+		RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 		RestoreMemory(aimingForwardVectorInstructionsAddresses);
 		RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 		RestoreMemory(sniperAimingVectorInstructionsAddresses);
