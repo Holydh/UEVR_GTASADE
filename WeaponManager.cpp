@@ -412,6 +412,9 @@ void WeaponManager::UpdateAimingVectors()
 
 void WeaponManager::HandleWeaponVisibility()
 {
+	if (weaponMesh == nullptr)
+		return;
+
 	bool hideWeapon = false;
 	switch (equippedWeaponIndex)
 	{
@@ -491,7 +494,7 @@ void WeaponManager::WeaponHandling(float delta)
 		UpdateActualWeaponMesh();
 	}
 
-	if ((playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
+	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
 		return;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };

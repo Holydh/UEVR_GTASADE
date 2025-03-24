@@ -53,11 +53,11 @@ public:
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
-		//API::get()->log_info("playerIsInControl %i", playerIsInControl);
+		API::get()->log_info("playerIsInControl %i", playerManager.isInControl);
 
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
-			
+		API::get()->log_info("FixUnderwaterView");
 		
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
@@ -78,7 +78,8 @@ public:
 		memoryManager.isShooting = false;
 
 		playerManager.FetchPlayerUObjects();
-		
+		API::get()->log_info("FetchPlayerUObjects");
+
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
 			API::get()->log_info("playerIsInControl");
@@ -102,29 +103,35 @@ public:
 		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs != 55 && cameraController.cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
+			API::get()->log_info("RestoreVehicleRelatedMemoryInstructions");
 		}
 
 		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs == 55 && cameraController.cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
+			API::get()->log_info("NopVehicleRelatedMemoryInstructions");
 		}
 	
 		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
+			API::get()->log_info("UpdateActualWeaponMesh");
 			if (!weaponWheelDisplayed)
 			{
 				cameraController.UpdateCameraMatrix(delta);
+				API::get()->log_info("UpdateCameraMatrix");
 				cameraController.ProcessHookedHeadPosition();
+				API::get()->log_info("ProcessHookedHeadPosition");
 				weaponManager.UpdateAimingVectors();
+				API::get()->log_info("UpdateAimingVectors");
 			}
 
-			if (weaponManager.weaponMesh != nullptr)
-			{
-				weaponManager.WeaponHandling(delta);
-			}
+			weaponManager.WeaponHandling(delta);
+			API::get()->log_info("WeaponHandling");
 		}
+
 		weaponManager.HandleWeaponVisibility();
+		API::get()->log_info("HandleWeaponVisibility");
 
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
