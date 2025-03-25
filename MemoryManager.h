@@ -7,6 +7,7 @@
 #include <iostream>
 #include <windows.h>
 #include <array>
+#include "SettingsManager.h"
 
 // Define the OriginalByte struct
 struct OriginalByte {
@@ -33,10 +34,12 @@ struct MemoryBlock {
 // MemoryManager class
 class MemoryManager {
 private:
+	SettingsManager* settingsManager;
 	void* exceptionHandlerHandle = nullptr;  // Store the handler so we can remove it later
 
 public:
-    uintptr_t baseAddressGameEXE;
+	MemoryManager(SettingsManager* sm) : settingsManager(sm) {};
+    uintptr_t baseAddressGameEXE = NULL;
 
 	std::array<uintptr_t, 16> cameraMatrixAddresses = {
 		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,

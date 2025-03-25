@@ -2,6 +2,7 @@
 
 void PlayerManager::FetchPlayerUObjects()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("FetchPlayerUObjects");
 	playerController = uevr::API::get()->get_player_controller(0);
 	if (playerController == nullptr)
 		return;

@@ -11,6 +11,8 @@ private:
 
 
 public:
+	bool debugMod = false;
+
 	std::string configFilePath;
 	FILETIME lastWriteTime;
 

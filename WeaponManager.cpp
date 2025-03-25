@@ -2,6 +2,7 @@
 
 void WeaponManager::UpdateActualWeaponMesh()
 	{
+		if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
 		//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 		//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
 		static auto gta_BPplayerCharacter_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/Characters/Player/BP_player_character.BP_Player_Character_C");
@@ -118,6 +119,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 
 void WeaponManager::UpdateAimingVectors()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors");
 	if (weaponMesh != nullptr) {
 		struct {
 			glm::fvec3 ForwardVector;
@@ -412,6 +414,8 @@ void WeaponManager::UpdateAimingVectors()
 
 void WeaponManager::HandleWeaponVisibility()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleWeaponVisibility");
+
 	if (weaponMesh == nullptr)
 		return;
 
@@ -483,6 +487,8 @@ void WeaponManager::HandleWeaponVisibility()
 
 void WeaponManager::WeaponHandling(float delta)
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling");
+
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();

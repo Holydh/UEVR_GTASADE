@@ -417,6 +417,7 @@ void MemoryManager::AdjustAddresses() {
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("NopVehicleRelatedMemoryInstructions()");
 	NopMemory(matrixInstructionsPositionAddresses);
 	NopMemory(ingameCameraPositionInstructionsAddresses);
 	//NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
@@ -429,6 +430,7 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 
 void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("RestoreVehicleRelatedMemoryInstructions()");
 	RestoreMemory(matrixInstructionsPositionAddresses);
 	RestoreMemory(ingameCameraPositionInstructionsAddresses);
 	//RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);

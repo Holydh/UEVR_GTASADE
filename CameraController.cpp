@@ -2,6 +2,8 @@
 
 
 void CameraController::UpdateCameraMatrix(float delta) {
+		if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateCameraMatrix()");
+
 		struct {
 			glm::fvec3 ForwardVector;
 		} forwardVector_params;
@@ -113,6 +115,8 @@ void CameraController::UpdateCameraMatrix(float delta) {
 //Fix the camera not following the crouch animation
 void CameraController::ProcessHookedHeadPosition()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("ProcessHookedHeadPosition()");
+
 	if (playerManager->isInVehicle || cameraModeIs == 15)
 	{
 		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
@@ -132,6 +136,7 @@ void CameraController::ProcessHookedHeadPosition()
 
 	void CameraController::FixUnderwaterView(bool enableFix)
 	{
+		if (settingsManager->debugMod) uevr::API::get()->log_info("FixUnderwaterView()");
 		//API::get()->log_info("fixing underwater");
 		auto underwaterMaterial = uevr::API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
 		//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());

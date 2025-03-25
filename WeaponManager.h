@@ -10,15 +10,17 @@
 #include "CameraController.h"
 #include "MemoryManager.h"
 #include "Utilities.h"
+#include "SettingsManager.h"
 
 class WeaponManager {
 private:
 	PlayerManager* playerManager;
 	CameraController* cameraController;
 	MemoryManager* memoryManager;
+	SettingsManager* settingsManager;
 
 public:
-	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm) : playerManager(pm), cameraController(cc), memoryManager(mm) {}
+	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
 
 	int equippedWeaponIndex = 0;
 	int previousEquippedWeaponIndex = 0;

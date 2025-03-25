@@ -6,12 +6,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #define GLM_FORCE_QUAT_DATA_XYZW
 #include "Utilities.h"
+#include "SettingsManager.h"
 
 class PlayerManager {
 private:
-
+	SettingsManager* settingsManager;
 
 public:
+	PlayerManager(SettingsManager* sm) : settingsManager(sm) {};
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
