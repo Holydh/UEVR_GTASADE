@@ -15,6 +15,7 @@ private:
 public:
 	PlayerManager(SettingsManager* sm) : settingsManager(sm) {};
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 actualPlayerHeadPositionUE = { 0.0f, 0.0f, 0.0f };
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
 	bool isInControl = false;

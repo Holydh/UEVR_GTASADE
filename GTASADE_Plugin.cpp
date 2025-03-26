@@ -4,6 +4,7 @@
 #include "CameraController.h"
 #include "PlayerManager.h"
 #include "WeaponManager.h"
+#include "Utilities.h"
 
 
 using namespace uevr;
@@ -71,7 +72,7 @@ public:
 		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
 		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
-		//API::get()->log_info("weaponWheelOpen = %i", weaponWheelOpen);
+		//API::get()->log_info("cameraController.cameraModeIs = %i", cameraController.cameraModeIs);
 
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
@@ -116,12 +117,22 @@ public:
 			
 			if (!weaponWheelDisplayed)
 			{
-				cameraController.UpdateCameraMatrix(delta);
+				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition();
 				weaponManager.UpdateAimingVectors();
 			}
 
 			weaponManager.WeaponHandling(delta);
+
+			if (cameraController.cameraModeIs == 46 && cameraController.cameraModeWas != 46)
+			{
+
+			}
+			
+			if (cameraController.cameraModeIs != 46 && cameraController.cameraModeWas == 46)
+			{
+	
+			}
 		}
 
 		weaponManager.HandleWeaponVisibility();
@@ -143,8 +154,7 @@ public:
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
-
-
+	
 	void ToggleAllUObjectHooks(bool enable)
 	{
 		if (enable)

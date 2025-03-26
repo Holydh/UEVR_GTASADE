@@ -39,6 +39,8 @@ public:
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
 
+	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
 
 	std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed

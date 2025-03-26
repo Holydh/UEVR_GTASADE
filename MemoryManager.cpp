@@ -420,9 +420,10 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 	if (settingsManager->debugMod) uevr::API::get()->log_info("NopVehicleRelatedMemoryInstructions()");
 	NopMemory(matrixInstructionsPositionAddresses);
 	NopMemory(ingameCameraPositionInstructionsAddresses);
-	//NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
-	//NopMemory(pitchAxisAimingInstructionsAddresses);
+	NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
+	NopMemory(pitchAxisAimingInstructionsAddresses);
 	NopMemory(aimingForwardVectorInstructionsAddresses);
+	NopMemory(aimingUpVectorInstructionsAddresses);
 	NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	NopMemory(sniperAimingVectorInstructionsAddresses);
 	//NopMemory(carAimingVectorInstructionsAddresses);
@@ -433,9 +434,10 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	if (settingsManager->debugMod) uevr::API::get()->log_info("RestoreVehicleRelatedMemoryInstructions()");
 	RestoreMemory(matrixInstructionsPositionAddresses);
 	RestoreMemory(ingameCameraPositionInstructionsAddresses);
-	//RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
-	//RestoreMemory(pitchAxisAimingInstructionsAddresses);
+	RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
+	RestoreMemory(pitchAxisAimingInstructionsAddresses);
 	RestoreMemory(aimingForwardVectorInstructionsAddresses);
+	RestoreMemory(aimingUpVectorInstructionsAddresses);
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
 	//RestoreMemory(carAimingVectorInstructionsAddresses);
@@ -451,6 +453,7 @@ void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
 		NopMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 		NopMemory(pitchAxisAimingInstructionsAddresses);
 		NopMemory(aimingForwardVectorInstructionsAddresses);
+		NopMemory(aimingUpVectorInstructionsAddresses);
 		NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 		NopMemory(sniperAimingVectorInstructionsAddresses);
 		NopMemory(carAimingVectorInstructionsAddresses);
@@ -463,6 +466,7 @@ void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
 		RestoreMemory(ingameCameraPositionSniperAndCamWpnInstructionsAddresses);
 		RestoreMemory(pitchAxisAimingInstructionsAddresses);
 		RestoreMemory(aimingForwardVectorInstructionsAddresses);
+		RestoreMemory(aimingUpVectorInstructionsAddresses);
 		RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 		RestoreMemory(sniperAimingVectorInstructionsAddresses);
 		RestoreMemory(carAimingVectorInstructionsAddresses);

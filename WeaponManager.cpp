@@ -364,7 +364,8 @@ void WeaponManager::UpdateAimingVectors()
 			//aimingDirection = forwardVector_params.ForwardVector;
 		}
 
-
+		calculatedAimForward = {aimingDirection.x, -aimingDirection.y, aimingDirection.z};
+		calculatedAimPosition = { point1Position.x * 0.01f, -point1Position.y * 0.01f, point1Position.z * 0.01f};
 
 		if (playerManager->isInVehicle && cameraController->cameraModeIs != 55 || meleeWeapon)
 		{
@@ -387,13 +388,13 @@ void WeaponManager::UpdateAimingVectors()
 		else
 		{
 			//Apply new values to memory
-			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = point1Position.x * 0.01f;
-			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = -point1Position.y * 0.01f;
-			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[2])) = point1Position.z * 0.01f;
+			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = calculatedAimPosition.x;
+			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = calculatedAimPosition.y;
+			*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[2])) = calculatedAimPosition.z;
 
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = aimingDirection.x;
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = -aimingDirection.y;
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = aimingDirection.z;
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = calculatedAimForward.x;
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = calculatedAimForward.y;
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = calculatedAimForward.z;
 		}
 		if (sprayWeapon)
 		{

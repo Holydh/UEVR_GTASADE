@@ -32,7 +32,8 @@ public:
 
 	bool waterViewFixed = false;
 
-	void UpdateCameraMatrix(float delta);
+	void ProcessCameraMatrix(float delta);
+	void UpdateCameraMatrix();
 	void ProcessHookedHeadPosition();
 	void FixUnderwaterView(bool enableFix);
 };
