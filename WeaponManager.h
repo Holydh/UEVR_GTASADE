@@ -95,6 +95,7 @@ public:
 	void WeaponHandling(float delta);
 	void DisableMeleeWeaponsUObjectHooks();
 	void ResetWeaponMeshPosAndRot();
+	void HandleCameraWeaponAiming();
 };
 
 #endif

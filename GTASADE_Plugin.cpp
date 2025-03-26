@@ -123,16 +123,6 @@ public:
 			}
 
 			weaponManager.WeaponHandling(delta);
-
-			if (cameraController.cameraModeIs == 46 && cameraController.cameraModeWas != 46)
-			{
-
-			}
-			
-			if (cameraController.cameraModeIs != 46 && cameraController.cameraModeWas == 46)
-			{
-	
-			}
 		}
 
 		weaponManager.HandleWeaponVisibility();
@@ -154,6 +144,22 @@ public:
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
+
+	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
+	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
+	//{
+	//	//API::get()->log_error("%f", rotation->yaw);/* = cameraController.accumulatedJoystickRotation*/
+	//	//API::get()->log_error("matrix yaw %f", cameraController.actualYaw);
+	//	// Apply joystick input to adjust the local yaw rotation
+	//	UEVR_Vector2f rightJoystick{};
+	//	uevr::API::get()->param()->vr->get_joystick_axis(uevr::API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
+	//	float joystickYaw = 0.0f;
+	//	const float DEADZONE = 0.1f;
+	//	if (abs(rightJoystick.x) > DEADZONE) {
+	//		joystickYaw = -rightJoystick.x * delta * settingsManager.xAxisSensitivity;
+	//	}
+	//	rotation->yaw = rotation->yaw + joystickYaw;
+	//}
 	
 	void ToggleAllUObjectHooks(bool enable)
 	{

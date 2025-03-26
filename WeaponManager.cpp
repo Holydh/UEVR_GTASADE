@@ -411,6 +411,28 @@ void WeaponManager::UpdateAimingVectors()
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = cameraController->cameraMatrixValues[5];
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
 	}
+
+	//if (cameraController->cameraModeIs == 46)
+	//{
+	//	glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
+	//	glm::fvec3 right = glm::cross(up, calculatedAimForward);
+
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[0])) = right.x;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[1])) = right.y;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[2])) = right.z;
+
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[4])) = calculatedAimForward.x;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[5])) = calculatedAimForward.y;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[6])) = calculatedAimForward.z;
+
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[8])) = up.x;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[9])) = up.y;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[10])) = up.z;
+
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[12])) = calculatedAimPosition.x;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[13])) = calculatedAimPosition.y;
+	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[14])) = calculatedAimPosition.z;
+	//}
 }
 
 void WeaponManager::HandleWeaponVisibility()
@@ -503,6 +525,8 @@ void WeaponManager::WeaponHandling(float delta)
 
 	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
 		return;
+
+	/*HandleCameraWeaponAiming();*/
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
@@ -615,7 +639,6 @@ void WeaponManager::WeaponHandling(float delta)
 
 	auto motionState = uevr::API::UObjectHook::get_motion_controller_state(weaponMesh);
 
-
 	if (playerManager->isShooting)
 	{
 		// use the UEVR uobject attached offset : 
@@ -647,6 +670,31 @@ void WeaponManager::WeaponHandling(float delta)
 	}
 
 }
+
+//void WeaponManager::HandleCameraWeaponAiming()
+//{
+//	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
+//	{
+//		uevr::API::get()->log_error("hello ?");
+//		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+//		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+//		setRelativeLocation_params.bSweep = false;
+//		setRelativeLocation_params.bTeleport = true;
+//		setRelativeLocation_params.NewLocation = playerManager->actualPlayerHeadPositionUE;
+//		weaponMesh->call_function(L"K2_SetWorldLocation", &setRelativeLocation_params);
+//
+//		Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+//		setRelativeRotation_params.bSweep = false;
+//		setRelativeRotation_params.bTeleport = true;
+//		setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
+//		weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
+//	}
+//
+//	if (cameraController->cameraModeIs != 46 && cameraController->cameraModeWas == 46)
+//	{
+//		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+//	}
+//}
 
 void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 {
