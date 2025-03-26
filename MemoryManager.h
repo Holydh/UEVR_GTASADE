@@ -39,14 +39,11 @@ private:
 
 public:
 	MemoryManager(SettingsManager* sm) : settingsManager(sm) {};
-    uintptr_t baseAddressGameEXE = NULL;
 
-	std::array<uintptr_t, 16> cameraMatrixAddresses = {
-		0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
-		0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
-		0x53E2C20, 0x53E2C24, 0x53E2C28, 0x53E2C2C,
-		0x53E2C30, 0x53E2C34, 0x53E2C38, 0x53E2C3C
-	};
+	uintptr_t baseAddressGameEXE = NULL;
+
+	static std::array<uintptr_t, 16> cameraMatrixAddresses;
+
 	std::array<uintptr_t, 3> aimForwardVectorAddresses // x, y, z
 	{
 		0x53E2668, 0x53E266C, 0x53E2670
@@ -68,6 +65,9 @@ public:
 		0x58013D8, 0x58013DC, 0x58013E0
 	};
 
+	static std::array<float, 12> matrixAimCalculatedValues;
+	static int cameraMode;
+
 	uintptr_t weaponWheelDisplayedAddress = 0x507C580;
 
 	//without Cleo delete
@@ -80,6 +80,7 @@ public:
 	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 	static uintptr_t shootInstructionAddress;
+	static uintptr_t cameraShootInstructionAddress;
 	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
 
 
@@ -93,6 +94,7 @@ public:
 	void RestoreAllMemoryInstructions(bool restoreInstructions);
 	
 	static bool isShooting;
+	static bool isShootingCamera;
 
 	void InstallBreakpoints();
 	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);

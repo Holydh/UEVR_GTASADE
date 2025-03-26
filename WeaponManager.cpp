@@ -433,6 +433,24 @@ void WeaponManager::UpdateAimingVectors()
 	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[13])) = calculatedAimPosition.y;
 	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[14])) = calculatedAimPosition.z;
 	//}
+	glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
+	glm::fvec3 right = glm::cross(up, calculatedAimForward);
+
+	MemoryManager::matrixAimCalculatedValues[0] = right.x;
+	MemoryManager::matrixAimCalculatedValues[1] = right.y;
+	MemoryManager::matrixAimCalculatedValues[2] = right.z;
+	MemoryManager::matrixAimCalculatedValues[3] = calculatedAimForward.x;
+	MemoryManager::matrixAimCalculatedValues[4] = calculatedAimForward.y;
+	MemoryManager::matrixAimCalculatedValues[5] = calculatedAimForward.z;
+	MemoryManager::matrixAimCalculatedValues[6] = up.x;
+	MemoryManager::matrixAimCalculatedValues[7] = up.y;
+	MemoryManager::matrixAimCalculatedValues[8] = up.z;
+	MemoryManager::matrixAimCalculatedValues[9] = calculatedAimPosition.x;
+	MemoryManager::matrixAimCalculatedValues[10] = calculatedAimPosition.y;
+	MemoryManager::matrixAimCalculatedValues[11] = calculatedAimPosition.z;
+
+	//uevr::API::get()->log_info("calculatedAimForward.x = %f ", calculatedAimForward.x);
+	//uevr::API::get()->log_info("MemoryManager::matrixAimCalculatedValues[3] = %f ", MemoryManager::matrixAimCalculatedValues[3]);
 }
 
 void WeaponManager::HandleWeaponVisibility()

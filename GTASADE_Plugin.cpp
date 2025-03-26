@@ -5,7 +5,10 @@
 #include "PlayerManager.h"
 #include "WeaponManager.h"
 #include "Utilities.h"
-
+//#include <thread>
+//#include <atomic> 
+//#include <chrono>
+//#include <iostream>
 
 using namespace uevr;
 
@@ -16,6 +19,11 @@ using namespace uevr;
         API::get()->log_info(__VA_ARGS__); \
     }}
 
+//std::atomic<bool> resetMatrix(false);
+//std::atomic<bool> stopThread(false);
+//std::condition_variable cv;
+//std::mutex cv_m;
+
 class GTASADE_Plugin : public uevr::Plugin {
 private:
 	MemoryManager memoryManager;
@@ -23,6 +31,9 @@ private:
 	CameraController cameraController;
 	PlayerManager playerManager;
 	WeaponManager weaponManager;
+
+	//std::unique_ptr<std::thread> waitThread;
+
 
 public:
 	GTASADE_Plugin() : cameraController(&memoryManager, &settingsManager, &playerManager),
@@ -38,6 +49,37 @@ public:
 		memoryManager.RestoreAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
 		ToggleAllUObjectHooks(false);
+		
+		
+        //// Signal thread to stop
+        //{
+        //    std::lock_guard<std::mutex> lk(cv_m);
+        //    stopThread.store(true, std::memory_order_release);
+        //    resetMatrix.store(true, std::memory_order_release);
+        //}
+        //cv.notify_all();
+
+        //// Wait for thread to finish with timeout
+        //if (waitThread && waitThread->joinable()) {
+        //    if (waitThread->get_id() != std::this_thread::get_id()) {
+        //        // Implement join with timeout
+        //        auto start = std::chrono::steady_clock::now();
+        //        while (waitThread->joinable()) {
+        //            if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(500)) {
+        //                API::get()->log_error("Thread failed to terminate in time - detaching");
+        //                waitThread->detach();
+        //                break;
+        //            }
+        //            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        //        }
+        //        if (waitThread->joinable()) {
+        //            waitThread->join();
+        //        }
+        //    } else {
+        //        waitThread->detach();
+        //    }
+        //}
+        //waitThread.reset();
 	}
 
 	void on_initialize() override {
@@ -48,11 +90,35 @@ public:
 
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
+
+		//waitThread = std::make_unique<std::thread>([this]() {
+		//	this->WaitAndUpdateTheCameraMatrix();
+		//	});
 	}
+
+	//void WaitAndUpdateTheCameraMatrix() {
+	//	std::unique_lock<std::mutex> lk(cv_m);
+	//	while (!stopThread.load(std::memory_order_acquire)) {
+	//		cv.wait_for(lk, std::chrono::milliseconds(9), [this]() {
+	//			return resetMatrix.load(std::memory_order_acquire) ||
+	//				stopThread.load(std::memory_order_acquire);
+	//			});
+
+	//		if (resetMatrix.load(std::memory_order_acquire)) {
+	//			lk.unlock();
+	//			cameraController.UpdateCameraMatrix();
+	//			lk.lock();
+	//			resetMatrix.store(false, std::memory_order_release);
+	//		}
+	//	}
+	//}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
+		//MemoryManager::isShootingCamera == false;
 
+		//API::get()->log_error("MemoryManager::cameraMatrixAddresses[0] : 0x%llx", MemoryManager::cameraMatrixAddresses[1]);
+		//API::get()->log_info(" MemoryManager::matrixAimCalculatedValues[3] : %f", MemoryManager::matrixAimCalculatedValues[3]);
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
@@ -72,6 +138,7 @@ public:
 		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
 		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
+		MemoryManager::cameraMode = cameraController.cameraModeIs;
 		//API::get()->log_info("cameraController.cameraModeIs = %i", cameraController.cameraModeIs);
 
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
@@ -131,10 +198,18 @@ public:
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.cameraModeWas = cameraController.cameraModeIs;
 		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
+
+		//{
+		//	std::lock_guard<std::mutex> lk(cv_m);
+		//	resetMatrix.store(true, std::memory_order_release);
+		//}
+		//cv.notify_one();
 	}
+
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
+		
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
@@ -148,17 +223,8 @@ public:
 	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
 	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
 	//{
-	//	//API::get()->log_error("%f", rotation->yaw);/* = cameraController.accumulatedJoystickRotation*/
-	//	//API::get()->log_error("matrix yaw %f", cameraController.actualYaw);
-	//	// Apply joystick input to adjust the local yaw rotation
-	//	UEVR_Vector2f rightJoystick{};
-	//	uevr::API::get()->param()->vr->get_joystick_axis(uevr::API::get()->param()->vr->get_right_joystick_source(), &rightJoystick);
-	//	float joystickYaw = 0.0f;
-	//	const float DEADZONE = 0.1f;
-	//	if (abs(rightJoystick.x) > DEADZONE) {
-	//		joystickYaw = -rightJoystick.x * delta * settingsManager.xAxisSensitivity;
-	//	}
-	//	rotation->yaw = rotation->yaw + joystickYaw;
+	//	API::get()->log_error("3 - On pre calculate");
+	//	
 	//}
 	
 	void ToggleAllUObjectHooks(bool enable)
