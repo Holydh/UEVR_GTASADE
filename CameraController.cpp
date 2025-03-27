@@ -42,43 +42,52 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	headRotationMatrix[2] = glm::vec4(upVector_params.UpVector.x, -upVector_params.UpVector.y, upVector_params.UpVector.z, 0.0f);      // Up vector 
 
 	float joystickYaw = 0.0f;
+	//float joystickPitch = 0.0f;
 
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		accumulatedJoystickRotation = glm::mat4(1.0f);
 	}
-	if ((!playerManager->isInVehicle && playerManager->wasInVehicle) || (!playerManager->isInVehicle && camResetRequested) || (cameraModeIs == 46) && camResetRequested)
+	if ((!playerManager->isInVehicle && playerManager->wasInVehicle) || (!playerManager->isInVehicle && camResetRequested) || (cameraModeWas == 46 && cameraModeIs != 46))
 	{
-		//camResetRequested = true;
 		accumulatedJoystickRotation = glm::mat4(1.0f);
 		baseHeadRotation = headRotationMatrix;
 	}
 
 	// Calculate the delta rotation matrix. 
-	// Store the base head rotation on the frame the character is out of the car, so the accumulatedJoystickRotation drives it.
-	// If the player is in a car, keep the headRotationMatrix drive so the camera follows the car heading.
 	glm::mat4 deltaRotationMatrix = playerManager->isInVehicle && cameraModeIs != 55 ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
 
 	// Apply joystick input to adjust the local yaw rotation
 	const float DEADZONE = 0.1f;
-	joystickYaw = /*camResetRequested ? 180.0f : */0.0f;
 	if (abs(rightJoystick.x) > DEADZONE) {
 		joystickYaw = -rightJoystick.x * delta * settingsManager->xAxisSensitivity;
+		//joystickPitch = rightJoystick.y * delta * settingsManager->xAxisSensitivity;
 	}
 
 	// Convert joystick yaw to radians
 	float yawRadians = joystickYaw * (M_PI / 180.0f);
+	//float pitchRadians = joystickPitch * (M_PI / 180.0f);
 
-	// Create a yaw rotation matrix for the joystick input
-	glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around the Y-axis
+	// Extract the right vector from the current rotation matrix
+	//glm::vec3 currentRightVector = glm::vec3(
+	//	cameraMatrixValues[0],
+	//	cameraMatrixValues[1],
+	//	cameraMatrixValues[2]
+	//);
 
-	// Combine the delta rotation with the joystick yaw rotation
-	accumulatedJoystickRotation = accumulatedJoystickRotation * joystickYawRotation;
+	// Create rotation matrices using the current right vector for pitch
+	glm::mat4 joystickYawRotation = glm::rotate(glm::mat4(1.0f), yawRadians, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around world Y-axis
+	//glm::mat4 joystickPitchRotation = glm::rotate(glm::mat4(1.0f), pitchRadians, currentRightVector); // Rotate around local right vector
+
+	// Combine the delta rotation with the joystick rotations
+	accumulatedJoystickRotation = /*cameraModeIs == 46
+		? accumulatedJoystickRotation * joystickYawRotation * joystickPitchRotation
+		: */accumulatedJoystickRotation * joystickYawRotation;
 
 	// Combine the delta rotation with the joystick yaw rotation
 	glm::mat4 totalDeltaRotation = accumulatedJoystickRotation * deltaRotationMatrix;
 
-	//// Combine the head rotation matrix with the joystick yaw rotation
+	// Combine the head rotation matrix with the joystick rotations
 	glm::mat4 finalRotationMatrix = accumulatedJoystickRotation * totalDeltaRotation;
 
 	// Copy the modified matrix back to cameraMatrixValues
@@ -110,17 +119,33 @@ void CameraController::ProcessCameraMatrix(float delta) {
 
 	playerManager->actualPlayerPositionUE = socketLocation_params.Location;
 	playerManager->actualPlayerHeadPositionUE = glm::fvec3(playerManager->actualPlayerPositionUE.x, playerManager->actualPlayerPositionUE.y, *(reinterpret_cast<float*>(memoryManager->playerHeadPositionAddresses[2])) * 100);
+	cameraPositionUE = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) * 100,
+		-*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) * 100,
+		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[2])) * 100);
+
+	rightVectorUE = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[0])),
+		-*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[1])),
+		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[2])));
+
+	upVectorUE = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[8])),
+		-*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[9])),
+		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[10])));
 }
 
 void CameraController::UpdateCameraMatrix()
 {	
-	//if (cameraModeIs != 46 && cameraModeWas == 46)
-	//	MemoryManager::isShootingCamera = false;
+	if (cameraModeIs != 46 && cameraModeWas == 46)
+	{
+		memoryManager->ToggleAllMemoryInstructions(false);
+	}
+		
+	if (cameraModeIs == 46 && cameraModeWas != 46)
+		memoryManager->ToggleAllMemoryInstructions(true);
 
-	//if (MemoryManager::isShootingCamera == true)
-	//{
-	//	return;
-	//}
+	if (cameraModeIs == 46)
+	{
+		return;
+	}
 	// Write the modified matrix back to memory
 	for (int i = 0; i < 12; ++i) {
 		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[i])) = cameraMatrixValues[i];
@@ -139,6 +164,16 @@ void CameraController::ProcessHookedHeadPosition()
 		setRelativeLocation_params.bTeleport = true;
 		setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 69.0f);
 		playerManager->playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+		return;
+	}
+
+	if (cameraModeIs == 46)
+	{
+		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
+		setWorldLocation_params.bSweep = false;
+		setWorldLocation_params.bTeleport = true;
+		setWorldLocation_params.NewLocation = glm::fvec3(cameraPositionUE.x, cameraPositionUE.y, cameraPositionUE.z);
+		playerManager->playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 		return;
 	}
 

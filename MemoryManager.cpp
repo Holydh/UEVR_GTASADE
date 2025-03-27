@@ -488,7 +488,7 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	//RestoreMemory(carAimingVectorInstructionsAddresses);
 }
 
-void MemoryManager::RestoreAllMemoryInstructions(bool restoreInstructions)
+void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 {
 	if (!restoreInstructions)
 	{

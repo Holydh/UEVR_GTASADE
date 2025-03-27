@@ -122,6 +122,16 @@ void WeaponManager::UpdateActualWeaponMesh()
 
 void WeaponManager::UpdateAimingVectors()
 {
+	if (cameraController->cameraModeIs == 46)
+	{
+		cameraController->forwardVectorUE = glm::fvec3(
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
+			-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
+		);
+		return;
+	}
+
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors");
 	if (weaponMesh != nullptr) {
 		struct {
@@ -415,6 +425,12 @@ void WeaponManager::UpdateAimingVectors()
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
 	}
 
+	cameraController->forwardVectorUE = glm::fvec3(
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
+			-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
+			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
+		);
+
 	//if (cameraController->cameraModeIs == 46)
 	//{
 	//	glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
@@ -695,7 +711,7 @@ void WeaponManager::WeaponHandling(float delta)
 
 void WeaponManager::HandleCameraWeaponAiming()
 {
-	uevr::API::get()->log_error("%ls", weaponMesh->get_full_name().c_str());
+	//uevr::API::get()->log_error("%ls", weaponMesh->get_full_name().c_str());
 	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
@@ -714,20 +730,45 @@ void WeaponManager::HandleCameraWeaponAiming()
 
 	if (cameraController->cameraModeIs == 46)
 	{
+		glm::fvec3 cameraOffsetsPoint1 = { 13.8476, -11.6162, -1.72577 };
+		glm::fvec3 cameraOffsetsPoint2 = { 27.6432, -11.6162, -2.84382 };
+
+		// Convert local offsets into world positions
+		glm::fvec3 worldOffset1 = (cameraController->forwardVectorUE * cameraOffsetsPoint1.x) + ( cameraController->rightVectorUE * cameraOffsetsPoint1.y) + (cameraController->upVectorUE* cameraOffsetsPoint1.z);
+		glm::fvec3 worldOffset2 = (cameraController->forwardVectorUE * cameraOffsetsPoint2.x) + ( cameraController->rightVectorUE * cameraOffsetsPoint2.y) + (cameraController->upVectorUE * cameraOffsetsPoint2.z);
+
+		glm::fvec3 weaponPoint1 = cameraController->cameraPositionUE + (cameraController->forwardVectorUE * 35.0f) + worldOffset1;
+		glm::fvec3 weaponPoint2 = cameraController->cameraPositionUE + (cameraController->forwardVectorUE * 35.0f) + worldOffset2;
+
+		// Apply position to weaponMesh
 		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
 		setWorldLocation_params.bSweep = false;
 		setWorldLocation_params.bTeleport = true;
-		setWorldLocation_params.NewLocation = cameraWpnPosition;
+		setWorldLocation_params.NewLocation = weaponPoint1;
 		weaponMesh->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 
+		// FindLookAtRotation from Point1 to Point2
+		struct {
+			glm::fvec3 Start;
+			glm::fvec3 Target;
+			Utilities::FRotator OutRotation;
+		} LookAtRotationParams;
+
+		LookAtRotationParams.Start = weaponPoint1;
+		LookAtRotationParams.Target = weaponPoint2;
+
+		Utilities::KismetMathLibrary->call_function(L"FindLookAtRotation", &LookAtRotationParams);
+
+		// Apply rotation to weaponMesh
 		Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setWorldRotation_params{};
 		setWorldRotation_params.bSweep = false;
 		setWorldRotation_params.bTeleport = true;
-		setWorldRotation_params.NewRotation = cameraWpnRotation;
+		setWorldRotation_params.NewRotation = LookAtRotationParams.OutRotation;
 		weaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
 
-		uevr::API::get()->log_info("position : x %f, y %f, z %f", cameraWpnPosition.x, cameraWpnPosition.y, cameraWpnPosition.z);
-		uevr::API::get()->log_info("rotation : x %f, y %f, z %f", cameraWpnRotation.Pitch, cameraWpnRotation.Roll, cameraWpnRotation.Yaw);
+
+		//uevr::API::get()->log_info("position : x %f, y %f, z %f", cameraWpnPosition.x, cameraWpnPosition.y, cameraWpnPosition.z);
+		//uevr::API::get()->log_info("rotation : x %f, y %f, z %f", cameraWpnRotation.Pitch, cameraWpnRotation.Roll, cameraWpnRotation.Yaw);
 	}
 }
 

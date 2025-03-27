@@ -25,6 +25,10 @@ public:
 	float cameraMatrixValues[16] = { 0.0f };
 	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
 	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
+	glm::fvec3 cameraPositionUE = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 forwardVectorUE = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 rightVectorUE = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 upVectorUE = { 0.0f, 0.0f, 0.0f };
 
 	bool camResetRequested = false;
 	int cameraModeIs = 0;

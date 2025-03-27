@@ -91,7 +91,7 @@ public:
     void AdjustAddresses();
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
-	void RestoreAllMemoryInstructions(bool restoreInstructions);
+	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
 	
 	static bool isShooting;
 	//static bool isShootingCamera;
