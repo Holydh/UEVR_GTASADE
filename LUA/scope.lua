@@ -657,6 +657,8 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             local weapon_changed = not current_weapon or 
             not weapon_mesh or 
             not current_weapon or 
+            weapon_mesh.StaticMesh == nil or
+            current_weapon.StaticMesh == nil or
             weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
             scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
 
