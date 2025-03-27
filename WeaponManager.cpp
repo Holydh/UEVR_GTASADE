@@ -1,121 +1,124 @@
 #include "WeaponManager.h"
 
 void WeaponManager::UpdateActualWeaponMesh()
+{
+	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas == 46)
+		return;
+
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
+	//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
+	//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
+	static auto gta_BPplayerCharacter_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/Characters/Player/BP_player_character.BP_Player_Character_C");
+	static auto gta_StaticMeshComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMeshComponent");
+	//API::get()->log_info("gta_BPweapon_c = %ls", gta_BPweapon_c->get_full_name().c_str());
+
+
+	const auto& playerControllerChildren = playerManager->playerController->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"Children");
+	//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
+
+	if (playerControllerChildren.data[3]->is_a(gta_BPplayerCharacter_c))
+		torso = playerControllerChildren.data[3]->get_property<uevr::API::UObject*>(L"torso");
+	else
 	{
-		if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
-		//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
-		//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
-		static auto gta_BPplayerCharacter_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/Characters/Player/BP_player_character.BP_Player_Character_C");
-		static auto gta_StaticMeshComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMeshComponent");
-		//API::get()->log_info("gta_BPweapon_c = %ls", gta_BPweapon_c->get_full_name().c_str());
-
-	
-		const auto& playerControllerChildren = playerManager->playerController->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"Children");
-		//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
-
-		if (playerControllerChildren.data[3]->is_a(gta_BPplayerCharacter_c))
-			torso = playerControllerChildren.data[3]->get_property<uevr::API::UObject*>(L"torso");
-		else
-		{
-			uevr::API::get()->log_info("gta_BPplayerCharacter not found.");
-			torso = nullptr;
-			equippedWeaponIndex = 0;
-			weaponMesh = nullptr;
-			weaponStaticMesh = nullptr;
-			return;
-		}
-		const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
-		if (torsoChildren.count == 0)
-		{
-			equippedWeaponIndex = 0;
-			weaponMesh = nullptr;
-			weaponStaticMesh = nullptr;
-			return;
-		}
-		const auto& weaponRootChildren = torsoChildren.data[0]->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
-
-		if (weaponRootChildren.data[0]->is_a(gta_StaticMeshComponent_c))
-		{
-			weaponMesh = weaponRootChildren.data[0];
-			weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
-		}
-		else
-		{
-			equippedWeaponIndex = 0;
-			weaponMesh = nullptr;
-			weaponStaticMesh = nullptr;
-			return;
-		}
-	
-
-		if (!playerManager->isInVehicle || cameraController->cameraModeIs == 55)
-		{
-			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-			motionState->set_hand(1);
-			motionState->set_permanent(true);
-		}
-		if ((playerManager->isInVehicle && !playerManager->wasInVehicle) && cameraController->cameraModeIs != 55)
-		{
-			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-		}
-
-
-		//for (auto child : playerControllerChildren){
-		//	//API::get()->log_info("child = %ls", child->get_full_name().c_str());
-		//	if (child->is_a(gta_weapon_c) && child == playerControllerChildren.data[4]) {
-		//		weapon = child;
-		//		weaponMesh = weapon->get_property<uevr::API::UObject*>(L"WeaponMesh");
-		//		/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
-		//		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
-		//		/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
-
-		//		if (!playerManager->characterIsInVehicle || cameraController->cameraMode == 55)
-		//		{
-		//			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-		//			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-		//			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-		//			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-		//			motionState->set_hand(1);
-		//			motionState->set_permanent(true);
-		//		}
-		//		if ((playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle) && cameraController->cameraMode != 55)
-		//		{
-		//			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-		//		}
-		//		break;
-		//	}
-		//	else
-		//	{
-		//		weaponMesh = nullptr;
-		//		weaponStaticMesh = nullptr;
-		//	}
-		//}
-
-
-		//if (weaponMesh == nullptr)
-		//{
-		//	equippedWeaponIndex = 0;
-		//	return;
-		//}
-		//
-		std::wstring weaponName = weaponStaticMesh->get_full_name();
-		
-		// Extract only the weapon name from the full path
-		size_t lastDot = weaponName.find_last_of(L'.');
-		if (lastDot != std::wstring::npos) {
-			weaponName = weaponName.substr(lastDot + 1);
-		}
-		/*API::get()->log_info("%ls", weaponName.c_str());*/
-		// Look up the weapon in the map
-		auto it = weaponNameToIndex.find(weaponName);
-		if (it != weaponNameToIndex.end()) {
-			equippedWeaponIndex = it->second;
-		}
-		/*API::get()->log_info("%i", equippedWeaponIndex);*/
+		uevr::API::get()->log_info("gta_BPplayerCharacter not found.");
+		torso = nullptr;
+		equippedWeaponIndex = 0;
+		weaponMesh = nullptr;
+		weaponStaticMesh = nullptr;
+		return;
 	}
+	const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
+	if (torsoChildren.count == 0)
+	{
+		equippedWeaponIndex = 0;
+		weaponMesh = nullptr;
+		weaponStaticMesh = nullptr;
+		return;
+	}
+	const auto& weaponRootChildren = torsoChildren.data[0]->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
+
+	if (weaponRootChildren.data[0]->is_a(gta_StaticMeshComponent_c))
+	{
+		weaponMesh = weaponRootChildren.data[0];
+		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
+	}
+	else
+	{
+		equippedWeaponIndex = 0;
+		weaponMesh = nullptr;
+		weaponStaticMesh = nullptr;
+		return;
+	}
+
+
+	if (cameraController->cameraModeIs != 46 && (!playerManager->isInVehicle || cameraController->cameraModeIs == 55))
+	{
+		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+		motionState->set_hand(1);
+		motionState->set_permanent(true);
+	}
+	if ((cameraController->cameraModeIs != 46 && playerManager->isInVehicle && !playerManager->wasInVehicle) && cameraController->cameraModeIs != 55)
+	{
+		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+	}
+
+
+	//for (auto child : playerControllerChildren){
+	//	//API::get()->log_info("child = %ls", child->get_full_name().c_str());
+	//	if (child->is_a(gta_weapon_c) && child == playerControllerChildren.data[4]) {
+	//		weapon = child;
+	//		weaponMesh = weapon->get_property<uevr::API::UObject*>(L"WeaponMesh");
+	//		/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
+	//		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
+	//		/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
+
+	//		if (!playerManager->characterIsInVehicle || cameraController->cameraMode == 55)
+	//		{
+	//			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+	//			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+	//			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+	//			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+	//			motionState->set_hand(1);
+	//			motionState->set_permanent(true);
+	//		}
+	//		if ((playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle) && cameraController->cameraMode != 55)
+	//		{
+	//			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+	//		}
+	//		break;
+	//	}
+	//	else
+	//	{
+	//		weaponMesh = nullptr;
+	//		weaponStaticMesh = nullptr;
+	//	}
+	//}
+
+
+	//if (weaponMesh == nullptr)
+	//{
+	//	equippedWeaponIndex = 0;
+	//	return;
+	//}
+	//
+	std::wstring weaponName = weaponStaticMesh->get_full_name();
+
+	// Extract only the weapon name from the full path
+	size_t lastDot = weaponName.find_last_of(L'.');
+	if (lastDot != std::wstring::npos) {
+		weaponName = weaponName.substr(lastDot + 1);
+	}
+	/*API::get()->log_info("%ls", weaponName.c_str());*/
+	// Look up the weapon in the map
+	auto it = weaponNameToIndex.find(weaponName);
+	if (it != weaponNameToIndex.end()) {
+		equippedWeaponIndex = it->second;
+	}
+	/*API::get()->log_info("%i", equippedWeaponIndex);*/
+}
 
 void WeaponManager::UpdateAimingVectors()
 {
@@ -433,21 +436,21 @@ void WeaponManager::UpdateAimingVectors()
 	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[13])) = calculatedAimPosition.y;
 	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[14])) = calculatedAimPosition.z;
 	//}
-	glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
-	glm::fvec3 right = glm::cross(up, calculatedAimForward);
+	//glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
+	//glm::fvec3 right = glm::cross(up, calculatedAimForward);
 
-	MemoryManager::matrixAimCalculatedValues[0] = right.x;
-	MemoryManager::matrixAimCalculatedValues[1] = right.y;
-	MemoryManager::matrixAimCalculatedValues[2] = right.z;
-	MemoryManager::matrixAimCalculatedValues[3] = calculatedAimForward.x;
-	MemoryManager::matrixAimCalculatedValues[4] = calculatedAimForward.y;
-	MemoryManager::matrixAimCalculatedValues[5] = calculatedAimForward.z;
-	MemoryManager::matrixAimCalculatedValues[6] = up.x;
-	MemoryManager::matrixAimCalculatedValues[7] = up.y;
-	MemoryManager::matrixAimCalculatedValues[8] = up.z;
-	MemoryManager::matrixAimCalculatedValues[9] = calculatedAimPosition.x;
-	MemoryManager::matrixAimCalculatedValues[10] = calculatedAimPosition.y;
-	MemoryManager::matrixAimCalculatedValues[11] = calculatedAimPosition.z;
+	//MemoryManager::matrixAimCalculatedValues[0] = right.x;
+	//MemoryManager::matrixAimCalculatedValues[1] = right.y;
+	//MemoryManager::matrixAimCalculatedValues[2] = right.z;
+	//MemoryManager::matrixAimCalculatedValues[3] = calculatedAimForward.x;
+	//MemoryManager::matrixAimCalculatedValues[4] = calculatedAimForward.y;
+	//MemoryManager::matrixAimCalculatedValues[5] = calculatedAimForward.z;
+	//MemoryManager::matrixAimCalculatedValues[6] = up.x;
+	//MemoryManager::matrixAimCalculatedValues[7] = up.y;
+	//MemoryManager::matrixAimCalculatedValues[8] = up.z;
+	//MemoryManager::matrixAimCalculatedValues[9] = calculatedAimPosition.x;
+	//MemoryManager::matrixAimCalculatedValues[10] = calculatedAimPosition.y;
+	//MemoryManager::matrixAimCalculatedValues[11] = calculatedAimPosition.z;
 
 	//uevr::API::get()->log_info("calculatedAimForward.x = %f ", calculatedAimForward.x);
 	//uevr::API::get()->log_info("MemoryManager::matrixAimCalculatedValues[3] = %f ", MemoryManager::matrixAimCalculatedValues[3]);
@@ -645,6 +648,7 @@ void WeaponManager::WeaponHandling(float delta)
 	case 42: // Extinguisher
 		return;
 	case 43: // Camera
+		HandleCameraWeaponAiming();
 		return;
 		//case 44: // NightVision
 		//case 45: // Infrared
@@ -689,30 +693,43 @@ void WeaponManager::WeaponHandling(float delta)
 
 }
 
-//void WeaponManager::HandleCameraWeaponAiming()
-//{
-//	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
-//	{
-//		uevr::API::get()->log_error("hello ?");
-//		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-//		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
-//		setRelativeLocation_params.bSweep = false;
-//		setRelativeLocation_params.bTeleport = true;
-//		setRelativeLocation_params.NewLocation = playerManager->actualPlayerHeadPositionUE;
-//		weaponMesh->call_function(L"K2_SetWorldLocation", &setRelativeLocation_params);
-//
-//		Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
-//		setRelativeRotation_params.bSweep = false;
-//		setRelativeRotation_params.bTeleport = true;
-//		setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
-//		weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
-//	}
-//
-//	if (cameraController->cameraModeIs != 46 && cameraController->cameraModeWas == 46)
-//	{
-//		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-//	}
-//}
+void WeaponManager::HandleCameraWeaponAiming()
+{
+	uevr::API::get()->log_error("%ls", weaponMesh->get_full_name().c_str());
+	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
+	{
+		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+
+		struct {
+				bool MaintainWorldPosition = true;
+				bool CallModify = false;
+			} DetachFromParent_params;
+		weaponMesh->call_function(L"DetachFromParent", &DetachFromParent_params);
+	}
+
+	if (cameraController->cameraModeIs != 46 && cameraController->cameraModeWas == 46)
+	{
+		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+	}
+
+	if (cameraController->cameraModeIs == 46)
+	{
+		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
+		setWorldLocation_params.bSweep = false;
+		setWorldLocation_params.bTeleport = true;
+		setWorldLocation_params.NewLocation = cameraWpnPosition;
+		weaponMesh->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
+
+		Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setWorldRotation_params{};
+		setWorldRotation_params.bSweep = false;
+		setWorldRotation_params.bTeleport = true;
+		setWorldRotation_params.NewRotation = cameraWpnRotation;
+		weaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
+
+		uevr::API::get()->log_info("position : x %f, y %f, z %f", cameraWpnPosition.x, cameraWpnPosition.y, cameraWpnPosition.z);
+		uevr::API::get()->log_info("rotation : x %f, y %f, z %f", cameraWpnRotation.Pitch, cameraWpnRotation.Roll, cameraWpnRotation.Yaw);
+	}
+}
 
 void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 {

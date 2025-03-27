@@ -5,10 +5,6 @@
 #include "PlayerManager.h"
 #include "WeaponManager.h"
 #include "Utilities.h"
-//#include <thread>
-//#include <atomic> 
-//#include <chrono>
-//#include <iostream>
 
 using namespace uevr;
 
@@ -19,11 +15,6 @@ using namespace uevr;
         API::get()->log_info(__VA_ARGS__); \
     }}
 
-//std::atomic<bool> resetMatrix(false);
-//std::atomic<bool> stopThread(false);
-//std::condition_variable cv;
-//std::mutex cv_m;
-
 class GTASADE_Plugin : public uevr::Plugin {
 private:
 	MemoryManager memoryManager;
@@ -31,8 +22,6 @@ private:
 	CameraController cameraController;
 	PlayerManager playerManager;
 	WeaponManager weaponManager;
-
-	//std::unique_ptr<std::thread> waitThread;
 
 
 public:
@@ -49,37 +38,6 @@ public:
 		memoryManager.RestoreAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
 		ToggleAllUObjectHooks(false);
-		
-		
-        //// Signal thread to stop
-        //{
-        //    std::lock_guard<std::mutex> lk(cv_m);
-        //    stopThread.store(true, std::memory_order_release);
-        //    resetMatrix.store(true, std::memory_order_release);
-        //}
-        //cv.notify_all();
-
-        //// Wait for thread to finish with timeout
-        //if (waitThread && waitThread->joinable()) {
-        //    if (waitThread->get_id() != std::this_thread::get_id()) {
-        //        // Implement join with timeout
-        //        auto start = std::chrono::steady_clock::now();
-        //        while (waitThread->joinable()) {
-        //            if (std::chrono::steady_clock::now() - start > std::chrono::milliseconds(500)) {
-        //                API::get()->log_error("Thread failed to terminate in time - detaching");
-        //                waitThread->detach();
-        //                break;
-        //            }
-        //            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        //        }
-        //        if (waitThread->joinable()) {
-        //            waitThread->join();
-        //        }
-        //    } else {
-        //        waitThread->detach();
-        //    }
-        //}
-        //waitThread.reset();
 	}
 
 	void on_initialize() override {
@@ -91,34 +49,11 @@ public:
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
 
-		//waitThread = std::make_unique<std::thread>([this]() {
-		//	this->WaitAndUpdateTheCameraMatrix();
-		//	});
+		Utilities::InitHelperClasses();
 	}
-
-	//void WaitAndUpdateTheCameraMatrix() {
-	//	std::unique_lock<std::mutex> lk(cv_m);
-	//	while (!stopThread.load(std::memory_order_acquire)) {
-	//		cv.wait_for(lk, std::chrono::milliseconds(9), [this]() {
-	//			return resetMatrix.load(std::memory_order_acquire) ||
-	//				stopThread.load(std::memory_order_acquire);
-	//			});
-
-	//		if (resetMatrix.load(std::memory_order_acquire)) {
-	//			lk.unlock();
-	//			cameraController.UpdateCameraMatrix();
-	//			lk.lock();
-	//			resetMatrix.store(false, std::memory_order_release);
-	//		}
-	//	}
-	//}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		//MemoryManager::isShootingCamera == false;
-
-		//API::get()->log_error("MemoryManager::cameraMatrixAddresses[0] : 0x%llx", MemoryManager::cameraMatrixAddresses[1]);
-		//API::get()->log_info(" MemoryManager::matrixAimCalculatedValues[3] : %f", MemoryManager::matrixAimCalculatedValues[3]);
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
@@ -133,7 +68,6 @@ public:
 		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
 
 		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
-		/*characterIsGettingInACar = *(reinterpret_cast<byte*>(memoryManager.characterIsGettingInACarAddress)) > 0;*/
 		
 		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
@@ -198,12 +132,6 @@ public:
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.cameraModeWas = cameraController.cameraModeIs;
 		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
-
-		//{
-		//	std::lock_guard<std::mutex> lk(cv_m);
-		//	resetMatrix.store(true, std::memory_order_release);
-		//}
-		//cv.notify_one();
 	}
 
 
@@ -220,13 +148,26 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
-	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
-	//{
-	//	API::get()->log_error("3 - On pre calculate");
-	//	
-	//}
-	
+	void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
+		UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
+	{
+		if (cameraController.cameraModeIs == 46)
+		{
+			struct {
+				Utilities::FRotator Rotation;
+				glm::fvec3 ForwardVector;
+			} ForwardVector_params;
+			ForwardVector_params.Rotation.Pitch = rotation->pitch;
+			ForwardVector_params.Rotation.Roll = rotation->roll;
+			ForwardVector_params.Rotation.Yaw = rotation->yaw;
+			Utilities::KismetMathLibrary->call_function(L"Conv_RotatorToVector", &ForwardVector_params);
+			weaponManager.cameraWpnPosition = glm::fvec3(position->x, position->y, position->z) + (ForwardVector_params.ForwardVector * 50.0f);
+			weaponManager.cameraWpnRotation.Pitch = rotation->pitch;
+			weaponManager.cameraWpnRotation.Roll = rotation->roll;
+			weaponManager.cameraWpnRotation.Yaw = rotation->yaw;
+		}
+	}
+
 	void ToggleAllUObjectHooks(bool enable)
 	{
 		if (enable)

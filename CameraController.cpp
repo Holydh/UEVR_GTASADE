@@ -114,13 +114,13 @@ void CameraController::ProcessCameraMatrix(float delta) {
 
 void CameraController::UpdateCameraMatrix()
 {	
-	if (cameraModeIs != 46 && cameraModeWas == 46)
-		MemoryManager::isShootingCamera = false;
+	//if (cameraModeIs != 46 && cameraModeWas == 46)
+	//	MemoryManager::isShootingCamera = false;
 
-	if (MemoryManager::isShootingCamera == true)
-	{
-		return;
-	}
+	//if (MemoryManager::isShootingCamera == true)
+	//{
+	//	return;
+	//}
 	// Write the modified matrix back to memory
 	for (int i = 0; i < 12; ++i) {
 		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[i])) = cameraMatrixValues[i];

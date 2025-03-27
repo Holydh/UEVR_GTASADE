@@ -237,11 +237,11 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //}
 
 uintptr_t MemoryManager::shootInstructionAddress = 0x11C6A7E; //0x13EE170; 
-uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // real take photo address;
+//uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // real take photo address;
 
 bool MemoryManager::isShooting = false;
 int MemoryManager::cameraMode;
-bool MemoryManager::isShootingCamera = false;
+//bool MemoryManager::isShootingCamera = false;
 
 std::array<uintptr_t, 16> MemoryManager::cameraMatrixAddresses // x, y, z
 {
@@ -298,29 +298,30 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
 			/*uevr::API::get()->log_info("Shooting");*/
         }
 
-		if (instructionAddress == MemoryManager::cameraShootInstructionAddress)
-		{
-			if (MemoryManager::cameraMode == 46/* && !MemoryManager::isShootingCamera*/)
-			{
-				uevr::API::get()->log_info("it's alive");
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[0])) = MemoryManager::matrixAimCalculatedValues[0];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[1])) = MemoryManager::matrixAimCalculatedValues[1];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[2])) = MemoryManager::matrixAimCalculatedValues[2];
+		//if (instructionAddress == MemoryManager::cameraShootInstructionAddress)
+		//{
+		//	//if (MemoryManager::cameraMode == 46/* && !MemoryManager::isShootingCamera*/)
+		//	//{
+		//	//	uevr::API::get()->log_info("it's alive");
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[0])) = MemoryManager::matrixAimCalculatedValues[0];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[1])) = MemoryManager::matrixAimCalculatedValues[1];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[2])) = MemoryManager::matrixAimCalculatedValues[2];
 
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[4])) = MemoryManager::matrixAimCalculatedValues[3];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[5])) = MemoryManager::matrixAimCalculatedValues[4];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[6])) = MemoryManager::matrixAimCalculatedValues[5];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[4])) = MemoryManager::matrixAimCalculatedValues[3];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[5])) = MemoryManager::matrixAimCalculatedValues[4];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[6])) = MemoryManager::matrixAimCalculatedValues[5];
 
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[8])) = MemoryManager::matrixAimCalculatedValues[6];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[9])) = MemoryManager::matrixAimCalculatedValues[7];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[10])) = MemoryManager::matrixAimCalculatedValues[8];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[8])) = MemoryManager::matrixAimCalculatedValues[6];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[9])) = MemoryManager::matrixAimCalculatedValues[7];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[10])) = MemoryManager::matrixAimCalculatedValues[8];
 
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[12])) = MemoryManager::matrixAimCalculatedValues[9];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[13])) = MemoryManager::matrixAimCalculatedValues[10];
-				*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[14])) = MemoryManager::matrixAimCalculatedValues[11];
-				MemoryManager::isShootingCamera = true;
-			}
-		}
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[12])) = MemoryManager::matrixAimCalculatedValues[9];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[13])) = MemoryManager::matrixAimCalculatedValues[10];
+		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[14])) = MemoryManager::matrixAimCalculatedValues[11];
+		//	//	MemoryManager::isShootingCamera = true;
+		//	//}
+		//}
+		
 		// Set Resume Flag (RF) to prevent infinite breakpoint triggering
         pException->ContextRecord->EFlags |= (1 << 16);  // Set RF bit in EFLAGS
 
@@ -336,7 +337,7 @@ void MemoryManager::InstallBreakpoints() {
 
     // Set the breakpoints
     SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
-	SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::cameraShootInstructionAddress, &MemoryManager::isShooting);
+	//SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::cameraShootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler
     exceptionHandlerHandle = AddVectoredExceptionHandler(1, ExceptionHandler);
@@ -352,9 +353,9 @@ void MemoryManager::RemoveBreakpoints() {
 
     // Remove breakpoints by clearing DR0, DR1, and their control bits
     ctx.Dr0 = 0;
-    ctx.Dr1 = 0;
+    //ctx.Dr1 = 0;
     ctx.Dr7 &= ~(1 << 0); // Clear enable bit for DR0
-    ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
+    //ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
 
     SetThreadContext(hThread, &ctx);
 
@@ -455,7 +456,7 @@ void MemoryManager::AdjustAddresses() {
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 
 	shootInstructionAddress += baseAddressGameEXE;
-	cameraShootInstructionAddress += baseAddressGameEXE;
+	//cameraShootInstructionAddress += baseAddressGameEXE;
 	playerShootFromCarInputAddress += baseAddressGameEXE;
 }
 

@@ -89,6 +89,9 @@ public:
 		{L"SM_gun_para", 46}        // Parachute
 	};
 
+	glm::fvec3 cameraWpnPosition =  { 0.0f, 0.0f, 0.0f };
+	Utilities::FRotator cameraWpnRotation =  { 0.0f, 0.0f, 0.0f };
+
 	void UpdateActualWeaponMesh();
 	void UpdateAimingVectors();
 	void HandleWeaponVisibility();

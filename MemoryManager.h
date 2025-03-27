@@ -80,7 +80,7 @@ public:
 	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
 	//uintptr_t equippedWeaponAddress = 0x53DACC7;
 	static uintptr_t shootInstructionAddress;
-	static uintptr_t cameraShootInstructionAddress;
+	//static uintptr_t cameraShootInstructionAddress;
 	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
 
 
@@ -94,7 +94,7 @@ public:
 	void RestoreAllMemoryInstructions(bool restoreInstructions);
 	
 	static bool isShooting;
-	static bool isShootingCamera;
+	//static bool isShootingCamera;
 
 	void InstallBreakpoints();
 	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
