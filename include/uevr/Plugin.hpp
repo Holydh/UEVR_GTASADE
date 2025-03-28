@@ -50,8 +50,8 @@ public:
     virtual ~Plugin() = default;
 
     // Main plugin callbacks
-    virtual void on_dllmain_attach() {}
-    virtual void on_dllmain_detach() {}
+    virtual void on_dllmain() {}
+	virtual void on_dllmain_detach() {}
     virtual void on_initialize() {}
     virtual void on_present() {}
     virtual void on_post_render_vr_framework_dx11(ID3D11DeviceContext* context, ID3D11Texture2D* texture, ID3D11RenderTargetView* rtv) {}
@@ -73,6 +73,8 @@ public:
 
     virtual void on_pre_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle) {}
     virtual void on_post_viewport_client_draw(UEVR_UGameViewportClientHandle viewport_client, UEVR_FViewportHandle viewport, UEVR_FCanvasHandle) {}
+
+    virtual void on_custom_event(const char* event_name, const char* event_data) {}
 
 protected:
 };
@@ -119,6 +121,10 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
         uevr::detail::g_plugin->on_xinput_set_state(retval, user_index, (XINPUT_VIBRATION*)vibration);
     });
 
+    callbacks->on_custom_event([](const char* event_name, const char* event_data) {
+        uevr::detail::g_plugin->on_custom_event(event_name, event_data);
+    });
+
     sdk_callbacks->on_pre_engine_tick([](UEVR_UGameEngineHandle engine, float delta) {
         uevr::detail::g_plugin->on_pre_engine_tick((uevr::API::UGameEngine*)engine, delta);
     });
@@ -158,12 +164,11 @@ extern "C" __declspec(dllexport) bool uevr_plugin_initialize(const UEVR_PluginIn
 
 BOOL APIENTRY DllMain(HANDLE handle, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
-        uevr::detail::g_plugin->on_dllmain_attach();
+        uevr::detail::g_plugin->on_dllmain();
     }
     if (reason == DLL_PROCESS_DETACH)
     {
         uevr::detail::g_plugin->on_dllmain_detach();
     }
-
     return TRUE;
 }

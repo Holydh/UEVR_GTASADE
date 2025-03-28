@@ -1,4 +1,5 @@
 #include "uevr/Plugin.hpp"
+#include "uevr/API.hpp"
 #include "MemoryManager.h"
 #include "SettingsManager.h"
 #include "CameraController.h"
@@ -30,7 +31,7 @@ public:
 		playerManager(&settingsManager),
 		memoryManager(&settingsManager){}
 
-	void on_dllmain_attach() override {}
+	void on_dllmain() override {}
 
 	void on_dllmain_detach() override {
 		memoryManager.RemoveBreakpoints();
@@ -146,6 +147,15 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void on_custom_event(const char *event_name, const char *event_data) override
+	{
+		if (event_name = "OnHmdComponentCreated")
+		{
+			API::get()->log_info("OnHmdComponentCreated");
+			API::get()->log_info("%s", event_data);
+		}
 	}
 
 	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,

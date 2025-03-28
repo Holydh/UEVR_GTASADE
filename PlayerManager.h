@@ -18,6 +18,7 @@ public:
 	glm::fvec3 actualPlayerHeadPositionUE = { 0.0f, 0.0f, 0.0f };
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
+	uevr::API::UObject* playerHmd = nullptr;
 	bool isInControl = false;
 	bool wasInControl = false;
 	bool isInVehicle = false;

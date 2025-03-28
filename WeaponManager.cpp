@@ -122,15 +122,15 @@ void WeaponManager::UpdateActualWeaponMesh()
 
 void WeaponManager::UpdateAimingVectors()
 {
-	if (cameraController->cameraModeIs == 46)
-	{
-		cameraController->forwardVectorUE = glm::fvec3(
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
-			-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
-		);
-		return;
-	}
+	//if (cameraController->cameraModeIs == 46)
+	//{
+	//	cameraController->forwardVectorUE = glm::fvec3(
+	//		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
+	//		-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
+	//		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
+	//	);
+	//	return;
+	//}
 
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors");
 	if (weaponMesh != nullptr) {
@@ -425,11 +425,11 @@ void WeaponManager::UpdateAimingVectors()
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
 	}
 
-	cameraController->forwardVectorUE = glm::fvec3(
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
-			-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
-			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
-		);
+	//cameraController->forwardVectorUE = glm::fvec3(
+	//		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
+	//		-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
+	//		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
+	//	);
 
 	//if (cameraController->cameraModeIs == 46)
 	//{

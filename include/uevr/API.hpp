@@ -110,6 +110,12 @@ public:
         fn(event_name.data(), event_data.data());
     }
 
+    // This is not sent to Lua, it's sent to all plugins
+    void dispatch_custom_event(std::string_view event_name, std::string_view event_data) {
+        static const auto fn = param()->functions->dispatch_custom_event;
+        fn(event_name.data(), event_data.data());
+    }
+
     template <typename... Args> void log_error(const char* format, Args... args) { m_param->functions->log_error(format, args...); }
     template <typename... Args> void log_warn(const char* format, Args... args) { m_param->functions->log_warn(format, args...); }
     template <typename... Args> void log_info(const char* format, Args... args) { m_param->functions->log_info(format, args...); }
@@ -181,6 +187,11 @@ public:
     UObject* spawn_object(UClass* klass, UObject* outer) {
         static const auto fn = sdk()->functions->spawn_object;
         return (UObject*)fn(klass->to_handle(), outer->to_handle());
+    }
+
+    UObject* add_component_by_class(UObject* actor, UClass* klass, bool deferred = false) {
+        static const auto fn = sdk()->functions->add_component_by_class;
+        return (UObject*)fn(actor->to_handle(), klass->to_handle(), deferred);
     }
 
     void execute_command(std::wstring_view command) {
@@ -1335,9 +1346,9 @@ public:
             return result;
         }
 
-        static void trigger_haptic_vibration(UEVR_TrackedDeviceIndex index, float amplitude, float frequency, float duration, UEVR_InputSourceHandle source) {
+        static void trigger_haptic_vibration(float seconds_from_now, float amplitude, float frequency, float duration, UEVR_InputSourceHandle source) {
             static const auto fn = initialize()->trigger_haptic_vibration;
-            fn(index, amplitude, frequency, duration, source);
+            fn(seconds_from_now, amplitude, frequency, duration, source);
         }
 
         static bool is_using_contriollers() {
