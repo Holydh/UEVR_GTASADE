@@ -11,6 +11,8 @@
 #include "MemoryManager.h"
 #include "Utilities.h"
 #include "SettingsManager.h"
+#include <unordered_set>
+
 
 class WeaponManager {
 private:
@@ -41,6 +43,8 @@ public:
 
 	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
+
+	std::unordered_set<int> aimingCamModes = {5, 7, 8, 9, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
 
 	std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed

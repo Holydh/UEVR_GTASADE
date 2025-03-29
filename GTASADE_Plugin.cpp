@@ -149,14 +149,17 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-	void on_custom_event(const char *event_name, const char *event_data) override
-	{
-		if (event_name = "OnHmdComponentCreated")
-		{
-			API::get()->log_info("OnHmdComponentCreated");
-			API::get()->log_info("%s", event_data);
-		}
-	}
+	//void on_custom_event(const char* event_name, const char* event_data) override
+	//{
+	//	if (event_name == "OnHmdComponentCreated")
+	//	{
+	//		API::get()->log_info("OnHmdComponentCreated, event_data = %s", event_data);
+	//		std::wstring w_event_data = std::wstring(event_data, event_data + strlen(event_data));
+	//		playerManager.playerHmd = uevr::API::get()->find_uobject<uevr::API::UObject>(w_event_data);
+	//		if (playerManager.playerHmd != nullptr)
+	//			API::get()->log_info("playerHmd = %ws", playerManager.playerHmd->get_full_name().c_str());
+	//	}
+	//}
 
 	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
 	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
