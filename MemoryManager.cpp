@@ -133,7 +133,7 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1107E3B, 7, 0xf20f1187100100},
 	{0x1107E42, 1, 0x00},
 	{0x1108E75, 5, 0xf2410f1107},
-	{0xAE0406, 5, 0xf30f117104},
+	/*{0xAE0406, 5, 0xf30f117104},*/ //aggressive spawning of cars ?
 	{0x11090ED, 3, 0x418947},
 	{0x11090F0, 1, 0x08},
 	{0xAE040B, 5, 0xf30f117908},

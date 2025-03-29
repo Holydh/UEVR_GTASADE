@@ -132,6 +132,7 @@ void WeaponManager::UpdateAimingVectors()
 		return;
 	}
 	
+	// attempt to fix aggressive spawning of cars
 	if (aimingCamModes.find(cameraController->cameraModeIs) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[10];
