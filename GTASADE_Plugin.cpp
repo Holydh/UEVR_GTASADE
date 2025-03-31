@@ -164,22 +164,11 @@ public:
 	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
 	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
 	//{
-	//	if (cameraController.cameraModeIs == 46)
-	//	{
-	//		struct {
-	//			Utilities::FRotator Rotation;
-	//			glm::fvec3 ForwardVector;
-	//		} ForwardVector_params;
-	//		ForwardVector_params.Rotation.Pitch = rotation->pitch;
-	//		ForwardVector_params.Rotation.Roll = rotation->roll;
-	//		ForwardVector_params.Rotation.Yaw = rotation->yaw;
-	//		Utilities::KismetMathLibrary->call_function(L"Conv_RotatorToVector", &ForwardVector_params);
-	//		uevr::API::get()->log_info("ForwardVectorUE : x %f, y %f, z %f", ForwardVector_params.ForwardVector.x, ForwardVector_params.ForwardVector.y, ForwardVector_params.ForwardVector.z);
-	//		weaponManager.cameraWpnPosition = glm::fvec3(position->x, position->y, position->z) + (ForwardVector_params.ForwardVector * 50.0f);
-	//		weaponManager.cameraWpnRotation.Pitch = rotation->pitch;
-	//		weaponManager.cameraWpnRotation.Roll = rotation->roll;
-	//		weaponManager.cameraWpnRotation.Yaw = rotation->yaw;
-	//	}
+	//	rotation->pitch = 0.0f;
+	//	rotation->yaw = -90.0f;
+	//	rotation->roll = 0.0f;
+
+	//	cameraController.hm
 	//}
 
 	void ToggleAllUObjectHooks(bool enable)

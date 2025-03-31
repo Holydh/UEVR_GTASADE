@@ -34,6 +34,11 @@ public:
 	int cameraModeIs = 0;
 	int cameraModeWas = 0;
 
+	//glm::fvec3 hmdPosition = { 0.0f, 0.0f, 0.0f };
+	//glm::fvec3 hmdForward = { 0.0f, 0.0f, 0.0f };
+	//glm::fvec3 hmdUp = { 0.0f, 0.0f, 0.0f };
+	//glm::fvec3 hmdRight = { 0.0f, 0.0f, 0.0f };
+
 	bool waterViewFixed = false;
 
 	void ProcessCameraMatrix(float delta);
