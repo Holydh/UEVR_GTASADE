@@ -1,4 +1,5 @@
 #include "WeaponManager.h"
+#include <any>
 
 void WeaponManager::UpdateActualWeaponMesh()
 {
@@ -821,6 +822,251 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 	setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
+
+//void WeaponManager::LoadScopeMesh()
+//{
+//	struct {
+//		uevr::API::FName ObjectPath;
+//		bool bIncludeOnlyOnDiskAssets;
+//		uint8_t Padding[7];
+//		FAssetData ReturnValue;
+//	} getAssetByObjectPath_params;
+//	getAssetByObjectPath_params.ObjectPath = uevr::API::FName(L"/Engine/BasicShapes/Cylinder.Cylinder");
+//	getAssetByObjectPath_params.bIncludeOnlyOnDiskAssets = true;
+//
+//	Utilities::AssetRegistry->call_function(L"GetAssetByObjectPath", &getAssetByObjectPath_params);
+//	//uevr::API::get()->log_info("ASSET BY object path : % ls", getAssetByObjectPath_params.ReturnValue.AssetName.to_string());
+//
+//
+//	//struct {
+//	//	FAssetData InAssetData;
+//	//	uevr::API::UObject* ReturnValue;
+//	//} getAsset_params;
+//
+//	//
+//	//getAsset_params.InAssetData = getAssetByObjectPath_params.ReturnValue;
+//
+//	//Utilities::AssetRegistryHelper->call_function(L"GetAsset", &getAsset_params);
+//	//if (getAsset_params.ReturnValue == nullptr)
+//	//	uevr::API::get()->log_info("failed to load cylinder mesh");
+//	//else
+//	//	uevr::API::get()->log_info("% ls", getAsset_params.ReturnValue->get_full_name().c_str());
+//
+//	scopeMeshLoaded = true;
+//
+//	//struct {
+//	//	FAssetData InAssetData;
+//	//	bool ReturnValue;
+//	//} getAsset_params;
+//
+//	//getAsset_params.InAssetData.ObjectPath = uevr::API::FName(L"/Engine/BasicShapes/Cylinder.Cylinder");
+//	////getAsset_params.InAssetData.PackageName = uevr::API::FName(L"/Engine/BasicShapes/Cylinder");
+//	////getAsset_params.InAssetData.PackagePath = uevr::API::FName(L"/Engine/BasicShapes/");
+//	//getAsset_params.InAssetData.AssetName = uevr::API::FName(L"Cylinder");
+//	//getAsset_params.InAssetData.AssetClass = uevr::API::FName(L"StaticMesh");
+//	//
+//	//Utilities::AssetRegistryHelper->call_function(L"IsAssetLoaded", &getAsset_params);
+//
+//	//uevr::API::get()->log_info("%i", getAsset_params.ReturnValue);
+//	//getAsset_params.InAssetData.AssetClass = uevr::API::FName(L"Class /Script/Engine.StaticMesh");
+//	//getAsset_params.InAssetData.AssetName = uevr::API::FName(L"StaticMesh'/Engine/BasicShapes/Cylinder.Cylinder'");
+//	//getAsset_params.InAssetData.ObjectPath = uevr::API::FName(L"StaticMesh'/Engine/BasicShapes/Cylinder.Cylinder'");
+//	//getAsset_params.InAssetData.PackageName = uevr::API::FName(L"/Engine/BasicShapes/Cylinder");
+//	//getAsset_params.InAssetData.PackagePath = uevr::API::FName(L"/Engine/BasicShapes/Cylinder");
+//
+//	
+//
+//
+//
+//}
+
+
+
+//void WeaponManager::LoadScopeMesh()
+//{
+//	struct {
+//	/*	uevr::API::UObject* Object;*/
+//		std::wstring ReturnValue;
+//	} getAsset_params;
+//	getAsset_params.Object = weaponMesh;
+//	Utilities::KismetSystemLibrary->call_function(L"GetObjectName", &getAsset_params);
+//
+//	uevr::API::get()->log_info("%ls",getAsset_params.ReturnValue);
+//	/*scopeMeshLoaded = true;*/
+//}
+
+
+
+//void hook() {
+//}
+//
+//uevr::API::UObject* on_static_load_asset_func(uevr::API::UClass* ObjectClass, uevr::API::UObject* InOuter, const wchar_t *inName,const wchar_t *Filename, int32_t LoadFlags, struct UPackageMap* Sandbox, bool bAllowObjectReconciliation, const struct FLinkerInstancingContext* InstancingContext) {
+//   //spdlog::info("trace all arguments you like";
+//   auto original_fn = m_original_static_load_asset_func;
+//   //stage 2 begin
+//   if(!asset_loaded) {
+//     g_plugin->m_asset = original_fn(StaticMeshCl, L"cylinder", ......);
+//     asset_loaded = true;
+//   }
+//   //stage 2 end
+//   return original_fn(ObjectClass, InOuter, Filename .... other args);
+//}
+
+//WeaponManager::StaticLoadObjectFN WeaponManager::m_original_static_load_asset_func = nullptr;
+
+//int m_on_static_load_asset{};
+//using StaticLoadObjectFN = uevr::API::UObject* (__fastcall*)(uevr::API::UClass* ObjectClass, uevr::API::UObject* InOuter, const TCHAR* inName, const TCHAR* Filename, uint32_t LoadFlags, WeaponManager::UPackageMap* Sandbox, bool bAllowObjectReconciliation, const struct FLinkerInstancingContext* InstancingContext);
+//    StaticLoadObjectFN m_original_static_load_asset_func{};
+
+using StaticLoadObject_t = uevr::API::UObject* (__fastcall*)(
+        uevr::API::UClass* ObjectClass,
+        uevr::API::UObject* InOuter,
+        const TCHAR* inName, 
+        const TCHAR* Filename,
+        uint32_t LoadFlags,
+        void* Sandbox, // Match hook typedef
+        bool bAllowObjectReconciliation,
+        const FLinkerInstancingContext* InstancingContext
+    );
+
+// --- Hook Setup ---
+void WeaponManager::Hook_OnStaticLoadObject() {
+    auto mod = utility::get_executable(); // Make sure utility::get_executable() is correct
+	static const auto func_signature = "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 F8 F7 FF FF 48 81 EC 08 09 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 F0 07 00 00";
+	//4C 8D 05 ?? ?? ?? ?? BA 6E 03 00 00 48 8D 0D ?? ?? ?? ?? 4C 0F 45 E3 4D 8B CC E8 ?? ?? ?? ?? 48 85 DB 74 08 48 8B CB E8 ?? ?? ?? ??
+	uevr::API::get()->log_info("Attempting to find StaticLoadObject signature...");
+    static auto static_load_asset_func = utility::scan(mod, func_signature);
+
+    if (!static_load_asset_func.has_value()) {
+        uevr::API::get()->log_error("Failed to find StaticLoadObject function signature!");
+        return;
+    }
+
+    StaticLoadObjectAddress = static_load_asset_func.value();
+    uevr::API::get()->log_info("Found potential StaticLoadObject at address: 0x%llX", StaticLoadObjectAddress);
+    uevr::API::get()->log_info("Attempting to hook StaticLoadObject...");
+
+    // Use the static hook function's address
+    WeaponManager::HookID = uevr::API::get()->param()->functions->register_inline_hook(
+        (void*)StaticLoadObjectAddress,
+        (void*)&WeaponManager::on_static_load_asset_func_hook, // Address of static member function
+        (void**)&m_original_static_load_asset_func // Store original here
+    );
+
+    if (WeaponManager::HookID < 0) { // Check UEVR API doc for exact error indication
+        uevr::API::get()->log_error("Failed to register hook for StaticLoadObject (Error code: %d)", WeaponManager::HookID);
+        m_original_static_load_asset_func = nullptr; // Ensure original is null if hook failed
+    } else {
+        uevr::API::get()->log_info("Successfully hooked StaticLoadObject.");
+    }
+    
+    scopeMeshLoaded = true; // Don't set this here, set it when you actually load your mesh
+}
+
+int32_t WeaponManager::HookID = 0;
+
+
+// --- Hook Function Implementation (Static Member) ---
+uevr::API::UObject* __fastcall WeaponManager::on_static_load_asset_func_hook(
+    uevr::API::UClass* ObjectClass,
+    uevr::API::UObject* InOuter,
+    const TCHAR* inName,
+    const TCHAR* Filename,
+    uint32_t LoadFlags,
+    void* Sandbox, // Matching typedef (using void*)
+    bool bAllowObjectReconciliation,
+    const FLinkerInstancingContext* InstancingContext)
+{	
+	// Optional: Basic logging (add null checks!)
+	if (inName) {
+		uevr::API::get()->log_info("[HOOK] StaticLoadObject called with inName: 0x%p", (void*)inName);
+	}
+
+    // Call original with exactly the arguments received
+    return m_original_static_load_asset_func(
+        ObjectClass, InOuter, inName, Filename, LoadFlags, Sandbox, bAllowObjectReconciliation, InstancingContext
+    );
+}
+
+void WeaponManager::Unhook_OnStaticLoadObject() {
+	uevr::API::get()->param()->functions->unregister_inline_hook(WeaponManager::HookID);
+}
+
+
+// --- Your Original Loading Function (for direct calling attempt) ---
+// Make sure StaticLoadObject_t typedef matches the StaticLoadObjectFN used for hooking
+
+
+//uevr::API::UObject* on_static_load_asset_func(uevr::API::UClass* ObjectClass, uevr::API::UObject* InOuter, const wchar_t *inName,const wchar_t *Filename, int32_t LoadFlags, struct UPackageMap* Sandbox, bool bAllowObjectReconciliation, const struct FLinkerInstancingContext* InstancingContext) {
+//	uevr::API::get()->log_info("ObjectClass : %ls", ObjectClass->get_full_name().c_str());
+//	uevr::API::get()->log_info("InOuter : %ls", InOuter->get_full_name().c_str());
+//	uevr::API::get()->log_info("inName : %ls", inName);
+//	uevr::API::get()->log_info("inName : %ls", Filename);
+//	uevr::API::get()->log_info("LoadFlags : %i", LoadFlags);
+//	uevr::API::get()->log_info("bAllowObjectReconciliation : %i", bAllowObjectReconciliation);
+//	//spdlog::info("trace all arguments you like";
+//   //auto original_fn = m_original_static_load_asset_func;
+//   ////stage 2 begin
+//   //if(!asset_loaded) {
+//   //  g_plugin->m_asset = original_fn(StaticMeshCl, L"cylinder", ......);
+//   //  asset_loaded = true;
+//   //}
+//   ////stage 2 end
+//   //return original_fn(ObjectClass, InOuter, Filename .... other args);
+//}
+
+//using StaticLoadObject_t = uevr::API::UObject* (__fastcall*)(uevr::API::UClass* ObjectClass, uevr::API::UObject* InOuter, const TCHAR* inName, const TCHAR* Filename, uint32_t LoadFlags, WeaponManager::UPackageMap* Sandbox, bool bAllowObjectReconciliation, const struct FLinkerInstancingContext* InstancingContext);
+//
+//void WeaponManager::LoadScopeMesh()
+//{
+//	auto mod = utility::get_executable();
+//    // StaticLoadObject
+//	static const auto func_signature = "40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 F8 F7 FF FF 48 81 EC 08 09 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 F0 07 00 00";
+//	// x64dbg : 40 55 53 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 F8 F7 FF FF 48 81 EC 08 09 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 F0 07 00 00
+//	//static const auto func_signature = "4C 8D 05 ? ? ? ? BA 6E 03 00 00 48 8D 0D ? ? ? ? 4C 0F 45 E3 4D 8B CC E8 ? ? ? ? 48 85 DB 74 08 48 8B CB E8 ? ? ? ?"; //StaticLoadObjectInternal signature
+//
+//	static auto static_load_asset_func = utility::scan(mod, func_signature); 
+//	
+//	uintptr_t offset;
+//	if (static_load_asset_func.has_value())
+//	{
+//		offset = static_load_asset_func.value() - (uintptr_t)mod;
+//		uevr::API::get()->log_error("0x%llX", static_load_asset_func.value());
+//		uevr::API::get()->log_error("0x%llX", offset);
+//	}
+//	else {
+//        uevr::API::get()->log_error("Failed to find StaticLoadObject function");
+//        return;
+//    }
+//	
+////   auto static_load_asset_func_addr = (uintptr_t)mod + 0x2e1f3b0;
+//    auto func = (StaticLoadObject_t)static_load_asset_func.value();
+//    auto static_mesh_cl = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMesh");
+//
+//    if(!static_mesh_cl) {
+//        uevr::API::get()->log_error("Failed to find StaticMesh class");
+//        return;
+//    }
+//
+//	
+//	if (!func)
+//	{
+//		uevr::API::get()->log_error("func empty");
+//		return;
+//	}
+//
+//	uevr::API::get()->log_error("before cylinder");
+//
+//	auto test = func(static_mesh_cl, nullptr, L"StaticMesh'/Engine/BasicShapes/Cylinder.Cylinder'", nullptr, 0, nullptr, true, nullptr);
+//	if (!test) {
+//		uevr::API::get()->log_error("Failed to load cylinder");
+//		return;
+//	}
+//	uevr::API::get()->log_info("Loaded cylinder");
+//	scopeMeshLoaded = true;
+//}
+
+
 
 	//switch (equippedWeaponIndex)
 	//{

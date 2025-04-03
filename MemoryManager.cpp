@@ -586,3 +586,8 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 //	weaponWheelOpenAddress += baseAddressGameEXE;
 //	cameraModeAddress += baseAddressGameEXE;
 //}
+
+
+extern "C" void nd_memset(void* dest, int val, size_t len) {
+    memset(dest, val, len);
+}

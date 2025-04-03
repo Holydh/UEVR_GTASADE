@@ -12,7 +12,12 @@
 #include "Utilities.h"
 #include "SettingsManager.h"
 #include <unordered_set>
+#include <utility/Scan.hpp>
+#include <utility/Module.hpp>
+#include <iostream>
+#include <vector>
 
+struct FLinkerInstancingContext;
 
 class WeaponManager {
 private:
@@ -21,8 +26,59 @@ private:
 	MemoryManager* memoryManager;
 	SettingsManager* settingsManager;
 
+	   // --- Static members for hooking ---
+    // Typedef for the function pointer
+    // Option: using void* for Sandbox if definition unknown/unused
+    using StaticLoadObjectFN = uevr::API::UObject* (__fastcall*)(
+        uevr::API::UClass* ObjectClass,
+        uevr::API::UObject* InOuter,
+        const TCHAR* inName, // Use TCHAR or wchar_t consistently
+        const TCHAR* Filename,
+        uint32_t LoadFlags,
+        void* Sandbox, // Using void* for safety unless UPackageMap is well-defined globally
+        bool bAllowObjectReconciliation,
+        const FLinkerInstancingContext* InstancingContext
+    );
+
+    // Storage for the original function pointer
+    static inline StaticLoadObjectFN m_original_static_load_asset_func = nullptr; // Needs C++17 inline or define in .cpp
+
+    // Hook function (must be static)
+    static uevr::API::UObject* __fastcall on_static_load_asset_func_hook(
+        uevr::API::UClass* ObjectClass,
+        uevr::API::UObject* InOuter,
+        const TCHAR* inName,
+        const TCHAR* Filename,
+        uint32_t LoadFlags,
+        void* Sandbox, // Match typedef
+        bool bAllowObjectReconciliation,
+        const FLinkerInstancingContext* InstancingContext
+    );
+    // ---------------------------------
+
 public:
 	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
+
+	static int32_t HookID;
+	uintptr_t StaticLoadObjectAddress = 0;
+
+	struct FAssetData
+	{
+		uevr::API::FName ObjectPath;
+		uevr::API::FName PackageName;
+		uevr::API::FName PackagePath;
+		uevr::API::FName AssetName;
+		uevr::API::FName AssetClass;
+		uint8_t Padding[0x28];
+	};
+	#pragma pack(pop)
+
+		#pragma pack(push, 1)
+	struct UPackageMap
+	{
+		uint8_t Padding[0xB8];
+	};
+	#pragma pack(pop)
 
 	int equippedWeaponIndex = 0;
 	int previousEquippedWeaponIndex = 0;
@@ -95,6 +151,10 @@ public:
 
 	glm::fvec3 cameraWpnPosition =  { 0.0f, 0.0f, 0.0f };
 	Utilities::FRotator cameraWpnRotation =  { 0.0f, 0.0f, 0.0f };
+
+	bool scopeMeshLoaded = false;
+	void Hook_OnStaticLoadObject();
+	void Unhook_OnStaticLoadObject();
 
 	void UpdateActualWeaponMesh();
 	void UpdateAimingVectors();

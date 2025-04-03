@@ -39,6 +39,7 @@ public:
 		memoryManager.ToggleAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
 		ToggleAllUObjectHooks(false);
+		weaponManager.Unhook_OnStaticLoadObject();
 	}
 
 	void on_initialize() override {
@@ -51,6 +52,7 @@ public:
 		memoryManager.AdjustAddresses();
 
 		Utilities::InitHelperClasses();
+
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -62,7 +64,11 @@ public:
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
 
-		
+		// Test to load Cylinder mesh manually
+		if (!weaponManager.scopeMeshLoaded)
+			weaponManager.Hook_OnStaticLoadObject();
+
+
 	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
 		//Debug
 		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
