@@ -668,10 +668,12 @@ void WeaponManager::WeaponHandling(float delta)
 	case 35: // RocketLauncher
 		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		shootDetectionFromMemory = true;
 		break;
 	case 36: // RocketLauncherHeatSeek
 		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		shootDetectionFromMemory = true;
 		break;
 	case 37: // Flamethrower
 		positionRecoilForce = { 0.0f, -0.00001f, -0.0001f };
