@@ -385,12 +385,17 @@ void WeaponManager::UpdateAimingVectors()
 			} componentToWorld_params;
 			weaponMesh->call_function(L"K2_GetComponentLocation", &componentToWorld_params);
 			
-			point1Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
-			point2Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
-
-			aimingDirection = glm::normalize(point2Position - point1Position);
-			//point1Position = componentToWorld_params.Location;
-			//aimingDirection = forwardVector_params.ForwardVector;
+			if (glm::length(point1Offsets) > 0.0f && glm::length(point2Offsets) > 0.0f)
+			{
+				point1Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
+				point2Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+				aimingDirection = glm::normalize(point2Position - point1Position);
+			}
+			else
+			{
+				point1Position = componentToWorld_params.Location;
+				aimingDirection = forwardVector_params.ForwardVector;
+			}
 		}
 
 		calculatedAimForward = {aimingDirection.x, -aimingDirection.y, aimingDirection.z};
