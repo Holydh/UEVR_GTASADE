@@ -14,9 +14,6 @@ public:
 	static glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets);
 
 	static uevr::API::UObject* KismetMathLibrary;
-	static uevr::API::UObject* KismetSystemLibrary;
-	static uevr::API::UObject* AssetRegistryHelper;
-	static uevr::API::UObject* AssetRegistry;
 
 	static void InitHelperClasses();
 
