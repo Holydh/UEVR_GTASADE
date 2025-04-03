@@ -3,11 +3,15 @@
 
 void SettingsManager::UpdateSettings()
 {
+	if (debugMod) uevr::API::get()->log_info("UpdateSettings()");
+
 	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(configFilePath, "VR_AimSpeed", 125.0f) * 10;
 }
 
 bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath)
 {
+	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified()");
+
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
@@ -33,6 +37,8 @@ bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath)
 
 float SettingsManager::GetFloatValueFromFile(const std::string& filePath, const std::string& key, float defaultValue)
 {
+	if (debugMod) uevr::API::get()->log_info("GetFloatValueFromFile()");
+
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
@@ -98,6 +104,8 @@ std::string GetDLLDirectory()
 
 std::string SettingsManager::GetConfigFilePath()
 {
+	if (debugMod) uevr::API::get()->log_info("GetConfigFilePath()");
+
 	std::string fullPath = GetDLLDirectory();
 
 	// Remove "SanAndreas\plugins\VRmod.dll" part, leaving "SanAndreas"

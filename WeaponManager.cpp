@@ -2,10 +2,11 @@
 
 void WeaponManager::UpdateActualWeaponMesh()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
+
 	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas == 46)
 		return;
 
-	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
 	//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 	//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
 	static auto gta_BPplayerCharacter_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/Characters/Player/BP_player_character.BP_Player_Character_C");
@@ -122,6 +123,8 @@ void WeaponManager::UpdateActualWeaponMesh()
 
 void WeaponManager::UpdateAimingVectors()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
+
 	if (cameraController->cameraModeIs == 46)
 	{
 		cameraController->forwardVectorUE = glm::fvec3(
@@ -145,7 +148,7 @@ void WeaponManager::UpdateAimingVectors()
 		return;
 	}
 
-	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors");
+
 	if (weaponMesh != nullptr) {
 		struct {
 			glm::fvec3 ForwardVector;
@@ -487,7 +490,7 @@ void WeaponManager::UpdateAimingVectors()
 
 void WeaponManager::HandleWeaponVisibility()
 {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleWeaponVisibility");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleWeaponVisibility()");
 
 	if (weaponMesh == nullptr)
 		return;
@@ -550,6 +553,7 @@ void WeaponManager::HandleWeaponVisibility()
 		hideWeapon = false;
 		break;
 	}
+
 	struct {
 		bool ownerNoSee = false;
 	} setOwnerNoSee_params;
@@ -560,7 +564,7 @@ void WeaponManager::HandleWeaponVisibility()
 
 void WeaponManager::WeaponHandling(float delta)
 {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling()");
 
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
@@ -576,7 +580,8 @@ void WeaponManager::WeaponHandling(float delta)
 	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
 		return;
 
-	/*HandleCameraWeaponAiming();*/
+	
+	bool shootDetectionFromMemory = false;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
@@ -646,12 +651,14 @@ void WeaponManager::WeaponHandling(float delta)
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
 	case 33: //Rifle cuntgun
-		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
-		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
+		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
+		shootDetectionFromMemory = true;
 		break;
 	case 34: // Sniper
-		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
-		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
+		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
+		shootDetectionFromMemory = true;
 		break;
 	case 35: // RocketLauncher
 		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
@@ -688,9 +695,14 @@ void WeaponManager::WeaponHandling(float delta)
 		return;
 	}
 
+	if (shootDetectionFromMemory)
+		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager->isShooting : false;
+	memoryManager->isShooting = false;
+
+	//Apply Recoil
 	auto motionState = uevr::API::UObjectHook::get_motion_controller_state(weaponMesh);
 
-	if (playerManager->isShooting)
+	if (isShooting)
 	{
 		// use the UEVR uobject attached offset : 
 		currentWeaponRecoilPosition += positionRecoilForce;
@@ -724,7 +736,8 @@ void WeaponManager::WeaponHandling(float delta)
 
 void WeaponManager::HandleCameraWeaponAiming()
 {
-	//uevr::API::get()->log_error("%ls", weaponMesh->get_full_name().c_str());
+	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleCameraWeaponAiming()");
+
 	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
@@ -787,6 +800,8 @@ void WeaponManager::HandleCameraWeaponAiming()
 
 void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("DisableMeleeWeaponsUObjectHooks()");
+
 	if (weaponMesh == nullptr)
 		return;
 	uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
@@ -807,6 +822,8 @@ void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 
 void WeaponManager::ResetWeaponMeshPosAndRot()
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("ResetWeaponMeshPosAndRot()");
+
 	if (weaponMesh == nullptr)
 		return;
 	Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};

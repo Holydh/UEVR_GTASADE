@@ -24,6 +24,8 @@ private:
 public:
 	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
 
+	bool isShooting = false;
+
 	int equippedWeaponIndex = 0;
 	int previousEquippedWeaponIndex = 0;
 	uevr::API::UObject* weapon = nullptr;

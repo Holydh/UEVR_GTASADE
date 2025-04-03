@@ -78,8 +78,7 @@ public:
 
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
-		playerManager.isShooting = weaponManager.equippedWeaponIndex == weaponManager.previousEquippedWeaponIndex ? memoryManager.isShooting : false;
-		memoryManager.isShooting = false;
+		
 
 		playerManager.FetchPlayerUObjects();
 		
@@ -128,25 +127,27 @@ public:
 		}
 
 		weaponManager.HandleWeaponVisibility();
-
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.cameraModeWas = cameraController.cameraModeIs;
 		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
+		if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
 	}
 
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		
+		if (settingsManager.debugMod) uevr::API::get()->log_info("on_post_engine_tick");
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
+		if (settingsManager.debugMod) uevr::API::get()->log_info("on_pre_slate_draw_window");
 	}
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+		if (settingsManager.debugMod) uevr::API::get()->log_info("on_post_slate_draw_window");
 	}
 
 	//void on_custom_event(const char* event_name, const char* event_data) override

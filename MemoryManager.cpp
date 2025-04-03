@@ -133,7 +133,7 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1107E3B, 7, 0xf20f1187100100},
 	{0x1107E42, 1, 0x00},
 	{0x1108E75, 5, 0xf2410f1107},
-	/*{0xAE0406, 5, 0xf30f117104},*/ //aggressive spawning of cars ?
+/*	{0xAE0406, 5, 0xf30f117104},*/ //aggressive spawning of cars ?
 	{0x11090ED, 3, 0x418947},
 	{0x11090F0, 1, 0x08},
 	{0xAE040B, 5, 0xf30f117908},
@@ -294,33 +294,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
 
         if (instructionAddress == MemoryManager::shootInstructionAddress) {
             MemoryManager::isShooting = true;
-
-			/*uevr::API::get()->log_info("Shooting");*/
         }
-
-		//if (instructionAddress == MemoryManager::cameraShootInstructionAddress)
-		//{
-		//	//if (MemoryManager::cameraMode == 46/* && !MemoryManager::isShootingCamera*/)
-		//	//{
-		//	//	uevr::API::get()->log_info("it's alive");
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[0])) = MemoryManager::matrixAimCalculatedValues[0];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[1])) = MemoryManager::matrixAimCalculatedValues[1];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[2])) = MemoryManager::matrixAimCalculatedValues[2];
-
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[4])) = MemoryManager::matrixAimCalculatedValues[3];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[5])) = MemoryManager::matrixAimCalculatedValues[4];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[6])) = MemoryManager::matrixAimCalculatedValues[5];
-
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[8])) = MemoryManager::matrixAimCalculatedValues[6];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[9])) = MemoryManager::matrixAimCalculatedValues[7];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[10])) = MemoryManager::matrixAimCalculatedValues[8];
-
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[12])) = MemoryManager::matrixAimCalculatedValues[9];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[13])) = MemoryManager::matrixAimCalculatedValues[10];
-		//	//	*(reinterpret_cast<float*>(MemoryManager::cameraMatrixAddresses[14])) = MemoryManager::matrixAimCalculatedValues[11];
-		//	//	MemoryManager::isShootingCamera = true;
-		//	//}
-		//}
 		
 		// Set Resume Flag (RF) to prevent infinite breakpoint triggering
         pException->ContextRecord->EFlags |= (1 << 16);  // Set RF bit in EFLAGS
@@ -333,6 +307,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
 }
 
 void MemoryManager::InstallBreakpoints() {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("InstallBreakpoints()");
     HANDLE hThread = GetCurrentThread();
 
     // Set the breakpoints
@@ -344,6 +319,7 @@ void MemoryManager::InstallBreakpoints() {
 }
 
 void MemoryManager::RemoveBreakpoints() {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("RemoveBreakpoints()");
  // Clear hardware breakpoints
     CONTEXT ctx = { 0 };
     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
@@ -367,6 +343,7 @@ void MemoryManager::RemoveBreakpoints() {
 }
 
 void MemoryManager::RemoveExceptionHandler() {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("RemoveExceptionHandler()");
     static PVOID handler = nullptr;  // Store handler pointer globally
     if (handler) {
         RemoveVectoredExceptionHandler(handler);
@@ -422,7 +399,8 @@ uintptr_t MemoryManager::GetModuleBaseAddress(LPCTSTR moduleName) {
 }
 
 void MemoryManager::AdjustAddresses() {
-		//for (auto& [key, value] : originalBytes) { value.address += baseAddressGameEXE; }
+	//for (auto& [key, value] : originalBytes) { value.address += baseAddressGameEXE; }
+	if (settingsManager->debugMod) uevr::API::get()->log_info("AdjustAddresses()");
 	MemoryManager::cameraMatrixAddresses = {
 	0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
 	0x53E2C10, 0x53E2C14, 0x53E2C18, 0x53E2C1C,
@@ -490,6 +468,7 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 
 void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 {
+	if (settingsManager->debugMod) uevr::API::get()->log_info("ToggleAllMemoryInstructions(enabled : %i )", restoreInstructions);
 	if (!restoreInstructions)
 	{
 		NopMemory(matrixInstructionsRotationAddresses);

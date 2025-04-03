@@ -2,7 +2,7 @@
 
 
 void CameraController::ProcessCameraMatrix(float delta) {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdatePlayerPositions()");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("ProcessCameraMatrix()");
 
 	// Update the camera position based on the head's socket location
 	struct {
@@ -134,6 +134,8 @@ void CameraController::ProcessCameraMatrix(float delta) {
 
 void CameraController::UpdateCameraMatrix()
 {	
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateCameraMatrix()");
+
 	if (cameraModeIs != 46 && cameraModeWas == 46)
 	{
 		memoryManager->ToggleAllMemoryInstructions(false);
@@ -184,14 +186,14 @@ void CameraController::ProcessHookedHeadPosition()
 	playerManager->playerHead->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 }
 
-	void CameraController::FixUnderwaterView(bool enableFix)
-	{
-		if (settingsManager->debugMod) uevr::API::get()->log_info("FixUnderwaterView()");
-		//API::get()->log_info("fixing underwater");
-		auto underwaterMaterial = uevr::API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
-		//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());
-		underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
-		waterViewFixed = true;
+void CameraController::FixUnderwaterView(bool enableFix)
+{
+	if (settingsManager->debugMod) uevr::API::get()->log_info("FixUnderwaterView()");
+	//API::get()->log_info("fixing underwater");
+	auto underwaterMaterial = uevr::API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
+	//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());
+	underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
+	waterViewFixed = true;
 	/*	const auto& scalarParameter = underwaterMaterial->get_property<API::TArray<API::UObject*>>(L"ScalarParameterValues");
 		const auto& test = scalarParameter.data[0];
 		API::get()->log_info("scalarParameter : %i", test->get_class());*/
@@ -199,4 +201,4 @@ void CameraController::ProcessHookedHeadPosition()
 		/*API::get()->log_info("scalarParameter : %ls", scalarParameter.data[0].c_str());*/
 		//MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD
 		//Class /Script/Engine.MaterialInstanceConstant
-	}
+}

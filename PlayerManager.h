@@ -23,7 +23,6 @@ public:
 	bool wasInControl = false;
 	bool isInVehicle = false;
 	bool wasInVehicle = false;
-	bool isShooting = false;
 	bool shootFromCarInput = false;
 
 	void FetchPlayerUObjects();
