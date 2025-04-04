@@ -120,6 +120,7 @@ public:
 			{
 				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition();
+				weaponManager.ShootDetection();
 				weaponManager.UpdateAimingVectors();
 			}
 

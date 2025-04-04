@@ -121,6 +121,31 @@ void WeaponManager::UpdateActualWeaponMesh()
 	/*API::get()->log_info("%i", equippedWeaponIndex);*/
 }
 
+void WeaponManager::ShootDetection()
+{
+	if (!weaponMesh)
+		return;
+
+	const auto& childrenParticle = weaponMesh->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
+	//for (auto child : childrenParticle) {
+	//	uevr::API::get()->log_info("child = %ls", child->get_fname()->to_string().c_str());
+	//}
+	if (childrenParticle.count <= 0)
+		return;
+
+	auto actualParticleShot = childrenParticle.data[childrenParticle.count-1];
+	if (actualParticleShot != lastParticleShot/* && childrenParticle.count > shootParticleCount*/)
+	{
+		//uevr::API::get()->log_info("actualParticleShot = %ls", actualParticleShot->get_fname()->to_string().c_str());
+		//uevr::API::get()->log_info("lastParticleShot = %ls", lastParticleShot->get_fname()->to_string().c_str());
+		lastParticleShot = actualParticleShot;
+		isShooting = true;
+	}
+		
+	
+	//shootParticleCount = childrenParticle.count;
+}
+
 void WeaponManager::UpdateAimingVectors()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
@@ -666,20 +691,21 @@ void WeaponManager::WeaponHandling(float delta)
 		shootDetectionFromMemory = true;
 		break;
 	case 35: // RocketLauncher
-		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
-		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		positionRecoilForce = { 0.0f, -0.005f, -3.0f };
+		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
 	case 36: // RocketLauncherHeatSeek
-		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
-		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
+		positionRecoilForce = { 0.0f, -0.005f, -3.0f };
+		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
 	case 37: // Flamethrower
-		positionRecoilForce = { 0.0f, -0.00001f, -0.0001f };
-		rotationRecoilForceEuler = { -0.0001f, 0.0f, 0.0f };
+		positionRecoilForce = { -0.0f, 0.5f, -0.5f };
+		rotationRecoilForceEuler = { -0.0f, 0.0f, 0.0f };
 		break;
-	case 38: // Minigun
+	case 38: // Minigun		positionRecoilForce = { 0.0f, -0.005f, -5.0f };
+		rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
 		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
@@ -704,11 +730,12 @@ void WeaponManager::WeaponHandling(float delta)
 
 	if (shootDetectionFromMemory)
 		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager->isShooting : false;
-	memoryManager->isShooting = false;
+
+	
 
 	//Apply Recoil
 	auto motionState = uevr::API::UObjectHook::get_motion_controller_state(weaponMesh);
-
+	
 	if (isShooting)
 	{
 		// use the UEVR uobject attached offset : 
@@ -738,7 +765,8 @@ void WeaponManager::WeaponHandling(float delta)
 		UEVR_Quaternionf recoveredRotationFromRecoil = { smoothedWeaponRotationQuat.w, smoothedWeaponRotationQuat.x, smoothedWeaponRotationQuat.y, smoothedWeaponRotationQuat.z };
 		motionState->set_rotation_offset(&recoveredRotationFromRecoil);
 	}
-
+	memoryManager->isShooting = false;
+	isShooting = false;
 }
 
 void WeaponManager::HandleCameraWeaponAiming()

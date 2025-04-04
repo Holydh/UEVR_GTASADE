@@ -25,6 +25,8 @@ public:
 	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
 
 	bool isShooting = false;
+	int shootParticleCount = 0;
+	uevr::API::UObject* lastParticleShot = nullptr;
 
 	int equippedWeaponIndex = 0;
 	int previousEquippedWeaponIndex = 0;
@@ -97,8 +99,9 @@ public:
 
 	glm::fvec3 cameraWpnPosition =  { 0.0f, 0.0f, 0.0f };
 	Utilities::FRotator cameraWpnRotation =  { 0.0f, 0.0f, 0.0f };
-
+	
 	void UpdateActualWeaponMesh();
+	void ShootDetection();
 	void UpdateAimingVectors();
 	void HandleWeaponVisibility();
 	void WeaponHandling(float delta);
