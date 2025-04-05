@@ -121,6 +121,14 @@ void WeaponManager::UpdateActualWeaponMesh()
 	/*API::get()->log_info("%i", equippedWeaponIndex);*/
 }
 
+void WeaponManager::HideBulletTrace()
+{
+	static auto bp_water_base_c = uevr::API::get()->find_uobject<uevr::API::UObject>(L"BP_Water_Base_C /Game/SanAndreas/Maps/SAWorld/SAWorld.SAWorld.PersistentLevel.BP_Water_Base_4");
+	static auto bulletTracePMC = bp_water_base_c->get_property<uevr::API::UObject*>(L"BulletTrace");
+	bool* test = (reinterpret_cast<bool*>(uevr::API::get()->sdk()->uobject->get_property_data(bulletTracePMC->to_handle(), L"bVisible")));
+	if (test != NULL) *test = false;
+}
+
 void WeaponManager::ShootDetection()
 {
 	if (!weaponMesh)

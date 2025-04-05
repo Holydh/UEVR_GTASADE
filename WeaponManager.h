@@ -101,6 +101,7 @@ public:
 	Utilities::FRotator cameraWpnRotation =  { 0.0f, 0.0f, 0.0f };
 	
 	void UpdateActualWeaponMesh();
+	void HideBulletTrace();
 	void ShootDetection();
 	void UpdateAimingVectors();
 	void HandleWeaponVisibility();

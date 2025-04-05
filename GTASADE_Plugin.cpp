@@ -51,6 +51,7 @@ public:
 		memoryManager.AdjustAddresses();
 
 		Utilities::InitHelperClasses();
+		weaponManager.HideBulletTrace();
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
