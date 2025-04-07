@@ -139,7 +139,6 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-
 	void ToggleAllUObjectHooks(bool enable)
 	{
 		if (enable)
@@ -152,7 +151,6 @@ public:
 			weaponManager.ResetWeaponMeshPosAndRot();
 		}
 	}
-
 };
 
 // Actually creates the plugin. Very important that this global is created.
