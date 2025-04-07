@@ -7,6 +7,7 @@
 #include <iostream>
 #include <windows.h>
 #include <array>
+
 #include "SettingsManager.h"
 
 // Define the OriginalByte struct
@@ -65,28 +66,16 @@ public:
 		0x58013D8, 0x58013DC, 0x58013E0
 	};
 
-	static std::array<float, 12> matrixAimCalculatedValues;
 	static int cameraMode;
+	uintptr_t cameraModeAddress = 0x53E2580;
 
+	uintptr_t playerIsInControlAddress = 0x53E8840;
+	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
+	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
+	static uintptr_t playerShootInstructionAddress;
 	uintptr_t weaponWheelDisplayedAddress = 0x507C580;
 
-	//without Cleo delete
-	uintptr_t playerIsInControlAddress = 0x53E8840;
-	uintptr_t cameraModeAddress = 0x53E2580;
-	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
-
-	//Cleo set address
-	//uintptr_t characterIsDuckingAddress = 0x53DAD11;
-	//uintptr_t characterIsGettingInACarAddress = 0x53DAD01;
-	//uintptr_t equippedWeaponAddress = 0x53DACC7;
-	static uintptr_t shootInstructionAddress;
-	//static uintptr_t cameraShootInstructionAddress;
-	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
-
-
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
-
-	//void ResetShootStatus();
 
     void AdjustAddresses();
 	void NopVehicleRelatedMemoryInstructions();
@@ -94,7 +83,6 @@ public:
 	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
 	
 	static bool isShooting;
-	//static bool isShootingCamera;
 
 	void InstallBreakpoints();
 	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);

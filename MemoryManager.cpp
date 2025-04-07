@@ -1,44 +1,44 @@
-﻿#include "MemoryManager.h"
-#include <windows.h>
+﻿#include <windows.h>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <thread>
 #include <chrono>
 #include <atomic>
+
 #include "uevr/API.hpp"
+#include "MemoryManager.h"
 #include "WeaponManager.h"
 
 DWORD PID;
 
 
-
 std::vector<MemoryBlock> matrixInstructionsRotationAddresses = {
-{0x111DE7E, 7, 0xf30f118b300800}, 
-{0x111DE85, 1, 0x00},
-{0x111DECC, 7, 0xf30f118b340800}, 
-{0x111DED3, 1, 0x00},
-{0x111DED9, 7, 0xf30f11b3380800}, 
-{0x111DEE0, 1, 0x00},
-{0x111DE5C, 7, 0xf3440f11834008}, 
-{0x111DE63, 1, 0x00}, 
-{0x111DE64, 1, 0x00},
-{0x111DE3B, 7, 0xf30f11b3440800}, 
-{0x111DE42, 1, 0x00},				  
-{0x111DE68, 7, 0xf30f11bb480800}, 
-{0x111DE6F, 1, 0x00},				  
-{0x111DE75, 7, 0xf3440f11a35008}, 
-{0x111DE7C, 1, 0x00}, 
-{0x111DE7D, 1, 0x00},
-{0x111DE8F, 7, 0xf3440f118b5408}, 
-{0x111DE96, 1, 0x00}, 
-{0x111DE97, 1, 0x00},
-{0x111DE98, 7, 0xf3440f119b5808}, 
-{0x111DE9F, 1, 0x00}, 
-{0x111DEA0, 1, 0x00}
+	{0x111DE7E, 7, 0xf30f118b300800},
+	{0x111DE85, 1, 0x00},
+	{0x111DECC, 7, 0xf30f118b340800},
+	{0x111DED3, 1, 0x00},
+	{0x111DED9, 7, 0xf30f11b3380800},
+	{0x111DEE0, 1, 0x00},
+	{0x111DE5C, 7, 0xf3440f11834008},
+	{0x111DE63, 1, 0x00},
+	{0x111DE64, 1, 0x00},
+	{0x111DE3B, 7, 0xf30f11b3440800},
+	{0x111DE42, 1, 0x00},
+	{0x111DE68, 7, 0xf30f11bb480800},
+	{0x111DE6F, 1, 0x00},
+	{0x111DE75, 7, 0xf3440f11a35008},
+	{0x111DE7C, 1, 0x00},
+	{0x111DE7D, 1, 0x00},
+	{0x111DE8F, 7, 0xf3440f118b5408},
+	{0x111DE96, 1, 0x00},
+	{0x111DE97, 1, 0x00},
+	{0x111DE98, 7, 0xf3440f119b5808},
+	{0x111DE9F, 1, 0x00},
+	{0x111DEA0, 1, 0x00}
 };
 std::vector<MemoryBlock> matrixInstructionsPositionAddresses = {
-	{0x111DEA5, 7, 0xf3440f11b36008},	
+	{0x111DEA5, 7, 0xf3440f11b36008},
 	{0x111DEAC, 1, 0x00},
 	{0x111DEAD, 1, 0x00},
 	{0x111DF57, 7, 0xf30f1183600800},
@@ -133,7 +133,7 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1107E3B, 7, 0xf20f1187100100},
 	{0x1107E42, 1, 0x00},
 	{0x1108E75, 5, 0xf2410f1107},
-/*	{0xAE0406, 5, 0xf30f117104},*/ //aggressive spawning of cars ?
+/*	{0xAE0406, 5, 0xf30f117104},*/ //cause aggressive spawning velocity of cars
 	{0x11090ED, 3, 0x418947},
 	{0x11090F0, 1, 0x08},
 	{0xAE040B, 5, 0xf30f117908},
@@ -145,7 +145,7 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x1107E48, 1, 0x00},
 	{0x1108E7A, 3, 0x418947},
 	{0x1108E7D, 1, 0x08},
-	//Fix extinguisher, spraycan, flamethrower up and down aiming
+	//Cause extinguisher, spraycan, flamethrower up and down aiming issues
 	//{0x1105A60, 7, 0xc741180000F041},
 	//{0x1108D75, 7, 0xc7431800007a44},
 	//{0x1105A4F, 3, 0x668941},
@@ -154,7 +154,6 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	//{0x11202AB, 1, 0x00},
 	//{0x11205DB, 7, 0x6689ac38b00100},
 	//{0x11205E2, 1, 0x00},
-	//Fix extinguisher, spraycan, flamethrower up and down aiming
 	{0x11077C9, 3, 0xf30f11},
 	{0x11077CC, 1, 0x07},
 	{0x1107C9B, 5, 0xf3440f110f}
@@ -236,20 +235,13 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 //    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
 //}
 
-uintptr_t MemoryManager::shootInstructionAddress = 0x11C6A7E; //0x13EE170; 
-//uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // real take photo address;
+uintptr_t MemoryManager::playerShootInstructionAddress = 0x11C6A7E;
+//uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // Take photo function address;
 
 bool MemoryManager::isShooting = false;
 int MemoryManager::cameraMode;
-//bool MemoryManager::isShootingCamera = false;
 
-std::array<uintptr_t, 16> MemoryManager::cameraMatrixAddresses // x, y, z
-{
-};
-
-std::array<float, 12> MemoryManager::matrixAimCalculatedValues // x, y, z
-{
-};
+std::array<uintptr_t, 16> MemoryManager::cameraMatrixAddresses{}; // x, y, z
 
 // Struct for each breakpoint
 struct BreakpointInfo {
@@ -258,7 +250,7 @@ struct BreakpointInfo {
 };
 
 // Global breakpoints
-BreakpointInfo breakpoints[4];  // DR0-DR3, we'll use DR0 and DR1
+BreakpointInfo breakpoints[4];  // DR0, DR1, DR2, DR3, only DR0 is used in this plugin
 
 bool MemoryManager::SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag) {
     if (index < 0 || index > 3) return false;  // DR0-DR3 are valid
@@ -292,7 +284,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
     if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {  
         uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
-        if (instructionAddress == MemoryManager::shootInstructionAddress) {
+        if (instructionAddress == MemoryManager::playerShootInstructionAddress) {
             MemoryManager::isShooting = true;
         }
 		
@@ -311,7 +303,7 @@ void MemoryManager::InstallBreakpoints() {
     HANDLE hThread = GetCurrentThread();
 
     // Set the breakpoints
-    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::shootInstructionAddress, &MemoryManager::isShooting);
+    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::playerShootInstructionAddress, &MemoryManager::isShooting);
 	//SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::cameraShootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler
@@ -399,7 +391,6 @@ uintptr_t MemoryManager::GetModuleBaseAddress(LPCTSTR moduleName) {
 }
 
 void MemoryManager::AdjustAddresses() {
-	//for (auto& [key, value] : originalBytes) { value.address += baseAddressGameEXE; }
 	if (settingsManager->debugMod) uevr::API::get()->log_info("AdjustAddresses()");
 	MemoryManager::cameraMatrixAddresses = {
 	0x53E2C00, 0x53E2C04, 0x53E2C08, 0x53E2C0C,
@@ -433,7 +424,7 @@ void MemoryManager::AdjustAddresses() {
 
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 
-	shootInstructionAddress += baseAddressGameEXE;
+	playerShootInstructionAddress += baseAddressGameEXE;
 	//cameraShootInstructionAddress += baseAddressGameEXE;
 	playerShootFromCarInputAddress += baseAddressGameEXE;
 }
@@ -449,7 +440,6 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 	NopMemory(aimingUpVectorInstructionsAddresses);
 	NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	NopMemory(sniperAimingVectorInstructionsAddresses);
-	//NopMemory(carAimingVectorInstructionsAddresses);
 };
 
 void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
@@ -463,7 +453,6 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	RestoreMemory(aimingUpVectorInstructionsAddresses);
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
-	//RestoreMemory(carAimingVectorInstructionsAddresses);
 }
 
 void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
@@ -515,53 +504,3 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 		}
 		return addr;
 	}
-
-
-// Function to adjust addresses and store original bytes
-//void AdjustAddresses(std::vector<std::pair<uintptr_t, size_t>>& addresses) const {
-//	auto processAddresses = [&](std::vector<std::pair<uintptr_t, size_t>>& addresses) {
-//		for (auto& [address, size] : addresses) {
-//			uintptr_t offset = address;
-//			uintptr_t finalAddress = address + baseAddressGameEXE; // Calculate final address
-//			address = finalAddress; // Update the address in the vector
-
-//			DWORD oldProtect;
-//			VirtualProtect((LPVOID)finalAddress, size, PAGE_EXECUTE_READWRITE, &oldProtect);
-
-//			for (size_t i = 0; i < size; ++i) {
-//				uintptr_t currentAddr = finalAddress + i;
-//				if (originalBytes.find(offset) == originalBytes.end()) {
-//					originalBytes[offset] = { offset, *reinterpret_cast<uint8_t*>(currentAddr) };
-//				}
-//			}
-
-//			VirtualProtect((LPVOID)finalAddress, size, oldProtect, &oldProtect);
-//		}
-//		};
-
-//	// Process each address vector
-//	processAddresses(matrixInstructionsRotationAddresses);
-//	processAddresses(matrixInstructionsPositionAddresses);
-//	processAddresses(ingameCameraPositionInstructionsAddresses);
-//	processAddresses(aimingForwardVectorInstructionsAddresses);
-//	processAddresses(aimingUpVectorInstructionsAddresses);
-//	processAddresses(rocketLauncherAimingVectorInstructionsAddresses);
-//	processAddresses(sniperAimingVectorInstructionsAddresses);
-//	processAddresses(carAimingVectorInstructionsAddresses);
-
-//	for (auto& address : cameraMatrixAddresses) address += baseAddressGameEXE;
-//	for (auto& address : aimForwardVectorAddresses) address += baseAddressGameEXE;
-//	for (auto& address : aimUpVectorAddresses) address += baseAddressGameEXE;
-//	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
-
-//	fpsCamInitializedAddress += baseAddressGameEXE;
-//	equippedWeaponAddress += baseAddressGameEXE;
-//	characterHeadingAddress += baseAddressGameEXE;
-//	characterIsInCarAddress += baseAddressGameEXE;
-//	characterIsGettingInACarAddress += baseAddressGameEXE;
-//	characterIsShootingAddress += baseAddressGameEXE;
-//	characterIsDuckingAddress += baseAddressGameEXE;
-//	currentDuckOffsetAddress += baseAddressGameEXE;
-//	weaponWheelOpenAddress += baseAddressGameEXE;
-//	cameraModeAddress += baseAddressGameEXE;
-//}
