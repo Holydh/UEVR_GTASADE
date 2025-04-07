@@ -5,7 +5,8 @@ void SettingsManager::UpdateSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateSettings()");
 
-	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(configFilePath, "VR_AimSpeed", 125.0f) * 10;
+	// We retrieve the unused aim sensitivity of UEVR to use for the plugin. 
+	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(configFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
 }
 
 bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath)
@@ -72,7 +73,7 @@ float SettingsManager::GetFloatValueFromFile(const std::string& filePath, const 
 			}
 			catch (const std::invalid_argument&)
 			{
-				uevr::API::get()->log_info("%s", "%s", "Error: Invalid float value for key: ", key.c_str());
+				uevr::API::get()->log_info("Error: Invalid float value for key: %s", key.c_str());
 				return defaultValue;
 			}
 		}
@@ -98,6 +99,8 @@ std::string GetDLLDirectory()
 			return fullPath.substr(0, pos + 1); // Keep the trailing slash
 		}
 	}
+	else
+		uevr::API::get()->log_info("Failed to get module handle for VRmod.dll");
 
 	return "Unknown";
 }
