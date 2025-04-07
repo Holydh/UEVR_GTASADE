@@ -33,7 +33,7 @@ struct MemoryBlock {
 // MemoryManager class
 class MemoryManager {
 private:
-	SettingsManager* settingsManager;
+	SettingsManager* const settingsManager;
 	void* exceptionHandlerHandle = nullptr;  // Store the handler so we can remove it later
 
 public:

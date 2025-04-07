@@ -64,7 +64,7 @@ public:
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		playerManager.FetchPlayerUObjects();
 		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
-		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
+		cameraController.cameraModeIs = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
 		MemoryManager::cameraMode = cameraController.cameraModeIs;
 
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
@@ -92,11 +92,15 @@ public:
 		}
 
 		// Toggles the game's original instructions when going in and out of a vehicle.
-		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs != 55 && cameraController.cameraModeWas == 55)))
+		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || 
+			(playerManager.isInVehicle && cameraController.cameraModeIs != CameraController::AimWeaponFromCar && 
+				cameraController.cameraModeWas ==  CameraController::AimWeaponFromCar )))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
-		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs == 55 && cameraController.cameraModeWas != 55)))
+		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || 
+			(playerManager.isInVehicle && cameraController.cameraModeIs == CameraController::AimWeaponFromCar && 
+				cameraController.cameraModeWas !=  CameraController::AimWeaponFromCar )))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
@@ -111,7 +115,7 @@ public:
 			{
 				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition(delta);
-				weaponManager.ShootDetection();
+				weaponManager.UpdateShootingState();
 				weaponManager.UpdateAimingVectors();
 			}
 

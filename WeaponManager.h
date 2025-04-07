@@ -1,56 +1,39 @@
 #pragma once
-#ifndef WEAPONMANAGER_H
-#define WEAPONMANAGER_H
-#include "uevr/API.hpp"
 #include <unordered_map>
+#include <unordered_set>
+#define GLM_FORCE_QUAT_DATA_XYZW
 #include "glm/glm.hpp"
 #include <glm/gtc/type_ptr.hpp>
-#define GLM_FORCE_QUAT_DATA_XYZW
+
+#include "uevr/API.hpp"
 #include "PlayerManager.h"
 #include "CameraController.h"
 #include "MemoryManager.h"
 #include "Utilities.h"
 #include "SettingsManager.h"
-#include <unordered_set>
 
 
 class WeaponManager {
 private:
-	PlayerManager* playerManager;
-	CameraController* cameraController;
-	MemoryManager* memoryManager;
-	SettingsManager* settingsManager;
+	PlayerManager* const playerManager;
+	CameraController* const cameraController;
+	MemoryManager* const memoryManager;
+	SettingsManager* const settingsManager;
 
 public:
 	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
 
+	//Shoot detection
 	bool isShooting = false;
 	int shootParticleCount = 0;
 	uevr::API::UObject* lastParticleShot = nullptr;
 
-	int equippedWeaponIndex = 0;
-	int previousEquippedWeaponIndex = 0;
+	//Weapon infos
 	uevr::API::UObject* weapon = nullptr;
 	uevr::API::UObject* weaponMesh = nullptr;
 	uevr::API::UObject* torso = nullptr;
 	uevr::API::UObject* weaponStaticMesh = nullptr;
-
-	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
-
-	//recoil
-	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
-	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
-	float recoilPositionRecoverySpeed = 10.0f;
-	float recoilRotationRecoverySpeed = 8.0f;
-
-	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
-
-	std::unordered_set<int> aimingCamModes = {5, 7, 8, 9, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
-
-	std::unordered_map<std::wstring, int> weaponNameToIndex = {
+	const std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed
 		{L"SM_brassknuckle", 1},    // BrassKnuckles
 		{L"SM_golfclub", 2},         // GolfClub
@@ -96,13 +79,72 @@ public:
 		{L"SM_irgoggles", 45},        // Infrared
 		{L"SM_gun_para", 46}        // Parachute
 	};
+	enum WeaponType {
+		Unarmed = 0,
+		BrassKnuckles = 1,
+		GolfClub = 2,
+		NightStick = 3,
+		Knife = 4,
+		BaseballBat = 5,
+		Shovel = 6,
+		PoolCue = 7,
+		Katana = 8,
+		Chainsaw = 9,
+		Dildo1 = 10,
+		Dildo2 = 11,
+		Vibe1 = 12,
+		Vibe2 = 13,
+		Flowers = 14,
+		Cane = 15,
+		Grenade = 16,
+		Teargas = 17,
+		Molotov = 18,
+		Pistol = 22,
+		PistolSilenced = 23,
+		DesertEagle = 24,
+		Shotgun = 25,
+		Sawnoff = 26,
+		Spas12 = 27,
+		MicroUzi = 28,
+		Mp5 = 29,
+		Ak47 = 30,
+		M4 = 31,
+		Tec9 = 32,
+		Rifle = 33,
+		Sniper = 34,
+		RocketLauncher = 35,
+		RocketLauncherHs = 36,
+		Flamethrower = 37,
+		Minigun = 38,
+		Satchel = 39,
+		Detonator = 40,
+		SprayCan = 41,
+		Extinguisher = 42,
+		Camera = 43,
+		NightVision = 44,
+		Infrared = 45,
+		Parachute = 46
+	};
+	WeaponType equippedWeaponIndex = Unarmed;
+	WeaponType previousEquippedWeaponIndex = Unarmed;
 
-	glm::fvec3 cameraWpnPosition =  { 0.0f, 0.0f, 0.0f };
-	Utilities::FRotator cameraWpnRotation =  { 0.0f, 0.0f, 0.0f };
+	//aiming
+	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
+	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
+	std::unordered_set<int> aimingCamModes = {5, 7, 8, 9, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
+
+	//recoil
+	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
+	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
+	float recoilPositionRecoverySpeed = 10.0f;
+	float recoilRotationRecoverySpeed = 8.0f;
 	
 	void UpdateActualWeaponMesh();
 	void HideBulletTrace();
-	void ShootDetection();
+	void UpdateShootingState();
 	void UpdateAimingVectors();
 	void HandleWeaponVisibility();
 	void WeaponHandling(float delta);
@@ -110,5 +152,3 @@ public:
 	void ResetWeaponMeshPosAndRot();
 	void HandleCameraWeaponAiming();
 };
-
-#endif

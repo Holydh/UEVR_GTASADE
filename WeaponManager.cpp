@@ -4,7 +4,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
 
-	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas == 46)
+	if (cameraController->cameraModeIs == CameraController::Camera  && cameraController->cameraModeWas == CameraController::Camera )
 		return;
 
 	//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
@@ -23,7 +23,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	{
 		uevr::API::get()->log_info("gta_BPplayerCharacter not found.");
 		torso = nullptr;
-		equippedWeaponIndex = 0;
+		equippedWeaponIndex = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
@@ -31,7 +31,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
 	if (torsoChildren.count == 0)
 	{
-		equippedWeaponIndex = 0;
+		equippedWeaponIndex = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
@@ -45,14 +45,15 @@ void WeaponManager::UpdateActualWeaponMesh()
 	}
 	else
 	{
-		equippedWeaponIndex = 0;
+		equippedWeaponIndex = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
 	}
 
 
-	if (cameraController->cameraModeIs != 46 && (!playerManager->isInVehicle || cameraController->cameraModeIs == 55))
+	if (cameraController->cameraModeIs != CameraController::Camera  && (!playerManager->isInVehicle || 
+		cameraController->cameraModeIs == CameraController::AimWeaponFromCar ))
 	{
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
@@ -61,50 +62,12 @@ void WeaponManager::UpdateActualWeaponMesh()
 		motionState->set_hand(1);
 		motionState->set_permanent(true);
 	}
-	if ((cameraController->cameraModeIs != 46 && playerManager->isInVehicle && !playerManager->wasInVehicle) && cameraController->cameraModeIs != 55)
+	if ((cameraController->cameraModeIs != CameraController::Camera  && playerManager->isInVehicle && !playerManager->wasInVehicle) && 
+		cameraController->cameraModeIs != CameraController::AimWeaponFromCar)
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 	}
 
-
-	//for (auto child : playerControllerChildren){
-	//	//API::get()->log_info("child = %ls", child->get_full_name().c_str());
-	//	if (child->is_a(gta_weapon_c) && child == playerControllerChildren.data[4]) {
-	//		weapon = child;
-	//		weaponMesh = weapon->get_property<uevr::API::UObject*>(L"WeaponMesh");
-	//		/*API::get()->log_info("%ls", weaponMesh->get_full_name().c_str());*/
-	//		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
-	//		/*API::get()->log_info("%ls", weaponStaticMesh->get_full_name().c_str());*/
-
-	//		if (!playerManager->characterIsInVehicle || cameraController->cameraMode == 55)
-	//		{
-	//			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
-	//			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
-	//			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
-	//			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-	//			motionState->set_hand(1);
-	//			motionState->set_permanent(true);
-	//		}
-	//		if ((playerManager->characterIsInVehicle && !playerManager->characterWasInVehicle) && cameraController->cameraMode != 55)
-	//		{
-	//			uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
-	//		}
-	//		break;
-	//	}
-	//	else
-	//	{
-	//		weaponMesh = nullptr;
-	//		weaponStaticMesh = nullptr;
-	//	}
-	//}
-
-
-	//if (weaponMesh == nullptr)
-	//{
-	//	equippedWeaponIndex = 0;
-	//	return;
-	//}
-	//
 	std::wstring weaponName = weaponStaticMesh->get_full_name();
 
 	// Extract only the weapon name from the full path
@@ -116,7 +79,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
 	if (it != weaponNameToIndex.end()) {
-		equippedWeaponIndex = it->second;
+		equippedWeaponIndex = static_cast<WeaponType>(it->second);
 	}
 	/*API::get()->log_info("%i", equippedWeaponIndex);*/
 }
@@ -129,36 +92,29 @@ void WeaponManager::HideBulletTrace()
 	if (bVisible != NULL) *bVisible = false;
 }
 
-void WeaponManager::ShootDetection()
+void WeaponManager::UpdateShootingState()
 {
 	if (!weaponMesh)
 		return;
 
 	const auto& childrenParticle = weaponMesh->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
-	//for (auto child : childrenParticle) {
-	//	uevr::API::get()->log_info("child = %ls", child->get_fname()->to_string().c_str());
-	//}
+
 	if (childrenParticle.count <= 0)
 		return;
 
 	auto actualParticleShot = childrenParticle.data[childrenParticle.count-1];
 	if (actualParticleShot != lastParticleShot/* && childrenParticle.count > shootParticleCount*/)
 	{
-		//uevr::API::get()->log_info("actualParticleShot = %ls", actualParticleShot->get_fname()->to_string().c_str());
-		//uevr::API::get()->log_info("lastParticleShot = %ls", lastParticleShot->get_fname()->to_string().c_str());
 		lastParticleShot = actualParticleShot;
 		isShooting = true;
 	}
-		
-	
-	//shootParticleCount = childrenParticle.count;
 }
 
 void WeaponManager::UpdateAimingVectors()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
 
-	if (cameraController->cameraModeIs == 46)
+	if (cameraController->cameraModeIs == CameraController::Camera)
 	{
 		cameraController->forwardVectorUE = glm::fvec3(
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
@@ -168,8 +124,8 @@ void WeaponManager::UpdateAimingVectors()
 		return;
 	}
 	
-	// attempt to fix aggressive spawning of cars
-	if (aimingCamModes.find(cameraController->cameraModeIs) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
+	// attempt to fix aggressive spawning of cars.
+	if (aimingCamModes.find((int)cameraController->cameraModeIs) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[10];
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = cameraController->cameraMatrixValues[11];
@@ -183,19 +139,9 @@ void WeaponManager::UpdateAimingVectors()
 
 
 	if (weaponMesh != nullptr) {
-		struct {
-			glm::fvec3 ForwardVector;
-		} forwardVector_params;
-
-		struct {
-			glm::fvec3 UpVector;
-		} upVector_params;
-
-		struct {
-			glm::fvec3 RightVector;
-		} rightVector_params;
-
-
+		Utilities::ParameterSingleVector3 forwardVector_params;
+		Utilities::ParameterSingleVector3 upVector_params;
+		Utilities::ParameterSingleVector3 rightVector_params;
 		weaponMesh->call_function(L"GetForwardVector", &forwardVector_params);
 		weaponMesh->call_function(L"GetUpVector", &upVector_params);
 		weaponMesh->call_function(L"GetRightVector", &rightVector_params);
@@ -209,110 +155,87 @@ void WeaponManager::UpdateAimingVectors()
 		//mesh alignement weapon offsets
 		switch (equippedWeaponIndex)
 		{
-			//case 0:  // Unarmed
-			//case 1:  // BrassKnuckles
-			//case 2:  // GolfClub
-			//case 3:  // NightStick
-			//case 4:  // Knife
-			//case 5:  // BaseballBat
-			//case 6:  // Shovel
-			//case 7:  // PoolCue
-			//case 8:  // Katana
-			//case 9:  // Chainsaw
-			//case 10: // Dildo1
-			//case 11: // Dildo2
-			//case 12: // Vibe1
-			//case 13: // Vibe2
-			//case 14: // Flowers
-			//case 15: // Cane
-			//case 16: // Grenade
-			//case 17: // Teargas
-			//case 18: // Molotov
-		case 22: //Pistol colt 45
+			// All previous are melee weapons
+			// offsets taken from 3D models in Blender by taking 2 points aligned with the barrel. Units is centimeters. 
+			// Y axis is inversed in Blender. 
+			// We then add some slight offsets manually depending on the aiming tests done ingame.
+		case Pistol :
 			point1Offsets = { 2.82819, -2.52103, 9.92684 };
 			point2Offsets = { 21.7272, -3.89487, 12.9088 + 0.2 };
 			break;
-		case 23: // PistolSilenced
+		case PistolSilenced :
 			point1Offsets = { 2.80735, -2.52308, 9.9193 };
 			point2Offsets = { 17.3316, -3.5591 + 0.1, 12.2129 + 0.6 };
 			break;
-		case 24: // DesertEagle
+		case DesertEagle :
 			point1Offsets = { 7.06492 , -2.25853 , 11.9386 + 0.5 };
 			point2Offsets = { 33.5914, -1.46079 - 0.5, 11.9439 - 0.5 };
 			break;
-		case 25: // Shotgun
+		case Shotgun :
 			point1Offsets = { 31.3429, -0.670153, 15.2663 };
 			point2Offsets = { 73.6795 , 4.2357 - 1 , 22.2237 - 2 };
 			break;
-		case 26: // Sawnoff
+		case Sawnoff :
 			point1Offsets = { 21.2896, -2.13098 , 13.0224 };
 			point2Offsets = { 55.8867 , -2.10406 - 1, 16.3934 - 2 };
 			break;
-		case 27: // Spas12
+		case Spas12 :
 			point1Offsets = { 51.9659 , 1.30133, 19.5475 };
 			point2Offsets = { 70.459 , 3.20646 , 22.5404 };
 			break;
-		case 28: // MicroUzi
+		case MicroUzi:
 			point1Offsets = { -0.267532, -2.19868 , 10.2951 };
 			point2Offsets = { 12.9468 , -0.996034 + 0.4, 11.293 + 0.9 };
 			break;
-		case 29: // Mp5
+		case Mp5:
 			point1Offsets = { 6.8924, -1.74509 , 19.3761 };
 			point2Offsets = { 21.3778 , 0.000536 + 0.2, 21.2535 + 1 };
 			break;
-		case 30: //AK47
+		case Ak47:
 			point1Offsets = { 3.8416 , -2.83908, 14.3539 };
 			point2Offsets = { 36.3719, 0.193737 - 0.2, 16.1544 - 0.2 };
 			break;
-		case 31: // M4
+		case M4:
 			point1Offsets = { 5.85945 , -1.78476 , 15.1271 };
 			point2Offsets = { 60.0434  , 2.99539 - 1 , 16.4006 - 1.5 };
 			break;
-		case 32: // Tec9
+		case Tec9:
 			point1Offsets = { 1.1631 , -3.60654, 11.7162 };
 			point2Offsets = { 24.9241 , -3.60654, 13.9038 - 1 };
 			break;
-		case 33: //Rifle cuntgun
+		case Rifle : //"cuntgun"
 			point1Offsets = { 7.92837 , -3.48911 , 11.4936 };
-			point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 }; //additional offsets required. Crosshair offset is probably different for that weapon
+			point2Offsets = { 71.2598, 4.09339 - 0.75, 20.9391 - 1.5 };
 			break;
-		case 34: // Sniper
-			point1Offsets = { 5.94806 , -2.75068, 13.2024 /*+1*/ };
-			point2Offsets = { 30.6871 , -0.22823 - 0.025, 15.6848 /*+1 */};
+		case Sniper :
+			point1Offsets = { 5.94806 , -2.75068, 13.2024 };
+			point2Offsets = { 30.6871 , -0.22823 - 0.025, 15.6848 };
 			socketAvailable = false;
 			break;
-		case 35: // RocketLauncher
+		case RocketLauncher :
 			//point1Offsets = { 2.41748 , -3.88386 , 14.4056 };
 			//point2Offsets = { 29.0589, -3.88386, 14.4056 };
 			point1Offsets = { 0.0f , 0.0f, 0.0f };
 			point2Offsets = { 0.0f , 0.0f, 0.0f };
 			socketAvailable = false;
 			break;
-		case 36: // RocketLauncherHeatSeek
+		case RocketLauncherHs : // RocketLauncherHeatSeek
 			//point1Offsets = { -57.665 , -3.74195 , 20.2618 };
 			//point2Offsets = { 34.8035, -3.52085 , 20.1928 };
 			point1Offsets = { 0.0f , 0.0f, 0.0f };
 			point2Offsets = { 0.0f , 0.0f, 0.0f };
 			socketAvailable = false;
 			break;
-		case 37: // Flamethrower
+		case Flamethrower :
 			point1Offsets = { 48.0165 , -1.65182 , 16.1683 };
 			point2Offsets = { 76.7885, 0.537026 , 31.6837 };
 			sprayWeapon = true;
 			break;
-		case 38: // Minigun
+		case Minigun :
 			point1Offsets = { 48.1025 , -2.9978 , 14.3878 };
 			point2Offsets = { 86.6453 , 0.429413 - 0.5 , 35.9644 - 0.5 };
 			break;
-			//case 39: // Satchel
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 40: // Detonator
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-		case 41: // SprayCan
+		case SprayCan:
 			/*point1Offsets = { 2.82819, -2.52103, 9.92684 };
 			point2Offsets = { 21.7272, -3.89487, 12.9088 };*/
 			point1Offsets = { 0.0f , 0.0f, 0.0f };
@@ -320,7 +243,7 @@ void WeaponManager::UpdateAimingVectors()
 			sprayWeapon = true;
 			socketAvailable = false;
 			break;
-		case 42: // Extinguisher
+		case Extinguisher:
 			/*point1Offsets = { 2.82819, -2.52103, 9.92684 };
 			point2Offsets = { 21.7272, -3.89487, 12.9088 };*/
 			point1Offsets = { 0.0f , 0.0f, 0.0f };
@@ -328,23 +251,11 @@ void WeaponManager::UpdateAimingVectors()
 			sprayWeapon = true;
 			socketAvailable = false;
 			break;
-		case 43: // Camera
+		case Camera:
 			point1Offsets = { 13.8476, -11.6162, 1.72577 };
 			point2Offsets = { 27.6432, -11.6162, 2.84382 };
 			socketAvailable = false;
 			break;
-			//case 44: // NightVision
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 45: // Infrared
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
-			//case 46: // Parachute
-			//	point1Offsets = { 2.82819, -2.52103, 9.92684 };
-			//	point2Offsets = { 21.7272, -3.89487, 12.9088 };
-			//	break;
 
 		default:
 			point1Offsets = { 0.0f , 0.0f, 0.0f };
@@ -360,20 +271,19 @@ void WeaponManager::UpdateAimingVectors()
 
 		if (socketAvailable && !meleeWeapon)
 		{
-			struct {
-				const struct uevr::API::FName& InSocketName = uevr::API::FName(L"gunflash");
-				glm::fvec3 Location;
-			} socketLocation_params;
+			Utilities::ParameterGetSocketLocation socketLocation_params;
+			socketLocation_params.inSocketName = uevr::API::FName(L"gunflash");
 
 			weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
 			//API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x,  forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
 
-			point1Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
-			point2Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+			point1Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point1Offsets);
+			point2Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point2Offsets);
 
 			aimingDirection = glm::normalize(point2Position - point1Position);
 
 			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
+
 			// Safeguard: Normalize projectedToFloorVector only if valid
 			if (glm::length(projectedToFloorVector) > 0.0f) {
 				projectedToFloorVector = glm::normalize(projectedToFloorVector);
@@ -381,7 +291,6 @@ void WeaponManager::UpdateAimingVectors()
 			else {
 				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
 			}
-
 
 			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
 			if (glm::length(yawRight) > 0.0f) {
@@ -413,44 +322,31 @@ void WeaponManager::UpdateAimingVectors()
 		}
 		else
 		{
-			struct {
-				glm::fvec3 Location;
-			} componentToWorld_params;
+			Utilities::ParameterSingleVector3 componentToWorld_params;
 			weaponMesh->call_function(L"K2_GetComponentLocation", &componentToWorld_params);
 			
 			if (glm::length(point1Offsets) > 0.0f && glm::length(point2Offsets) > 0.0f)
 			{
-				point1Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point1Offsets);
-				point2Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.Location, forwardVector_params.ForwardVector, upVector_params.UpVector, rightVector_params.RightVector, point2Offsets);
+				point1Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.vec3Value, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point1Offsets);
+				point2Position = Utilities::OffsetLocalPositionFromWorld(componentToWorld_params.vec3Value, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point2Offsets);
 				aimingDirection = glm::normalize(point2Position - point1Position);
 			}
 			else
 			{
-				point1Position = componentToWorld_params.Location;
-				aimingDirection = forwardVector_params.ForwardVector;
+				point1Position = componentToWorld_params.vec3Value;
+				aimingDirection = forwardVector_params.vec3Value;
 			}
 		}
 
 		calculatedAimForward = {aimingDirection.x, -aimingDirection.y, aimingDirection.z};
 		calculatedAimPosition = { point1Position.x * 0.01f, -point1Position.y * 0.01f, point1Position.z * 0.01f};
 
-		if (playerManager->isInVehicle && cameraController->cameraModeIs != 55 || meleeWeapon)
+		if (playerManager->isInVehicle && cameraController->cameraModeIs != CameraController::AimWeaponFromCar || meleeWeapon)
 		{
-			// Apply new values to memory - This messes up the aiming vector
-			//*(reinterpret_cast<float*>(cameraPositionAddresses[0])) = actualPlayerPositionUE.x * 0.01f;;
-			//*(reinterpret_cast<float*>(cameraPositionAddresses[1])) = -actualPlayerPositionUE.y * 0.01f;;
-			//*(reinterpret_cast<float*>(cameraPositionAddresses[2])) = actualPlayerPositionUE.z * 0.01f;;
-
-
 			////forward vector
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = cameraController->cameraMatrixValues[4];
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = cameraController->cameraMatrixValues[5];
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
-
-			////forward vector
-			//*(reinterpret_cast<float*>(aimUpVectorAddresses[0])) = cameraMatrixValues[8];
-			//*(reinterpret_cast<float*>(aimUpVectorAddresses[1])) = cameraMatrixValues[9];
-			//*(reinterpret_cast<float*>(aimUpVectorAddresses[2])) = cameraMatrixValues[10];
 		}
 		else
 		{
@@ -468,7 +364,7 @@ void WeaponManager::UpdateAimingVectors()
 			*(reinterpret_cast<float*>(memoryManager->xAxisSpraysAimAddress)) = aimingDirection.z;
 		}
 	}
-	else //unarmed
+	else //if unarmed
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = playerManager->actualPlayerPositionUE.x * 0.01f;
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = -playerManager->actualPlayerPositionUE.y * 0.01f;
@@ -484,46 +380,6 @@ void WeaponManager::UpdateAimingVectors()
 			-*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])),
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2]))
 		);
-
-	//if (cameraController->cameraModeIs == 46)
-	//{
-	//	glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
-	//	glm::fvec3 right = glm::cross(up, calculatedAimForward);
-
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[0])) = right.x;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[1])) = right.y;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[2])) = right.z;
-
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[4])) = calculatedAimForward.x;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[5])) = calculatedAimForward.y;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[6])) = calculatedAimForward.z;
-
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[8])) = up.x;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[9])) = up.y;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[10])) = up.z;
-
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[12])) = calculatedAimPosition.x;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[13])) = calculatedAimPosition.y;
-	//	*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[14])) = calculatedAimPosition.z;
-	//}
-	//glm::fvec3 up = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[0])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[1])), *(reinterpret_cast<float*>(memoryManager->aimUpVectorAddresses[2])));
-	//glm::fvec3 right = glm::cross(up, calculatedAimForward);
-
-	//MemoryManager::matrixAimCalculatedValues[0] = right.x;
-	//MemoryManager::matrixAimCalculatedValues[1] = right.y;
-	//MemoryManager::matrixAimCalculatedValues[2] = right.z;
-	//MemoryManager::matrixAimCalculatedValues[3] = calculatedAimForward.x;
-	//MemoryManager::matrixAimCalculatedValues[4] = calculatedAimForward.y;
-	//MemoryManager::matrixAimCalculatedValues[5] = calculatedAimForward.z;
-	//MemoryManager::matrixAimCalculatedValues[6] = up.x;
-	//MemoryManager::matrixAimCalculatedValues[7] = up.y;
-	//MemoryManager::matrixAimCalculatedValues[8] = up.z;
-	//MemoryManager::matrixAimCalculatedValues[9] = calculatedAimPosition.x;
-	//MemoryManager::matrixAimCalculatedValues[10] = calculatedAimPosition.y;
-	//MemoryManager::matrixAimCalculatedValues[11] = calculatedAimPosition.z;
-
-	//uevr::API::get()->log_info("calculatedAimForward.x = %f ", calculatedAimForward.x);
-	//uevr::API::get()->log_info("MemoryManager::matrixAimCalculatedValues[3] = %f ", MemoryManager::matrixAimCalculatedValues[3]);
 }
 
 void WeaponManager::HandleWeaponVisibility()
@@ -536,68 +392,24 @@ void WeaponManager::HandleWeaponVisibility()
 	bool hideWeapon = false;
 	switch (equippedWeaponIndex)
 	{
-		//case 0:  // Unarmed
-		//case 1:  // BrassKnuckles
-		//case 2:  // GolfClub
-		//case 3:  // NightStick
-		//case 4:  // Knife
-		//case 5:  // BaseballBat
-		//case 6:  // Shovel
-		//case 7:  // PoolCue
-		//case 8:  // Katana
-		//case 9:  // Chainsaw
-		//case 10: // Dildo1
-		//case 11: // Dildo2
-		//case 12: // Vibe1
-		//case 13: // Vibe2
-		//case 14: // Flowers
-		//case 15: // Cane
-		//case 16: // Grenade
-		//case 17: // Teargas
-		//case 18: // Molotov
-		//case 22: //Pistol colt 45
-		//case 23: // PistolSilenced
-		//case 24: // DesertEagle
-		//case 25: // Shotgun
-		//case 26: // Sawnoff
-		//case 27: // Spas12
-		//case 28: // MicroUzi
-		//case 29: // Mp5
-		//case 30: //AK47
-		//case 31: // M4
-		//case 32: // Tec9
-		//case 33: //Rifle cuntgun
-		//case 34: // Sniper
-		//case 35: // RocketLauncher
-		//case 36: // RocketLauncherHeatSeek
-		//case 37: // Flamethrower
-		//case 38: // Minigun
-		//case 39: // Satchel
-		//case 40: // Detonator
-		//case 41: // SprayCan
-		//case 42: // Extinguisher
-		//case 43: // Camera
-		case 44: // NightVision
-			hideWeapon = true;
-			break;
-		case 45: // Infrared
-			hideWeapon = true;
-			break;
-		case 46: // Parachute
-			hideWeapon = true;
-			break;
-
+	case NightVision:
+		hideWeapon = true;
+		break;
+	case Infrared:
+		hideWeapon = true;
+		break;
+	case Parachute:
+		hideWeapon = true;
+		break;
 	default:
 		hideWeapon = false;
 		break;
 	}
 
-	struct {
-		bool ownerNoSee = false;
-	} setOwnerNoSee_params;
-	setOwnerNoSee_params.ownerNoSee = playerManager->isInControl ? hideWeapon : false; //Enable visibility when in cutscenes
+	Utilities::ParameterSingleBool setOwnerNoSee_params;
+	setOwnerNoSee_params.boolValue = playerManager->isInControl ? hideWeapon : false; //Enable visibility when in cutscenes
 	weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
-	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.ownerNoSee);
+	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.boolValue);
 }
 
 void WeaponManager::WeaponHandling(float delta)
@@ -615,121 +427,98 @@ void WeaponManager::WeaponHandling(float delta)
 		UpdateActualWeaponMesh();
 	}
 
-	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != 55)) //check a shooting on car scenario before deleting
+	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
 		return;
 
-	
 	bool shootDetectionFromMemory = false;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
 	switch (equippedWeaponIndex)
 	{
-		//case 0:  // Unarmed
-		//case 1:  // BrassKnuckles
-		//case 2:  // GolfClub
-		//case 3:  // NightStick
-		//case 4:  // Knife
-		//case 5:  // BaseballBat
-		//case 6:  // Shovel
-		//case 7:  // PoolCue
-		//case 8:  // Katana
-		//case 9:  // Chainsaw
-		//case 10: // Dildo1
-		//case 11: // Dildo2
-		//case 12: // Vibe1
-		//case 13: // Vibe2
-		//case 14: // Flowers
-		//case 15: // Cane
-		//case 16: // Grenade
-		//case 17: // Teargas
-		//case 18: // Molotov
-	case 22: //Pistol colt 45
+	case Pistol:
 		positionRecoilForce = { 0.0f, -0.005f, -0.5f };
 		rotationRecoilForceEuler = { -0.08f, 0.0f, 0.0f };
 		break;
-	case 23: // PistolSilenced
+	case PistolSilenced:
 		positionRecoilForce = { 0.0f, -0.005f, -0.5f };
 		rotationRecoilForceEuler = { -0.05f, 0.0f, 0.0f };
 		break;
-	case 24: // DesertEagle
+	case DesertEagle:
 		positionRecoilForce = { 0.0f, -0.005f, -2.5f };
 		rotationRecoilForceEuler = { -0.15f, 0.0f, 0.0f };
 		break;
-	case 25: // Shotgun
+	case Shotgun:
 		positionRecoilForce = { 0.0f, -0.005f, -5.0f };
 		rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
 		break;
-	case 26: // Sawnoff
+	case Sawnoff:
 		positionRecoilForce = { 0.0f, -0.005f, -5.0f };
 		rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
 		break;
-	case 27: // Spas12
+	case Spas12:
 		positionRecoilForce = { 0.0f, -0.005f, -5.0f };
 		rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
 		break;
-	case 28: // MicroUzi
+	case MicroUzi:
 		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-	case 29: // Mp5
+	case Mp5:
 		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-	case 30: //AK47
+	case Ak47:
 		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-	case 31: // M4
+	case M4:
 		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-	case 32: // Tec9
+	case Tec9:
 		positionRecoilForce = { 0.0f, -0.005f, -1.0f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-	case 33: //Rifle cuntgun
+	case Rifle: // "cuntgun"
 		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
 		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
-	case 34: // Sniper
+	case Sniper:
 		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
 		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
-	case 35: // RocketLauncher
+	case RocketLauncher:
 		positionRecoilForce = { 0.0f, -0.005f, -3.0f };
 		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
-	case 36: // RocketLauncherHeatSeek
+	case RocketLauncherHs : // RocketLauncherHeatSeek
 		positionRecoilForce = { 0.0f, -0.005f, -3.0f };
 		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
 		break;
-	case 37: // Flamethrower
+	case Flamethrower:
 		positionRecoilForce = { -0.0f, 0.5f, -0.5f };
 		rotationRecoilForceEuler = { -0.0f, 0.0f, 0.0f };
 		break;
-	case 38: // Minigun		positionRecoilForce = { 0.0f, -0.005f, -5.0f };
-		rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
+	case Minigun:	
+		//positionRecoilForce = { 0.0f, -0.005f, -5.0f };
+		//rotationRecoilForceEuler = { -0.3f, 0.0f, 0.0f };
 		positionRecoilForce = { 0.0f, -0.005f, -1.5f };
 		rotationRecoilForceEuler = { -0.01f, 0.0f, 0.0f };
 		break;
-		//case 39: // Satchel
-	case 40: // Detonator
+	case Detonator:
 		return;
-	case 41: // SprayCan
+	case SprayCan:
 		return;
-	case 42: // Extinguisher
+	case Extinguisher:
 		return;
-	case 43: // Camera
+	case Camera:
 		HandleCameraWeaponAiming();
 		return;
-		//case 44: // NightVision
-		//case 45: // Infrared
-		//case 46: // Parachute
 
 	default:
 		DisableMeleeWeaponsUObjectHooks();
@@ -738,7 +527,6 @@ void WeaponManager::WeaponHandling(float delta)
 
 	if (shootDetectionFromMemory)
 		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager->isShooting : false;
-
 	
 
 	//Apply Recoil
@@ -781,23 +569,22 @@ void WeaponManager::HandleCameraWeaponAiming()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleCameraWeaponAiming()");
 
-	if (cameraController->cameraModeIs == 46 && cameraController->cameraModeWas != 46)
+	if (cameraController->cameraModeIs == CameraController::Camera  && cameraController->cameraModeWas != CameraController::Camera )
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 
-		struct {
-				bool MaintainWorldPosition = true;
-				bool CallModify = false;
-			} DetachFromParent_params;
-		weaponMesh->call_function(L"DetachFromParent", &DetachFromParent_params);
+		Utilities::ParameterDetachFromParent detachFromParent_params;
+		detachFromParent_params.maintainWorldPosition = true;
+		detachFromParent_params.callModify = false;
+		weaponMesh->call_function(L"DetachFromParent", &detachFromParent_params);
 	}
 
-	if (cameraController->cameraModeIs != 46 && cameraController->cameraModeWas == 46)
+	if (cameraController->cameraModeIs != CameraController::Camera  && cameraController->cameraModeWas == CameraController::Camera )
 	{
 		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 	}
 
-	if (cameraController->cameraModeIs == 46)
+	if (cameraController->cameraModeIs == CameraController::Camera)
 	{
 		glm::fvec3 cameraOffsetsPoint1 = { 13.8476, -11.6162, -1.72577 };
 		glm::fvec3 cameraOffsetsPoint2 = { 27.6432, -11.6162, -2.84382 };
@@ -813,28 +600,21 @@ void WeaponManager::HandleCameraWeaponAiming()
 		Utilities::Parameter_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
 		setWorldLocation_params.bSweep = false;
 		setWorldLocation_params.bTeleport = true;
-		setWorldLocation_params.NewLocation = weaponPoint1;
+		setWorldLocation_params.newLocation = weaponPoint1;
 		weaponMesh->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 
 		// FindLookAtRotation from Point1 to Point2
-		struct {
-			glm::fvec3 Start;
-			glm::fvec3 Target;
-			Utilities::FRotator OutRotation;
-		} LookAtRotationParams;
-
-		LookAtRotationParams.Start = weaponPoint1;
-		LookAtRotationParams.Target = weaponPoint2;
-
-		Utilities::KismetMathLibrary->call_function(L"FindLookAtRotation", &LookAtRotationParams);
+		Utilities::ParameterFindLookAtRotation lookAtRotationParams;
+		lookAtRotationParams.start = weaponPoint1;
+		lookAtRotationParams.target = weaponPoint2;
+		Utilities::KismetMathLibrary->call_function(L"FindLookAtRotation", &lookAtRotationParams);
 
 		// Apply rotation to weaponMesh
 		Utilities::Parameter_K2_SetWorldOrRelativeRotation setWorldRotation_params{};
 		setWorldRotation_params.bSweep = false;
 		setWorldRotation_params.bTeleport = true;
-		setWorldRotation_params.NewRotation = LookAtRotationParams.OutRotation;
+		setWorldRotation_params.newRotation = lookAtRotationParams.outRotation;
 		weaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
-
 
 		//uevr::API::get()->log_info("position : x %f, y %f, z %f", cameraWpnPosition.x, cameraWpnPosition.y, cameraWpnPosition.z);
 		//uevr::API::get()->log_info("rotation : x %f, y %f, z %f", cameraWpnRotation.Pitch, cameraWpnRotation.Roll, cameraWpnRotation.Yaw);
@@ -853,13 +633,13 @@ void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
-	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 
 	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 	setRelativeRotation_params.bSweep = false;
 	setRelativeRotation_params.bTeleport = true;
-	setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
+	setRelativeRotation_params.newRotation = { 0.0f, 0.0f, 0.0f };
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
 
@@ -872,13 +652,13 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
-	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 
 	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 	setRelativeRotation_params.bSweep = false;
 	setRelativeRotation_params.bTeleport = true;
-	setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
+	setRelativeRotation_params.newRotation = { 0.0f, 0.0f, 0.0f };
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
 
@@ -928,6 +708,5 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 	//	//case 44: // NightVision
 	//	//case 45: // Infrared
 	//	//case 46: // Parachute
-
 	//default:
 	//}

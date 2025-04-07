@@ -15,35 +15,54 @@ public:
 
 	static void InitHelperClasses();
 
-	#pragma pack(push, 1)
+#pragma pack(push, 1)
 	struct FRotator {
-		float Pitch;
-		float Yaw;
-		float Roll;
+		float pitch;
+		float yaw;
+		float roll;
 	};
 #pragma pack(pop)
 
-	struct ParameterGLMfvec3
+	struct ParameterSingleBool
 	{
-		glm::fvec3 returnedValue;
+		bool boolValue = false;
 	};
 
-	struct ParameterSocketLocation
+	struct ParameterSingleVector3
 	{
-		uevr::API::FName InSocketName;
-		glm::fvec3 Location;
+		glm::fvec3 vec3Value{};
 	};
 
+	struct ParameterGetSocketLocation
+	{
+		uevr::API::FName inSocketName;
+		glm::fvec3 outLocation;
+	};
+
+	struct ParameterDetachFromParent
+	{
+		bool maintainWorldPosition;
+		bool callModify;
+	};
+
+	struct ParameterFindLookAtRotation
+	{
+		glm::fvec3 start;
+		glm::fvec3 target;
+		Utilities::FRotator outRotation;
+	};
+
+//Parameters taken from Dumper7 dump of the game. Padding allows to align with the size Unreal Engine expects for each parameters.
 #pragma pack(push, 1)
 	struct Parameter_K2_SetWorldOrRelativeLocation final
 	{
 	public:
-		glm::fvec3 NewLocation;
+		glm::fvec3 newLocation;
 		bool bSweep;
-		uint8_t Pad_D[3];
-		uint8_t Padding[0x8C];
+		uint8_t pad_D[3];
+		uint8_t padding[0x8C];
 		bool bTeleport;
-		uint8_t Pad_9D[3];
+		uint8_t pad_9D[3];
 	};
 #pragma pack(pop)
 
@@ -51,12 +70,12 @@ public:
 	struct Parameter_K2_SetWorldOrRelativeRotation final
 	{
 	public:
-		FRotator NewRotation;
+		FRotator newRotation;
 		bool bSweep;
-		uint8_t Pad_D[3];
-		uint8_t Padding[0x8C];
+		uint8_t pad_D[3];
+		uint8_t padding[0x8C];
 		bool bTeleport;
-		uint8_t Pad_9D[3];
+		uint8_t pad_9D[3];
 	};
 #pragma pack(pop)
 };

@@ -10,7 +10,7 @@
 
 class PlayerManager {
 private:
-	SettingsManager* settingsManager;
+	SettingsManager* const settingsManager;
 
 public:
 	PlayerManager(SettingsManager* sm) : settingsManager(sm) {};

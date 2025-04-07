@@ -30,6 +30,6 @@ void PlayerManager::DisablePlayerUObjectsHook()
 	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
-	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
+	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 }
