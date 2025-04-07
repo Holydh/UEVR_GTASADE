@@ -17,6 +17,17 @@ public:
 
 	static void InitHelperClasses();
 
+	struct ParameterGLMfvec3
+	{
+		glm::fvec3 returnedValue;
+	};
+
+	struct ParameterSocketLocation
+	{
+		uevr::API::FName InSocketName;
+		glm::fvec3 Location;
+	};
+
 	struct FQuat {
 		float x;
 		float y;
@@ -87,7 +98,7 @@ public:
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-	struct SceneComponent_K2_SetWorldOrRelativeLocation final
+	struct Parameter_K2_SetWorldOrRelativeLocation final
 	{
 	public:
 		glm::fvec3 NewLocation;

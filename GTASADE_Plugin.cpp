@@ -110,7 +110,7 @@ public:
 			if (!weaponWheelDisplayed)
 			{
 				cameraController.ProcessCameraMatrix(delta);
-				cameraController.ProcessHookedHeadPosition();
+				cameraController.ProcessHookedHeadPosition(delta);
 				weaponManager.ShootDetection();
 				weaponManager.UpdateAimingVectors();
 			}

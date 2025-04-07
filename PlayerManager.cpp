@@ -27,7 +27,7 @@ void PlayerManager::DisablePlayerUObjectsHook()
 	if (playerHead == nullptr)
 		return;
 	//Reset head position during cutscene
-	Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
 	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);

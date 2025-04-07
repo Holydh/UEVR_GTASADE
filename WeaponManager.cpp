@@ -810,7 +810,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 		glm::fvec3 weaponPoint2 = cameraController->cameraPositionUE + (cameraController->forwardVectorUE * 35.0f) + worldOffset2;
 
 		// Apply position to weaponMesh
-		Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
+		Utilities::Parameter_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
 		setWorldLocation_params.bSweep = false;
 		setWorldLocation_params.bTeleport = true;
 		setWorldLocation_params.NewLocation = weaponPoint1;
@@ -850,7 +850,7 @@ void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 	uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 
 	//Reset weapon position and rotation for melee weapons
-	Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
 	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
@@ -869,7 +869,7 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 
 	if (weaponMesh == nullptr)
 		return;
-	Utilities::SceneComponent_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
+	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
 	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);

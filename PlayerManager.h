@@ -18,6 +18,7 @@ public:
 	PlayerManager(SettingsManager* sm) : settingsManager(sm) {};
 	glm::fvec3 actualPlayerPositionUE = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 actualPlayerHeadPositionUE = { 0.0f, 0.0f, 0.0f };
+	const glm::fvec3 defaultPlayerHeadLocalPositionUE = { 0.0f, 0.0f, 69.0f };
 	uevr::API::UObject* playerController = nullptr;
 	uevr::API::UObject* playerHead = nullptr;
 	uevr::API::UObject* playerHmd = nullptr;
