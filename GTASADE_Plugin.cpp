@@ -46,7 +46,7 @@ public:
 		settingsManager.configFilePath = settingsManager.GetConfigFilePath();
 		API::get()->log_info("%s", settingsManager.configFilePath.c_str());
 		
-
+		//Set up the memory addresses
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
 		memoryManager.AdjustAddresses();
 
@@ -58,31 +58,20 @@ public:
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
+		//Fetch various states from memory
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
+		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
+		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
+		playerManager.FetchPlayerUObjects();
+		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
+		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
+		MemoryManager::cameraMode = cameraController.cameraModeIs;
 
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
-
-		
-	/*	API::get()->log_info("playerIsInControl = %i",playerIsInControl);*/
-		//Debug
-		//if (GetAsyncKeyState(VK_UP)) fpsCamInitialized = true;
-		//if (GetAsyncKeyState(VK_DOWN)) fpsCamInitialized = false;
-
-		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
-		
-		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
-		//API::get()->log_info("characterIsInCar = %i", characterIsInCar);
-		cameraController.cameraModeIs = *(reinterpret_cast<int*>(memoryManager.cameraModeAddress));
-		MemoryManager::cameraMode = cameraController.cameraModeIs;
-		//API::get()->log_info("cameraController.cameraModeIs = %i", cameraController.cameraModeIs);
-
-		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
-		//API::get()->log_info("playerShootFromCarInput = %i", playerShootFromCarInput);
 		
 
-		playerManager.FetchPlayerUObjects();
-		
+		// Handles the cutscenes and various points in which the camera should be freed from VR controls.
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("playerIsInControl");
@@ -93,7 +82,6 @@ public:
 		}
 		else
 			cameraController.camResetRequested = false;
-
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
@@ -103,19 +91,21 @@ public:
 			ToggleAllUObjectHooks(false);
 		}
 
+		// Toggles the game's original instructions when going in and out of a vehicle.
 		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs != 55 && cameraController.cameraModeWas == 55)))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
-
 		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || (playerManager.isInVehicle && cameraController.cameraModeIs == 55 && cameraController.cameraModeWas != 55)))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
 	
+		// VR mod processing :
 		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
+			if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
 			
 			if (!weaponWheelDisplayed)
 			{
@@ -127,52 +117,28 @@ public:
 
 			weaponManager.WeaponHandling(delta);
 		}
-
 		weaponManager.HandleWeaponVisibility();
+
+		// Keep previous states
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.cameraModeWas = cameraController.cameraModeIs;
 		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
-		if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
 	}
 
 
 	void on_post_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Post Engine Tick: %f", delta);
-		if (settingsManager.debugMod) uevr::API::get()->log_info("on_post_engine_tick");
 	}
 
 	void on_pre_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Pre Slate Draw Window");
-		if (settingsManager.debugMod) uevr::API::get()->log_info("on_pre_slate_draw_window");
 	}
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-		if (settingsManager.debugMod) uevr::API::get()->log_info("on_post_slate_draw_window");
 	}
 
-	//void on_custom_event(const char* event_name, const char* event_data) override
-	//{
-	//	if (event_name == "OnHmdComponentCreated")
-	//	{
-	//		API::get()->log_info("OnHmdComponentCreated, event_data = %s", event_data);
-	//		std::wstring w_event_data = std::wstring(event_data, event_data + strlen(event_data));
-	//		playerManager.playerHmd = uevr::API::get()->find_uobject<uevr::API::UObject>(w_event_data);
-	//		if (playerManager.playerHmd != nullptr)
-	//			API::get()->log_info("playerHmd = %ws", playerManager.playerHmd->get_full_name().c_str());
-	//	}
-	//}
-
-	//void on_pre_calculate_stereo_view_offset(UEVR_StereoRenderingDeviceHandle, int view_index, float world_to_meters,
-	//	UEVR_Vector3f* position, UEVR_Rotatorf* rotation, bool is_double)
-	//{
-	//	rotation->pitch = 0.0f;
-	//	rotation->yaw = -90.0f;
-	//	rotation->roll = 0.0f;
-
-	//	cameraController.hm
-	//}
 
 	void ToggleAllUObjectHooks(bool enable)
 	{
@@ -180,7 +146,6 @@ public:
 			uevr::API::UObjectHook::set_disabled(false);
 		else
 		{
-			//uevr::API::UObjectHook::remove_all_motion_controller_states();
 			uevr::API::UObjectHook::set_disabled(true);
 
 			playerManager.DisablePlayerUObjectsHook();
