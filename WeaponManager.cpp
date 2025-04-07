@@ -7,12 +7,19 @@ void WeaponManager::UpdateActualWeaponMesh()
 	if (cameraController->cameraModeIs == CameraController::Camera  && cameraController->cameraModeWas == CameraController::Camera )
 		return;
 
+	///////////////////////////////////////////////////////////////
+	// This code needs to be improved, replaced by a for loop with a check of it's class to fetch the right UObject
+	// BUT, for some reasons, this game sometimes freaks out and add a GTAWeapon component to random props and attach them as a children 
+	// of the player character during a few frames. Making this method of fetch unreliable. This mean the player will end up with a bush,
+	// a tree, or random clothes in it's hand on top of the actual weapon.
+	// I need to add another check to counter that.
+	// In the meantime, fetch is done by array index. Not ideal but never broke so far, even for other users.
+
 	//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 	//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
 	static auto gta_BPplayerCharacter_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/Characters/Player/BP_player_character.BP_Player_Character_C");
 	static auto gta_StaticMeshComponent_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/Engine.StaticMeshComponent");
 	//API::get()->log_info("gta_BPweapon_c = %ls", gta_BPweapon_c->get_full_name().c_str());
-
 
 	const auto& playerControllerChildren = playerManager->playerController->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"Children");
 	//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
