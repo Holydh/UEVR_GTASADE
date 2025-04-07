@@ -1,6 +1,4 @@
 #pragma once
-#ifndef CAMERACONTROLLER_H
-#define CAMERACONTROLLER_H
 
 #define GLM_FORCE_QUAT_DATA_XYZW
 #include "glm/glm.hpp"
@@ -47,5 +45,3 @@ public:
 	void ProcessHookedHeadPosition(float delta);
 	void FixUnderwaterView(bool enableFix);
 };
-
-#endif

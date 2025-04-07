@@ -1,6 +1,4 @@
 #pragma once
-#ifndef MEMORYMANAGER_H
-#define MEMORYMANAGER_H
 
 #include <unordered_map>
 #include <cstdint>
@@ -92,5 +90,3 @@ public:
 	//void GetAllBytes();
 	//void WriteBytesToIniFile(const char* header, const std::vector<std::pair<uintptr_t, size_t>>& addresses);
 };
-
-#endif // MEMORYMANAGER_H

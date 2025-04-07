@@ -829,7 +829,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 		Utilities::KismetMathLibrary->call_function(L"FindLookAtRotation", &LookAtRotationParams);
 
 		// Apply rotation to weaponMesh
-		Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setWorldRotation_params{};
+		Utilities::Parameter_K2_SetWorldOrRelativeRotation setWorldRotation_params{};
 		setWorldRotation_params.bSweep = false;
 		setWorldRotation_params.bTeleport = true;
 		setWorldRotation_params.NewRotation = LookAtRotationParams.OutRotation;
@@ -856,7 +856,7 @@ void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 
-	Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 	setRelativeRotation_params.bSweep = false;
 	setRelativeRotation_params.bTeleport = true;
 	setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };
@@ -875,7 +875,7 @@ void WeaponManager::ResetWeaponMeshPosAndRot()
 	setRelativeLocation_params.NewLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 
-	Utilities::SceneComponent_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
+	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 	setRelativeRotation_params.bSweep = false;
 	setRelativeRotation_params.bTeleport = true;
 	setRelativeRotation_params.NewRotation = { 0.0f, 0.0f, 0.0f };

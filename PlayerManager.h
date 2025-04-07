@@ -1,6 +1,4 @@
 #pragma once
-#ifndef PLAYERMANAGER_H
-#define PLAYERMANAGER_H
 
 #define GLM_FORCE_QUAT_DATA_XYZW
 #include "glm/glm.hpp"
@@ -31,5 +29,3 @@ public:
 	void FetchPlayerUObjects();
 	void DisablePlayerUObjectsHook();
 };
-
-#endif
