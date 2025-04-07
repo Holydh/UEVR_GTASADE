@@ -17,7 +17,7 @@ void PlayerManager::FetchPlayerUObjects()
 			//API::get()->log_info("playerHead : %ls", playerHead->get_full_name().c_str());
 			break;
 		}
-	};
+	}
 }
 
 void PlayerManager::DisablePlayerUObjectsHook()

@@ -1,10 +1,12 @@
 #pragma once
 #ifndef PLAYERMANAGER_H
 #define PLAYERMANAGER_H
-#include "uevr/API.hpp"
+
+#define GLM_FORCE_QUAT_DATA_XYZW
 #include "glm/glm.hpp"
 #include <glm/gtc/type_ptr.hpp>
-#define GLM_FORCE_QUAT_DATA_XYZW
+
+#include "uevr/API.hpp"
 #include "Utilities.h"
 #include "SettingsManager.h"
 
