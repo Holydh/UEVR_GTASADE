@@ -29,6 +29,9 @@ local CameraManager_c = nil
 local Weapon_c = nil
 local Cylinder = nil
 
+local cylinderInit = false
+local cylinderActor = nil
+
 
 -- Instance variables
 local scope_actor = nil
@@ -145,9 +148,9 @@ local function init_static_objects()
     zero_transform.Scale3D = temp_vec3:set(1.0, 1.0, 1.0)
 
     
-    Cylinder = find_required_object("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
-    if not Cylinder then return false end
-    print(Cylinder:get_full_name())
+    -- Cylinder = find_required_object("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+    -- if not Cylinder then return false end
+    -- print(Cylinder:get_full_name())
 
     texture2D_c = find_required_object("Class /Script/Engine.Texture2D")
     if not texture2D_c then return false end
@@ -621,13 +624,29 @@ local last_level = nil
 
 uevr.sdk.callbacks.on_pre_engine_tick(
 	function(engine, delta)
-
-
         local viewport = engine.GameViewport
         if viewport then
             local world = viewport.World
             if world then
+
+                if Cylinder == nil then
+                    Cylinder = uevr.api:find_uobject("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+                end
+                if not cylinderInit and Cylinder ~= nil then
+                    cylinderActor = spawn_actor(world, actor_c, temp_vec3:set(0, 0, 0), 1, nil)
+                    if cylinderActor ~= nil then
+                        local cylinderMesh = cylinderActor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
+                        cylinderMesh:SetStaticMesh(Cylinder)
+                        cylinderMesh:SetVisibility(false)
+                        -- local_scope_mesh:SetHiddenInGame(false)
+                        cylinderMesh:SetCollisionEnabled(0)
+                    end
+                    cylinderInit = true
+
+                end
                 local level = world.PersistentLevel
+                print("PersistentLevel")
+
                 if last_level ~= level then
                     print("Level changed .. Reseting")
                     destroy_actor(scope_actor)
@@ -646,12 +665,14 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 last_level = level
             end
         end
-
+        print("get_player_controller")
         -- reset_scope_actor_if_deleted()
         local playerController = api:get_player_controller()
         -- print(playerController:get_full_name())
+        print("get_equipped_weapon")
         local weapon_mesh = get_equipped_weapon(playerController)
         -- print(weapon_mesh:get_full_name())
+        print(" if weapon_mesh")
         if weapon_mesh then
             -- fix_materials(weapon_mesh)
             local weapon_changed = not current_weapon or 
@@ -661,7 +682,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             current_weapon.StaticMesh == nil or
             weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
             scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
-
+            print(" if weapon_changed")
             if weapon_changed then
                 print(weapon_changed)
                 if (red_dot_plane_component ~= nil) then
@@ -694,13 +715,17 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 -- Attempt to attach components
               
             end
+            print(" if scene_capture_component")
             if scene_capture_component ~= nil then
+                print(scene_capture_component:get_full_name())
                 local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(CameraManager_c)
+                print(" if game_camera_manager")
                 if game_camera_manager ~= nil then
                     local actualFov = game_camera_manager.CameraCachePrivate.POV.FOV
                     if actualFov >= 70 then
                         actualFov = 70
                     end
+                    print(" if isSniper")
                     if isSniper then
                         scene_capture_component.FOVAngle = mapRange(actualFov, 12, 70, 0.75, 2.6) --remap fov range for better VR use
                     else
@@ -708,7 +733,9 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     end
                 end
             end
+            print("after if scene_capture_component")
         else
+            print("Weapon was removed/unequipped")
             -- Weapon was removed/unequipped
             if current_weapon then
                 print("Weapon unequipped")
@@ -717,7 +744,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                 --last_scope_state = false
             end
         end
-        
+        print("end of pre tick") 
     end
 )
 
