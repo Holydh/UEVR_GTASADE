@@ -1,17 +1,18 @@
 -- Script made by Mutar for Stalker 2
 -- Tweaked by Holydh
 
+local debugMode = false
 local api = uevr.api
-local vr = uevr.params.vr
-
-local emissive_material_amplifier = 2.0 
 
 -- Static variables
-local emissive_mesh_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
+local emissive_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
+local cylinder_mesh_name = "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder"
+local red_dot_texture_name = "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC"
+local plane_mesh_name = "StaticMesh /Engine/BasicShapes/Plane.Plane"
 local ftransform_c = nil
 local flinearColor_c = nil
 local hitresult_c = nil
-local game_engine_class = nil
+local game_engine_c = nil
 local Statics = nil
 local KismetStringLibrary = nil
 local KismetMathLibrary = nil
@@ -23,15 +24,12 @@ local static_mesh_component_c = nil
 local static_mesh_c = nil
 local texture2D_c = nil
 local scene_capture_component_c = nil
-local MeshC = nil
-local StaticMeshC = nil
-local CameraManager_c = nil
-local Weapon_c = nil
-local Cylinder = nil
-
-local cylinderInit = false
-local cylinderActor = nil
-
+local skeletal_mesh_component_c = nil
+local static_mesh_component_c = nil
+local cameraManager_c = nil
+local weapon_c = nil
+local cylinder_static_mesh = nil
+local emissive_material_amplifier = 2.0 
 
 -- Instance variables
 local scope_actor = nil
@@ -48,9 +46,11 @@ local temp_vec3f = Vector3f.new(0, 0, 0)
 local zero_color = nil
 local zero_transform = nil
 local isSniper = false
+local cylinder_initialized = false
+local cylinder_actor = nil
 
 local function find_required_object(name)
-    local obj = uevr.api:find_uobject(name)
+    local obj = api:find_uobject(name)
     if not obj then
         error("Cannot find " .. name)
         return nil
@@ -84,9 +84,9 @@ local function init_static_objects()
     hitresult_c = find_required_object("ScriptStruct /Script/Engine.HitResult")
     if not hitresult_c then return false end
     print(hitresult_c:get_full_name())
-    game_engine_class = find_required_object("Class /Script/Engine.GameEngine")
-    if not game_engine_class then return false end
-    print(game_engine_class:get_full_name())
+    game_engine_c = find_required_object("Class /Script/Engine.GameEngine")
+    if not game_engine_c then return false end
+    print(game_engine_c:get_full_name())
     Statics = find_static_class("Class /Script/Engine.GameplayStatics")
     if not Statics then return false end
     print(Statics:get_full_name())
@@ -119,19 +119,19 @@ local function init_static_objects()
     scene_capture_component_c = find_required_object("Class /Script/Engine.SceneCaptureComponent2D")
     if not scene_capture_component_c then return false end
     print(scene_capture_component_c:get_full_name())
-    MeshC = api:find_uobject("Class /Script/Engine.SkeletalMeshComponent")
-    if not MeshC then return false end
-    print(MeshC:get_full_name())
-    StaticMeshC = api:find_uobject("Class /Script/Engine.StaticMeshComponent")
-    if not StaticMeshC then return false end
-    print(StaticMeshC:get_full_name())
-    CameraManager_c = find_required_object("Class /Script/Engine.PlayerCameraManager")
-    if not CameraManager_c then return false end
-    print(CameraManager_c:get_full_name())
+    skeletal_mesh_component_c = api:find_uobject("Class /Script/Engine.SkeletalMeshComponent")
+    if not skeletal_mesh_component_c then return false end
+    print(skeletal_mesh_component_c:get_full_name())
+    static_mesh_component_c = api:find_uobject("Class /Script/Engine.StaticMeshComponent")
+    if not static_mesh_component_c then return false end
+    print(static_mesh_component_c:get_full_name())
+    cameraManager_c = find_required_object("Class /Script/Engine.PlayerCameraManager")
+    if not cameraManager_c then return false end
+    print(cameraManager_c:get_full_name())
 
-    Weapon_c = find_required_object("Class /Script/GTABase.GTAWeapon")
-    if not Weapon_c then return false end
-    print(Weapon_c:get_full_name())
+    weapon_c = find_required_object("Class /Script/GTABase.GTAWeapon")
+    if not weapon_c then return false end
+    print(weapon_c:get_full_name())
 
     -- Initialize reusable objects
     reusable_hit_result = StructObject.new(hitresult_c)
@@ -164,7 +164,7 @@ local function reset_static_objects()
     ftransform_c = nil
     flinearColor_c = nil
     hitresult_c = nil
-    game_engine_class = nil
+    game_engine_c = nil
     Statics = nil
     KismetRenderingLibrary = nil
     KismetMaterialLibrary = nil
@@ -173,9 +173,9 @@ local function reset_static_objects()
     static_mesh_component_c = nil
     static_mesh_c = nil
     scene_capture_component_c = nil
-    MeshC = nil
-    StaticMeshC = nil
-    CameraManager_c = nil
+    skeletal_mesh_component_c = nil
+    static_mesh_component_c = nil
+    cameraManager_c = nil
 
     
     reusable_hit_result = nil
@@ -225,7 +225,7 @@ local function get_scope_mesh(parent_mesh)
     if not child_components then return nil end
 
     for _, component in ipairs(child_components) do
-        if component:is_a(StaticMeshC) and string.find(component:get_fname():to_string(), "scope") then
+        if component:is_a(static_mesh_component_c) and string.find(component:get_fname():to_string(), "scope") then
             return component
         end
     end
@@ -240,7 +240,7 @@ local function get_equipped_weapon(playerController)
     local playerControllerChildren = playerController.Children
     local weapon
     for i, child in ipairs(playerControllerChildren) do
-        if child:is_a(Weapon_c) then
+        if child:is_a(weapon_c) then
             weapon = child
         end
     end
@@ -277,7 +277,7 @@ local function spawn_scope_plane(world, owner, pos, rt, isSniper)
         return
     end
 
-    local wanted_mat = api:find_uobject(emissive_mesh_material_name)
+    local wanted_mat = api:find_uobject(emissive_material_name)
     if wanted_mat == nil then
         print("Failed to find material")
         return
@@ -295,29 +295,26 @@ local function spawn_scope_plane(world, owner, pos, rt, isSniper)
     local redDotPlane
     local redDotTexture
     if isSniper then
-        scopePlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
-        redDotPlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
-        redDotTexture = find_required_object_no_cache(texture2D_c, "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC")
+        scopePlane = find_required_object_no_cache(static_mesh_c, cylinder_mesh_name)
+        redDotPlane = find_required_object_no_cache(static_mesh_c, cylinder_mesh_name)
+        redDotTexture = find_required_object_no_cache(texture2D_c, red_dot_texture_name)
     else
-        scopePlane = find_required_object_no_cache(static_mesh_c, "StaticMesh /Engine/BasicShapes/Plane.Plane")
+        scopePlane = find_required_object_no_cache(static_mesh_c, plane_mesh_name)
     end
 
     if scopePlane == nil then
         print("Failed to find plane mesh")
         return
     end
-    --print("plane" .. plane:get_full_name())
     
     
     local_scope_mesh:SetStaticMesh(scopePlane)
     local_scope_mesh:SetVisibility(false)
-    -- local_scope_mesh:SetHiddenInGame(false)
     local_scope_mesh:SetCollisionEnabled(0)
 
     if isSniper then
         local_red_dot_mesh:SetStaticMesh(redDotPlane)
         local_red_dot_mesh:SetVisibility(false)
-        -- local_scope_mesh:SetHiddenInGame(false)
         local_red_dot_mesh:SetCollisionEnabled(0)
     end
 
@@ -348,25 +345,6 @@ local function spawn_scope_plane(world, owner, pos, rt, isSniper)
     red_dot_plane_component = local_red_dot_mesh
     print("Scope plane spawned")
 end
-
-
--- local function create_emissive_mat(component, materialSocketName)
---     -- local wanted_mat = api:find_uobject(emissive_mesh_material_name)
---     -- if wanted_mat == nil then
---     --     print("Failed to find material")
---     --     return
---     -- end
---     -- wanted_mat.BlendMode = 0
---     -- wanted_mat.TwoSided = 1
---     local index = component:GetMaterialIndex(materialSocketName)
---     -- local dynamic_material = component:CreateDynamicMaterialInstance(index, wanted_mat, "ScopeMaterial")
---     local materials = component:GetMaterials()
---     local materal = materials[index]
---     materal:SetTextureParameterValue("SightMask ", render_target)
---     material.ShadingModel = 0
---     material.BlendMode = 0
---     -- dynamic_material:SetTextureParameterValue("LinearColor", render_target)
--- end
 
 local function spawn_scene_capture_component(world, owner, pos, fov, rt)
     scene_capture_component_mesh = scope_actor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
@@ -562,42 +540,6 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
     end
 end
 
--- local function on_level_changed(new_level)
---     -- All actors can be assumed to be deleted when the level changes
---     print("Level changed")
---     if new_level then
---         print("New level: " .. new_level:get_full_name())
---     end
---     scope_actor = nil
---     scene_capture = nil
---     plane_component = nil
--- end
-
-local function fix_effects(world)
-    if not KismetMaterialLibrary then
-        print("KismetMaterialLibrary is nil")
-        return
-    end
-    local game_encamera_manager = UEVR_UObjectHook.get_first_object_by_class(CameraManager_c)
-    if not game_encamera_manager then return end
-    local fov_mpc = game_encamera_manager.FovMPC
-    if not fov_mpc then return end
-    local fov_collection = fov_mpc.Collection
-    if not fov_collection then return end
-    KismetMaterialLibrary:SetScalarParameterValue(world, fov_collection, "IsFOVEnabled", 0.0)
-end
-
-local function is_scope_active(pawn)
-    if not pawn then return false end
-    local optical_scope = pawn.PlayerOpticScopeComponent
-    if not optical_scope then return false end
-    local scope_active = optical_scope:read_byte(0xA8, 1)
-    if scope_active > 0 then
-        return true
-    end
-    return false
-end
-
 local function switch_scope_state(state)
     if scene_capture_component ~= nil then
         scene_capture_component:SetVisibility(state)
@@ -629,19 +571,18 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             local world = viewport.World
             if world then
 
-                if Cylinder == nil then
-                    Cylinder = uevr.api:find_uobject("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
+                if cylinder_static_mesh == nil then
+                    cylinder_static_mesh = api:find_uobject("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
                 end
-                if not cylinderInit and Cylinder ~= nil then
-                    cylinderActor = spawn_actor(world, actor_c, temp_vec3:set(0, 0, 0), 1, nil)
-                    if cylinderActor ~= nil then
-                        local cylinderMesh = cylinderActor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
-                        cylinderMesh:SetStaticMesh(Cylinder)
+                if not cylinder_initialized and cylinder_static_mesh ~= nil then
+                    cylinder_actor = spawn_actor(world, actor_c, temp_vec3:set(0, 0, 0), 1, nil)
+                    if cylinder_actor ~= nil then
+                        local cylinderMesh = cylinder_actor:AddComponentByClass(static_mesh_component_c, false, zero_transform, false)
+                        cylinderMesh:SetStaticMesh(cylinder_static_mesh)
                         cylinderMesh:SetVisibility(false)
-                        -- local_scope_mesh:SetHiddenInGame(false)
                         cylinderMesh:SetCollisionEnabled(0)
                     end
-                    cylinderInit = true
+                    cylinder_initialized = true
 
                 end
                 local level = world.PersistentLevel
@@ -656,25 +597,15 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     actual_render_target = nil
                     weapon_mesh = nil
                     reset_static_objects()
-
                     init_static_objects()
-
-                    -- KismetSystemLibrary:LoadAsset(world, )
                 end
-                --fix_effects(world)
                 last_level = level
             end
         end
-        print("get_player_controller")
-        -- reset_scope_actor_if_deleted()
         local playerController = api:get_player_controller()
-        -- print(playerController:get_full_name())
-        print("get_equipped_weapon")
         local weapon_mesh = get_equipped_weapon(playerController)
-        -- print(weapon_mesh:get_full_name())
-        print(" if weapon_mesh")
+        if debugMode then print("check weapon_mesh") end
         if weapon_mesh then
-            -- fix_materials(weapon_mesh)
             local weapon_changed = not current_weapon or 
             not weapon_mesh or 
             not current_weapon or 
@@ -682,9 +613,9 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             current_weapon.StaticMesh == nil or
             weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
             scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
-            print(" if weapon_changed")
+            if debugMode then print("check weapon_mesh changed") end
             if weapon_changed then
-                print(weapon_changed)
+                if debugMode then print(weapon_changed) end
                 if (red_dot_plane_component ~= nil) then
                     red_dot_plane_component:K2_DestroyComponent(red_dot_plane_component)
                     red_dot_plane_component = nil
@@ -693,10 +624,10 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     scope_plane_component:K2_DestroyComponent(scope_plane_component)
                     scope_plane_component = nil
                 end
-                print("Weapon changed")
-                print("Previous weapon: " .. (current_weapon and current_weapon.StaticMesh:get_fname():to_string() or "none"))
+                if debugMode then print("Weapon changed") end
+                if debugMode then print("Previous weapon: " .. (current_weapon and current_weapon.StaticMesh:get_fname():to_string() or "none")) end
                 local currentWeaponString = weapon_mesh.StaticMesh:get_fname():to_string()
-                print("New weapon: " .. currentWeaponString)
+                if debugMode then print("New weapon: " .. currentWeaponString) end
                 
                 -- Update current weapon reference
                 current_weapon = weapon_mesh
@@ -706,26 +637,22 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     spawn_scope(engine, weapon_mesh, isSniper)
                     attach_components_to_weapon(weapon_mesh, isSniper)
                     switch_scope_state(true)
-                    --weapon_mesh:set_property("bHiddenInSceneCapture", true)
                 else
                     switch_scope_state(false)
                 end
-                
-                -- if (current_weapon.)
-                -- Attempt to attach components
-              
+             
             end
-            print(" if scene_capture_component")
+            if debugMode then print("check scene_capture_component") end
             if scene_capture_component ~= nil then
-                print(scene_capture_component:get_full_name())
-                local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(CameraManager_c)
-                print(" if game_camera_manager")
+                if debugMode then print(scene_capture_component:get_full_name()) end
+                local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(cameraManager_c)
+                if debugMode then print("check game_camera_manager") end
                 if game_camera_manager ~= nil then
                     local actualFov = game_camera_manager.CameraCachePrivate.POV.FOV
                     if actualFov >= 70 then
                         actualFov = 70
                     end
-                    print(" if isSniper")
+                    if debugMode then print("check if isSniper") end
                     if isSniper then
                         scene_capture_component.FOVAngle = mapRange(actualFov, 12, 70, 0.75, 2.6) --remap fov range for better VR use
                     else
@@ -733,24 +660,22 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     end
                 end
             end
-            print("after if scene_capture_component")
+            if debugMode then print("after if scene_capture_component") end
         else
-            print("Weapon was removed/unequipped")
+            if debugMode then print("Weapon was removed/unequipped") end
             -- Weapon was removed/unequipped
             if current_weapon then
-                print("Weapon unequipped")
+                if debugMode then print("Weapon unequipped") end
                 current_weapon = nil
                 weapon_mesh = nil
-                --last_scope_state = false
             end
         end
-        print("end of pre tick") 
     end
 )
 
 
 uevr.sdk.callbacks.on_script_reset(function()
-    print("Resetting")
+    if debugMode then print("Resetting") end
     destroy_actor(scope_actor)
     if scope_plane_component ~= nil then
         scope_plane_component:K2_DestroyComponent(scope_plane_component)

@@ -81,7 +81,9 @@ std::vector<MemoryBlock> ingameCameraPositionInstructionsAddresses = {
 	{0x110A29C, 5, 0xf30f114604},
 	{0x11255B3, 5, 0x04f30f114b},
 	{0x11070F0, 5, 0xf30f114304},
-	{0x110A3CB, 5, 0xf30f114604}
+	{0x110A3CB, 5, 0xf30f114604},
+	{0x110D0BC, 3, 0xf20f11},
+	{0x110D0BF, 1, 0x03},
 };
 std::vector<MemoryBlock> ingameCameraPositionSniperAndCamWpnInstructionsAddresses = {
 	{0x110E06D, 3, 0xf30f11},
@@ -156,7 +158,8 @@ std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	//{0x11205E2, 1, 0x00},
 	{0x11077C9, 3, 0xf30f11},
 	{0x11077CC, 1, 0x07},
-	{0x1107C9B, 5, 0xf3440f110f}
+	{0x1107C9B, 5, 0xf3440f110f},
+	{0x110D0F2, 5, 0xf2410f1101}
 };
 std::vector<MemoryBlock> aimingUpVectorInstructionsAddresses = {
 	{0x1105840, 5, 0xf20f118134}, 
