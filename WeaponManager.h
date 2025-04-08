@@ -125,8 +125,8 @@ public:
 		Infrared = 45,
 		Parachute = 46
 	};
-	WeaponType equippedWeaponIndex = Unarmed;
-	WeaponType previousEquippedWeaponIndex = Unarmed;
+	WeaponType currentWeaponEquipped = Unarmed;
+	WeaponType previousWeaponEquipped = Unarmed;
 
 	//aiming
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
@@ -148,7 +148,6 @@ public:
 	void UpdateAimingVectors();
 	void HandleWeaponVisibility();
 	void WeaponHandling(float delta);
-	void DisableMeleeWeaponsUObjectHooks();
-	void ResetWeaponMeshPosAndRot();
+	void UnhookWeaponAndReposition();
 	void HandleCameraWeaponAiming();
 };

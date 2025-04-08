@@ -4,7 +4,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateActualWeaponMesh()");
 
-	if (cameraController->cameraModeIs == CameraController::Camera  && cameraController->cameraModeWas == CameraController::Camera )
+	if (cameraController->currentCameraMode == CameraController::Camera  && cameraController->previousCameraMode == CameraController::Camera )
 		return;
 
 	///////////////////////////////////////////////////////////////
@@ -13,7 +13,8 @@ void WeaponManager::UpdateActualWeaponMesh()
 	// of the player character during a few frames. Making this method of fetch unreliable. This mean the player will end up with a bush,
 	// a tree, or random clothes in it's hand on top of the actual weapon.
 	// I need to add another check to counter that.
-	// In the meantime, fetch is done by array index. Not ideal but never broke so far, even for other users.
+	// In the meantime, fetch is done by array index. Not good practice but never broke so far, even during other users tests.
+	// This array index order seems constant.
 
 	//static auto gta_weapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"Class /Script/GTABase.GTAWeapon");
 	//static auto gta_BPweapon_c = uevr::API::get()->find_uobject<uevr::API::UClass>(L"BlueprintGeneratedClass /Game/SanAndreas/GameData/Blueprints/BP_GTASA_Weapon.BP_GTASA_Weapon_C");
@@ -30,7 +31,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	{
 		uevr::API::get()->log_info("gta_BPplayerCharacter not found.");
 		torso = nullptr;
-		equippedWeaponIndex = Unarmed;
+		currentWeaponEquipped = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
@@ -38,7 +39,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
 	if (torsoChildren.count == 0)
 	{
-		equippedWeaponIndex = Unarmed;
+		currentWeaponEquipped = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
@@ -52,15 +53,15 @@ void WeaponManager::UpdateActualWeaponMesh()
 	}
 	else
 	{
-		equippedWeaponIndex = Unarmed;
+		currentWeaponEquipped = Unarmed;
 		weaponMesh = nullptr;
 		weaponStaticMesh = nullptr;
 		return;
 	}
 
 
-	if (cameraController->cameraModeIs != CameraController::Camera  && (!playerManager->isInVehicle || 
-		cameraController->cameraModeIs == CameraController::AimWeaponFromCar ))
+	if (cameraController->currentCameraMode != CameraController::Camera  && (!playerManager->isInVehicle || 
+		cameraController->currentCameraMode == CameraController::AimWeaponFromCar ))
 	{
 		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
@@ -69,8 +70,8 @@ void WeaponManager::UpdateActualWeaponMesh()
 		motionState->set_hand(1);
 		motionState->set_permanent(true);
 	}
-	if ((cameraController->cameraModeIs != CameraController::Camera  && playerManager->isInVehicle && !playerManager->wasInVehicle) && 
-		cameraController->cameraModeIs != CameraController::AimWeaponFromCar)
+	if ((cameraController->currentCameraMode != CameraController::Camera  && playerManager->isInVehicle && !playerManager->wasInVehicle) && 
+		cameraController->currentCameraMode != CameraController::AimWeaponFromCar)
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 	}
@@ -86,7 +87,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
 	if (it != weaponNameToIndex.end()) {
-		equippedWeaponIndex = static_cast<WeaponType>(it->second);
+		currentWeaponEquipped = static_cast<WeaponType>(it->second);
 	}
 	/*API::get()->log_info("%i", equippedWeaponIndex);*/
 }
@@ -109,7 +110,7 @@ void WeaponManager::UpdateShootingState()
 		return;
 
 	auto actualParticleShot = childrenParticle.data[childrenParticle.count-1];
-	if (actualParticleShot != lastParticleShot/* && childrenParticle.count > shootParticleCount*/)
+	if (actualParticleShot != lastParticleShot)
 	{
 		lastParticleShot = actualParticleShot;
 		isShooting = true;
@@ -120,7 +121,7 @@ void WeaponManager::UpdateAimingVectors()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
 
-	if (cameraController->cameraModeIs == CameraController::Camera)
+	if (cameraController->currentCameraMode == CameraController::Camera)
 	{
 		cameraController->forwardVectorUE = glm::fvec3(
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])),
@@ -130,8 +131,8 @@ void WeaponManager::UpdateAimingVectors()
 		return;
 	}
 	
-	// attempt to fix aggressive spawning of cars.
-	if (aimingCamModes.find((int)cameraController->cameraModeIs) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
+	// If not aiming, synchronise the aiming vector with the camera matrix (prevents the radar from following the gun orientation)
+	if (aimingCamModes.find((int)cameraController->currentCameraMode) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[10];
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = cameraController->cameraMatrixValues[11];
@@ -159,7 +160,7 @@ void WeaponManager::UpdateAimingVectors()
 		bool meleeWeapon = false;
 
 		//mesh alignement weapon offsets
-		switch (equippedWeaponIndex)
+		switch (currentWeaponEquipped)
 		{
 			// All previous are melee weapons
 			// offsets taken from 3D models in Blender by taking 2 points aligned with the barrel. Units is centimeters. 
@@ -288,6 +289,10 @@ void WeaponManager::UpdateAimingVectors()
 
 			aimingDirection = glm::normalize(point2Position - point1Position);
 
+			//The code below compensate for the over the shoulder camera offset. This game's crosshair is not centered.
+			//The game calculate it's aiming vector with the camera direction. We move and align this camera with the gun mesh
+			//so the game can still use the camera values to calculate the shoot traces.
+			//Hacky but functional, if someday this game gets proper reverse engineered we should be able to do better.
 			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
 
 			// Safeguard: Normalize projectedToFloorVector only if valid
@@ -347,9 +352,10 @@ void WeaponManager::UpdateAimingVectors()
 		calculatedAimForward = {aimingDirection.x, -aimingDirection.y, aimingDirection.z};
 		calculatedAimPosition = { point1Position.x * 0.01f, -point1Position.y * 0.01f, point1Position.z * 0.01f};
 
-		if (playerManager->isInVehicle && cameraController->cameraModeIs != CameraController::AimWeaponFromCar || meleeWeapon)
+		// If in vehicle, just use the forwardVector of the camera matrix
+		if (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar || meleeWeapon)
 		{
-			////forward vector
+			//forward vector
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = cameraController->cameraMatrixValues[4];
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = cameraController->cameraMatrixValues[5];
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
@@ -365,12 +371,13 @@ void WeaponManager::UpdateAimingVectors()
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = calculatedAimForward.y;
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = calculatedAimForward.z;
 		}
+		//Fix the up/down aiming for spray weapons
 		if (sprayWeapon)
 		{
 			*(reinterpret_cast<float*>(memoryManager->xAxisSpraysAimAddress)) = aimingDirection.z;
 		}
 	}
-	else //if unarmed
+	else //if player unarmed
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = playerManager->actualPlayerPositionUE.x * 0.01f;
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = -playerManager->actualPlayerPositionUE.y * 0.01f;
@@ -396,7 +403,7 @@ void WeaponManager::HandleWeaponVisibility()
 		return;
 
 	bool hideWeapon = false;
-	switch (equippedWeaponIndex)
+	switch (currentWeaponEquipped)
 	{
 	case NightVision:
 		hideWeapon = true;
@@ -422,10 +429,12 @@ void WeaponManager::WeaponHandling(float delta)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling()");
 
+	//Forces the weapon to get back in it's original position when entering a vehicle. No 6dof possible in cars, devs removed the "free aiming" cheat
+	//that was in the original game.
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();
-		ResetWeaponMeshPosAndRot();
+		UnhookWeaponAndReposition();
 	}
 
 	if (!playerManager->isInVehicle && playerManager->wasInVehicle)
@@ -433,14 +442,14 @@ void WeaponManager::WeaponHandling(float delta)
 		UpdateActualWeaponMesh();
 	}
 
-	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->cameraModeIs != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
+	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
 		return;
 
 	bool shootDetectionFromMemory = false;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
-	switch (equippedWeaponIndex)
+	switch (currentWeaponEquipped)
 	{
 	case Pistol:
 		positionRecoilForce = { 0.0f, -0.005f, -0.5f };
@@ -527,12 +536,13 @@ void WeaponManager::WeaponHandling(float delta)
 		return;
 
 	default:
-		DisableMeleeWeaponsUObjectHooks();
+
+		UnhookWeaponAndReposition();
 		return;
 	}
 
 	if (shootDetectionFromMemory)
-		isShooting = equippedWeaponIndex == previousEquippedWeaponIndex ? memoryManager->isShooting : false;
+		isShooting = currentWeaponEquipped == previousWeaponEquipped ? memoryManager->isShooting : false;
 	
 
 	//Apply Recoil
@@ -573,9 +583,13 @@ void WeaponManager::WeaponHandling(float delta)
 
 void WeaponManager::HandleCameraWeaponAiming()
 {
+	//The camera aiming vector doesn't works like every weapons. Instead it's based on the camera matrix (the original game's one, not the UEVR).
+	//So the aiming has to be manually controlled with joystick.
+
 	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleCameraWeaponAiming()");
 
-	if (cameraController->cameraModeIs == CameraController::Camera  && cameraController->cameraModeWas != CameraController::Camera )
+	// detaching the weaponMesh from motion controls
+	if (cameraController->currentCameraMode == CameraController::Camera  && cameraController->previousCameraMode != CameraController::Camera )
 	{
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 
@@ -585,12 +599,13 @@ void WeaponManager::HandleCameraWeaponAiming()
 		weaponMesh->call_function(L"DetachFromParent", &detachFromParent_params);
 	}
 
-	if (cameraController->cameraModeIs != CameraController::Camera  && cameraController->cameraModeWas == CameraController::Camera )
+	if (cameraController->currentCameraMode != CameraController::Camera  && cameraController->previousCameraMode == CameraController::Camera )
 	{
 		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
 	}
 
-	if (cameraController->cameraModeIs == CameraController::Camera)
+	// Manually sets the camera Mesh to a position in front of the player.
+	if (cameraController->currentCameraMode == CameraController::Camera)
 	{
 		glm::fvec3 cameraOffsetsPoint1 = { 13.8476, -11.6162, -1.72577 };
 		glm::fvec3 cameraOffsetsPoint2 = { 27.6432, -11.6162, -2.84382 };
@@ -627,7 +642,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 	}
 }
 
-void WeaponManager::DisableMeleeWeaponsUObjectHooks()
+void WeaponManager::UnhookWeaponAndReposition()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("DisableMeleeWeaponsUObjectHooks()");
 
@@ -649,24 +664,7 @@ void WeaponManager::DisableMeleeWeaponsUObjectHooks()
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
 
-void WeaponManager::ResetWeaponMeshPosAndRot()
-{
-	if (settingsManager->debugMod) uevr::API::get()->log_info("ResetWeaponMeshPosAndRot()");
 
-	if (weaponMesh == nullptr)
-		return;
-	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
-	setRelativeLocation_params.bSweep = false;
-	setRelativeLocation_params.bTeleport = true;
-	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
-	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
-
-	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
-	setRelativeRotation_params.bSweep = false;
-	setRelativeRotation_params.bTeleport = true;
-	setRelativeRotation_params.newRotation = { 0.0f, 0.0f, 0.0f };
-	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
-}
 
 	//switch (equippedWeaponIndex)
 	//{

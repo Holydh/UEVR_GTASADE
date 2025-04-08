@@ -64,8 +64,8 @@ public:
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		playerManager.FetchPlayerUObjects();
 		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
-		cameraController.cameraModeIs = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
-		MemoryManager::cameraMode = cameraController.cameraModeIs;
+		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
+		MemoryManager::cameraMode = cameraController.currentCameraMode;
 
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
@@ -93,14 +93,14 @@ public:
 
 		// Toggles the game's original instructions when going in and out of a vehicle.
 		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || 
-			(playerManager.isInVehicle && cameraController.cameraModeIs != CameraController::AimWeaponFromCar && 
-				cameraController.cameraModeWas ==  CameraController::AimWeaponFromCar )))
+			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && 
+				cameraController.previousCameraMode ==  CameraController::AimWeaponFromCar )))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
 		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || 
-			(playerManager.isInVehicle && cameraController.cameraModeIs == CameraController::AimWeaponFromCar && 
-				cameraController.cameraModeWas !=  CameraController::AimWeaponFromCar )))
+			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && 
+				cameraController.previousCameraMode !=  CameraController::AimWeaponFromCar )))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
@@ -126,8 +126,8 @@ public:
 		// Keep previous states
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
-		cameraController.cameraModeWas = cameraController.cameraModeIs;
-		weaponManager.previousEquippedWeaponIndex = weaponManager.equippedWeaponIndex;
+		cameraController.previousCameraMode = cameraController.currentCameraMode;
+		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
 	}
 
 
@@ -152,7 +152,7 @@ public:
 			uevr::API::UObjectHook::set_disabled(true);
 
 			playerManager.DisablePlayerUObjectsHook();
-			weaponManager.ResetWeaponMeshPosAndRot();
+			weaponManager.UnhookWeaponAndReposition();
 		}
 	}
 };

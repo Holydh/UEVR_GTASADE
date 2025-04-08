@@ -35,14 +35,14 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	{
 		accumulatedJoystickRotation = glm::mat4(1.0f);
 	}
-	if ((!playerManager->isInVehicle && playerManager->wasInVehicle) || (!playerManager->isInVehicle && camResetRequested) || (cameraModeWas == Camera  && cameraModeIs != Camera ))
+	if ((!playerManager->isInVehicle && playerManager->wasInVehicle) || (!playerManager->isInVehicle && camResetRequested) || (previousCameraMode == Camera  && currentCameraMode != Camera ))
 	{
 		accumulatedJoystickRotation = glm::mat4(1.0f);
 		baseHeadRotation = headRotationMatrix;
 	}
 
 	// Calculate the delta rotation matrix, basically the rotation of the vehicle we're driving if any. 
-	glm::mat4 deltaRotationMatrix = playerManager->isInVehicle && cameraModeIs != AimWeaponFromCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
+	glm::mat4 deltaRotationMatrix = playerManager->isInVehicle && currentCameraMode != AimWeaponFromCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
 
 	// Joystick input to adjust the camera yaw rotation
 	const float DEADZONE = 0.1f;
@@ -81,7 +81,7 @@ void CameraController::ProcessCameraMatrix(float delta) {
 
 	// Letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
 	// also keeps the original audio listener position. Attempt to mitigate it by disabling the overwrite only when shooting in car.
-	if (cameraModeIs == AimWeaponFromCar  || !playerManager->isInVehicle || !playerManager->shootFromCarInput)
+	if (currentCameraMode == AimWeaponFromCar  || !playerManager->isInVehicle || !playerManager->shootFromCarInput)
 	{
 		glm::fvec3 offsetedPosition = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, glm::fvec3(49.5, 0.0, 0.0));
 
@@ -112,13 +112,13 @@ void CameraController::UpdateCameraMatrix()
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateCameraMatrix()");
 
 	// Required for the camera weapon controls (to take photos ingame)
-	if (cameraModeIs != Camera  && cameraModeWas == Camera )
+	if (currentCameraMode != Camera  && previousCameraMode == Camera )
 	{
 		memoryManager->ToggleAllMemoryInstructions(false);
 	}
-	if (cameraModeIs == Camera  && cameraModeWas != Camera )
+	if (currentCameraMode == Camera  && previousCameraMode != Camera )
 		memoryManager->ToggleAllMemoryInstructions(true);
-	if (cameraModeIs == Camera )
+	if (currentCameraMode == Camera )
 	{
 		return;
 	}
@@ -134,11 +134,11 @@ void CameraController::ProcessHookedHeadPosition(float delta)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("ProcessHookedHeadPosition()");
 
-	if (cameraModeIs != Fixed  && cameraModeWas == Fixed  )
+	if (currentCameraMode != Fixed  && previousCameraMode == Fixed  )
 		keepCameraHeight = true ;
 
 	//Workaround : Forces the VR camera height when player is in his garage.
-	if (playerManager->isInVehicle || cameraModeIs == Fixed  || keepCameraHeight)
+	if (playerManager->isInVehicle || currentCameraMode == Fixed  || keepCameraHeight)
 	{
 		Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 		setRelativeLocation_params.bSweep = false;
@@ -156,7 +156,7 @@ void CameraController::ProcessHookedHeadPosition(float delta)
 	}
 
 	//Fixes the VR camera height when player handles the camera weapon.
-	if (cameraModeIs == Camera )
+	if (currentCameraMode == Camera )
 	{
 		Utilities::Parameter_K2_SetWorldOrRelativeLocation setWorldLocation_params{};
 		setWorldLocation_params.bSweep = false;
@@ -176,7 +176,6 @@ void CameraController::ProcessHookedHeadPosition(float delta)
 void CameraController::FixUnderwaterView(bool enableFix)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("FixUnderwaterView()");
-	//API::get()->log_info("fixing underwater");
 	const auto underwaterMaterial = uevr::API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
 	//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());
 	underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);

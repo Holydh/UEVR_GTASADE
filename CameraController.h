@@ -99,8 +99,8 @@ public:
 		DwPlaneCam3 = 64,
 		AimWeaponAttached = 65
 	};
-	CameraMode cameraModeIs = None;
-	CameraMode cameraModeWas = None;
+	CameraMode currentCameraMode = None;
+	CameraMode previousCameraMode = None;
 	bool camResetRequested = false;
 	float keepCameraHeightTime = 2.0f;
 	float keepCameraHeightTimer = 0.0f;
