@@ -571,7 +571,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             local world = viewport.World
             if world then
 
-                if cylinder_static_mesh == nil then
+                if validate_object(cylinder_static_mesh) == nil then
                     cylinder_static_mesh = api:find_uobject("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
                 end
                 if not cylinder_initialized and cylinder_static_mesh ~= nil then
@@ -583,10 +583,8 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                         cylinderMesh:SetCollisionEnabled(0)
                     end
                     cylinder_initialized = true
-
                 end
                 local level = world.PersistentLevel
-                print("PersistentLevel")
 
                 if last_level ~= level then
                     print("Level changed .. Reseting")
@@ -607,10 +605,8 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         if debugMode then print("check weapon_mesh") end
         if weapon_mesh then
             local weapon_changed = not current_weapon or 
-            not weapon_mesh or 
-            not current_weapon or 
+            current_weapon.StaticMesh == nil or -- this one
             weapon_mesh.StaticMesh == nil or
-            current_weapon.StaticMesh == nil or
             weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
             scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
             if debugMode then print("check weapon_mesh changed") end
