@@ -5,6 +5,8 @@ local debugMode = false
 local api = uevr.api
 
 -- Static variables
+local sniperRenderTargetResolution = {1024, 1024}
+local cameraRenderTargetResolution = {720, 1280}
 local emissive_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
 local cylinder_mesh_name = "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder"
 local red_dot_texture_name = "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC"
@@ -255,10 +257,10 @@ local function get_render_target(world, isSniper)
     sniperRenderTarget = validate_object(sniperRenderTarget)
     cameraRenderTarget = validate_object(cameraRenderTarget)
     if cameraRenderTarget == nil then
-        cameraRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, 720, 1280, 6, zero_color, false)
+        cameraRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, cameraRenderTargetResolution[1], cameraRenderTargetResolution[2], 6, zero_color, false)
     end
     if sniperRenderTarget == nil then
-        sniperRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, 1024, 1024, 6, zero_color, false)
+        sniperRenderTarget = KismetRenderingLibrary:CreateRenderTarget2D(world, sniperRenderTargetResolution[1], sniperRenderTargetResolution[2], 6, zero_color, false)
     end
     if isSniper then
         actual_render_target = sniperRenderTarget
