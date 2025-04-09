@@ -132,11 +132,11 @@ void WeaponManager::UpdateAimingVectors()
 	}
 	
 	// If not aiming, synchronise the aiming vector with the camera matrix (prevents the radar from following the gun orientation)
-	if (aimingCamModes.find((int)cameraController->currentCameraMode) == aimingCamModes.end()) //check if the current camera mode is in the aiming cam, if not, return
+	if (camModsRequiringAimHandling.find((int)cameraController->currentCameraMode) == camModsRequiringAimHandling.end()) //check if the current camera mode is in the aiming cam, if not, return
 	{
-		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[10];
-		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = cameraController->cameraMatrixValues[11];
-		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[2])) = cameraController->cameraMatrixValues[12];
+		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[12];
+		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = cameraController->cameraMatrixValues[13];
+		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[2])) = cameraController->cameraMatrixValues[14];
 
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = cameraController->cameraMatrixValues[4];
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = cameraController->cameraMatrixValues[5];

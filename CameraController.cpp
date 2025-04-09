@@ -70,13 +70,11 @@ void CameraController::ProcessCameraMatrix(float delta) {
 		cameraMatrixValues[i] = finalRotationMatrix[i / 4][i % 4];
 	}
 
-	UpdateCameraMatrix();
-
 	//Runs if player loads a save or after a cinematic, resets the camera to the camera heading direction
 	if (camResetRequested) {
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[0])) = -1;
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[5])) = 1;
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[10])) = 1;
+		cameraMatrixValues[0] = -1;
+		cameraMatrixValues[5] = 1;
+		cameraMatrixValues[10] = 1;
 	}
 
 	// Letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
@@ -85,10 +83,12 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	{
 		glm::fvec3 offsetedPosition = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, glm::fvec3(49.5, 0.0, 0.0));
 
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[12])) = offsetedPosition.x * 0.01f;
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[13])) = -offsetedPosition.y * 0.01f;
-		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[14])) = offsetedPosition.z * 0.01f;
+		cameraMatrixValues[12] = offsetedPosition.x * 0.01f;
+		cameraMatrixValues[13] = -offsetedPosition.y * 0.01f;
+		cameraMatrixValues[14] = offsetedPosition.z * 0.01f;
 	}
+
+	UpdateCameraMatrix();
 
 	// Update some vars. The game's source code doesn't use the Unreal Engine unit scale. 
 	// GTA SA original unit scale = UE Scale / 100.
@@ -124,7 +124,7 @@ void CameraController::UpdateCameraMatrix()
 	}
 
 	// Write the modified matrix back to memory
-	for (int i = 0; i < 12; ++i) {
+	for (int i = 0; i < 15; ++i) {
 		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 	}
 }

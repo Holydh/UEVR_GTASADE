@@ -132,7 +132,7 @@ public:
 	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
 	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
-	std::unordered_set<int> aimingCamModes = {5, 7, 8, 9, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
+	std::unordered_set<int> camModsRequiringAimHandling = {5, 7, 8, 9, 15, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
 
 	//recoil
 	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
