@@ -1,21 +1,32 @@
 #include "SettingsManager.h"
 
 
-void SettingsManager::UpdateSettings()
+void SettingsManager::UpdateUevrSettings()
 {
-	if (debugMod) uevr::API::get()->log_info("UpdateSettings()");
+	if (debugMod) uevr::API::get()->log_info("UpdateUevrSettings()");
 
-	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(configFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
-	decoupledPitch = SettingsManager::GetBoolValueFromFile(configFilePath, "VR_DecoupledPitch", true);
-	lerpPitch = SettingsManager::GetBoolValueFromFile(configFilePath, "VR_LerpCameraPitch", true);
-	lerpRoll = SettingsManager::GetBoolValueFromFile(configFilePath, "VR_LerpCameraRoll", true);
+	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
+	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
+	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
+	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
+	lerpPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraPitch", true);
+	lerpRoll = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraRoll", true);
+	uevr::API::get()->log_info("UEVR Settings Updated");
+}
+
+void SettingsManager::UpdatePluginSettings()
+{
+	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
+	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
+	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
+	uevr::API::get()->log_info("Plugin Settings Updated");
 }
 
 void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
 {
-	SetBoolValueToFile(configFilePath, "VR_DecoupledPitch", enable ? storedDecoupledPitch : false);
-	SetBoolValueToFile(configFilePath, "VR_LerpCameraPitch", enable ? storedLerpPitch : false);
-	SetBoolValueToFile(configFilePath, "VR_LerpCameraRoll", enable ? storedLerpRoll : false);
+	SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", enable ? storedDecoupledPitch : false);
+	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", enable ? storedLerpPitch : false);
+	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", enable ? storedLerpRoll : false);
 	uevr::API::VR::reload_config();
 }
 
@@ -26,7 +37,7 @@ void SettingsManager::CacheSettings()
 	storedLerpRoll = lerpRoll;
 }
 
-bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath)
+bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath, bool uevr)
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified()");
 
@@ -40,10 +51,18 @@ bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath)
 	FILETIME currentWriteTime;
 	if (GetFileTime(hFile, NULL, NULL, &currentWriteTime))
 	{
-		if (CompareFileTime(&lastWriteTime, &currentWriteTime) != 0)
+		if (CompareFileTime(uevr ? &uevrLastWriteTime : &pluginLastWriteTime, &currentWriteTime) != 0)
 		{
-			lastWriteTime = currentWriteTime;  // Update last write time
-			UpdateSettings();
+			if (uevr)
+			{
+				uevrLastWriteTime = currentWriteTime;  // Update last write time
+				UpdateUevrSettings();
+			}
+			else
+			{
+				pluginLastWriteTime = currentWriteTime; 
+				UpdatePluginSettings();
+			}
 			CloseHandle(hFile);
 			return true;  // File has been modified
 		}
@@ -229,7 +248,7 @@ std::string GetDLLDirectory()
 	return "Unknown";
 }
 
-std::string SettingsManager::GetConfigFilePath()
+std::string SettingsManager::GetConfigFilePath(bool uevr)
 {
 	if (debugMod) uevr::API::get()->log_info("GetConfigFilePath()");
 
@@ -247,5 +266,5 @@ std::string SettingsManager::GetConfigFilePath()
 		}
 	}
 
-	return fullPath + "config.txt"; // Append "config.txt"
+	return fullPath + (uevr ? "config.txt" : "gtaVRplugin.txt"); // Append "config.txt"
 }

@@ -46,9 +46,11 @@ public:
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
-		settingsManager.configFilePath = settingsManager.GetConfigFilePath();
-		API::get()->log_info("%s", settingsManager.configFilePath.c_str());
-		settingsManager.UpdateSettings();
+		settingsManager.uevrConfigFilePath = settingsManager.GetConfigFilePath(true);
+		settingsManager.pluginConfigFilePath = settingsManager.GetConfigFilePath(false);
+		API::get()->log_info("%s", settingsManager.uevrConfigFilePath.c_str());
+		settingsManager.UpdateUevrSettings();
+		settingsManager.UpdatePluginSettings();
 		settingsManager.CacheSettings();
 		
 		//Set up the memory addresses
@@ -88,7 +90,8 @@ public:
 			uevr::API::UObjectHook::set_disabled(true);
 			playerManager.RepositionPlayerUObjectsHooked();
 			weaponManager.UnhookAndRepositionWeapon();
-			uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
+			if (settingsManager.autoDecoupledPitchDuringCutscenes)
+				uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
 		}
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
@@ -97,7 +100,8 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
 			uevr::API::UObjectHook::set_disabled(false);
-			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
+			if (settingsManager.autoDecoupledPitchDuringCutscenes)
+				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
 		}
 
 		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
@@ -106,7 +110,7 @@ public:
 			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
-			if (playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
+			if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
 			{
 				settingsManager.CacheSettings();
 				settingsManager.SetPitchAndLerpSettingsForFlight(false);
@@ -116,9 +120,11 @@ public:
 			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
-			uevr::API::get()->log_info("reapply store decouple pitch : %i", settingsManager.storedDecoupledPitch);
-			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset the setting to user preset
-			settingsManager.SetPitchAndLerpSettingsForFlight(true); // reset the setting to user preset
+			if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
+			{
+				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
+				settingsManager.SetPitchAndLerpSettingsForFlight(true);
+			}
 		}
 
 		// Toggles the game's original instructions for the camera weapon controls
@@ -145,7 +151,8 @@ public:
 		}
 		weaponManager.ProcessWeaponVisibility();
 
-		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
+		settingsManager.UpdateSettingsIfModified(settingsManager.uevrConfigFilePath, true);
+		settingsManager.UpdateSettingsIfModified(settingsManager.pluginConfigFilePath, false);
 
 		// Keep previous states
 		playerManager.wasInControl = playerManager.isInControl;

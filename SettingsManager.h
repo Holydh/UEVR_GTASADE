@@ -11,6 +11,8 @@ private:
 public:
 	bool debugMod = false;
 
+	bool autoPitchAndLerpForFlight = false;
+	bool autoDecoupledPitchDuringCutscenes = false;
 	bool decoupledPitch = false;
 	bool storedDecoupledPitch = false;
 	bool lerpPitch = false;
@@ -18,14 +20,17 @@ public:
 	bool lerpRoll = false;
 	bool storedLerpRoll = false;
 
-	std::string configFilePath;
-	FILETIME lastWriteTime;
+	std::string uevrConfigFilePath;
+	FILETIME uevrLastWriteTime;
+	std::string pluginConfigFilePath;
+	FILETIME pluginLastWriteTime;
 
 	float xAxisSensitivity = 125.0f;
 
-	std::string GetConfigFilePath();
-	bool UpdateSettingsIfModified(const std::string& filePath);
-	void UpdateSettings();
+	std::string GetConfigFilePath(bool uevr);
+	bool UpdateSettingsIfModified(const std::string& filePath, bool uevr);
+	void UpdateUevrSettings();
+	void UpdatePluginSettings();
 
 	void CacheSettings(); // For situations where we need to modify UEVR config temporarily
 	void SetPitchAndLerpSettingsForFlight(bool enable);
