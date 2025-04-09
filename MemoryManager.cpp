@@ -443,6 +443,7 @@ void MemoryManager::NopVehicleRelatedMemoryInstructions()
 	NopMemory(aimingUpVectorInstructionsAddresses);
 	NopMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	NopMemory(sniperAimingVectorInstructionsAddresses);
+	vehicleRelatedMemoryInstructionsNoped = true;
 };
 
 void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
@@ -456,6 +457,7 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	RestoreMemory(aimingUpVectorInstructionsAddresses);
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
+	vehicleRelatedMemoryInstructionsNoped = false;
 }
 
 void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
@@ -487,6 +489,7 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 		RestoreMemory(sniperAimingVectorInstructionsAddresses);
 		RestoreMemory(carAimingVectorInstructionsAddresses);
 	}
+	vehicleRelatedMemoryInstructionsNoped = !restoreInstructions;
 }
 
 	//Finds address from pointer offsets found in cheat engine

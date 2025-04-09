@@ -76,10 +76,10 @@ public:
 	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
 
     void AdjustAddresses();
+	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
-	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
-	
+	bool vehicleRelatedMemoryInstructionsNoped = false;
 	static bool isShooting;
 
 	void InstallBreakpoints();

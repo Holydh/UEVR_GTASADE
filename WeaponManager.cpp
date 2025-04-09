@@ -117,7 +117,7 @@ void WeaponManager::UpdateShootingState()
 	}
 }
 
-void WeaponManager::UpdateAimingVectors()
+void WeaponManager::ProcessAiming()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
 
@@ -132,7 +132,7 @@ void WeaponManager::UpdateAimingVectors()
 	}
 	
 	// If not aiming, synchronise the aiming vector with the camera matrix (prevents the radar from following the gun orientation)
-	if (camModsRequiringAimHandling.find((int)cameraController->currentCameraMode) == camModsRequiringAimHandling.end()) //check if the current camera mode is in the aiming cam, if not, return
+	if (!playerManager->isInVehicle && camModsRequiringAimHandling.find((int)cameraController->currentCameraMode) == camModsRequiringAimHandling.end()) //check if the current camera mode is in the aiming cam, if not, return
 	{
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) = cameraController->cameraMatrixValues[12];
 		*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) = cameraController->cameraMatrixValues[13];
@@ -355,6 +355,7 @@ void WeaponManager::UpdateAimingVectors()
 		// If in vehicle, just use the forwardVector of the camera matrix
 		if (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar || meleeWeapon)
 		{
+			//uevr::API::get()->log_info("UpdateAimingVectors isInVehicle");
 			//forward vector
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[0])) = cameraController->cameraMatrixValues[4];
 			*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[1])) = cameraController->cameraMatrixValues[5];
@@ -395,7 +396,7 @@ void WeaponManager::UpdateAimingVectors()
 		);
 }
 
-void WeaponManager::HandleWeaponVisibility()
+void WeaponManager::ProcessWeaponVisibility()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleWeaponVisibility()");
 
@@ -425,7 +426,7 @@ void WeaponManager::HandleWeaponVisibility()
 	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.boolValue);
 }
 
-void WeaponManager::WeaponHandling(float delta)
+void WeaponManager::ProcessWeaponHandling(float delta)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling()");
 

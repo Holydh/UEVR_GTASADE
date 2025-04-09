@@ -145,9 +145,9 @@ public:
 	void UpdateActualWeaponMesh();
 	void HideBulletTrace();
 	void UpdateShootingState();
-	void UpdateAimingVectors();
-	void HandleWeaponVisibility();
-	void WeaponHandling(float delta);
+	void ProcessAiming();
+	void ProcessWeaponVisibility();
+	void ProcessWeaponHandling(float delta);
 	void UnhookWeaponAndReposition();
 	void HandleCameraWeaponAiming();
 };

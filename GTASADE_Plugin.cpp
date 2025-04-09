@@ -94,15 +94,13 @@ public:
 		}
 
 		// Toggles the game's original instructions when going in and out of a vehicle.
-		if (playerManager.isInControl && ((playerManager.isInVehicle && !playerManager.wasInVehicle) || 
-			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && 
-				cameraController.previousCameraMode ==  CameraController::AimWeaponFromCar )))
+		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
+			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
 		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
 		}
-		if (playerManager.isInControl && ((!playerManager.isInVehicle && playerManager.wasInVehicle) || 
-			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && 
-				cameraController.previousCameraMode !=  CameraController::AimWeaponFromCar )))
+		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
+			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 		}
@@ -118,12 +116,12 @@ public:
 				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition(delta);
 				weaponManager.UpdateShootingState();
-				weaponManager.UpdateAimingVectors();
+				weaponManager.ProcessAiming();
 			}
 
-			weaponManager.WeaponHandling(delta);
+			weaponManager.ProcessWeaponHandling(delta);
 		}
-		weaponManager.HandleWeaponVisibility();
+		weaponManager.ProcessWeaponVisibility();
 
 		// Keep previous states
 		playerManager.wasInControl = playerManager.isInControl;

@@ -124,7 +124,8 @@ void CameraController::UpdateCameraMatrix()
 	}
 
 	// Write the modified matrix back to memory
-	for (int i = 0; i < 15; ++i) {
+	int arrayMaxIndex = playerManager->isInVehicle ? 12 : 15; //let the game handle the ingame camera position when driving
+	for (int i = 0; i < arrayMaxIndex; ++i) {
 		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[i])) = cameraMatrixValues[i];
 	}
 }
