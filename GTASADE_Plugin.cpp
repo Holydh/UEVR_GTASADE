@@ -96,14 +96,16 @@ public:
 		// Toggles the game's original instructions when going in and out of a vehicle.
 		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
 			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
-		}
-		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
+		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped && cameraController.currentCameraMode != CameraController::Camera) || 
 			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
-		}
+
+		// Required for the camera weapon controls (to take photos ingame)
+		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
+			memoryManager.ToggleAllMemoryInstructions(false);
+		if (cameraController.currentCameraMode == CameraController::Camera && cameraController.previousCameraMode != CameraController::Camera)
+			memoryManager.ToggleAllMemoryInstructions(true);
 	
 		// VR mod processing :
 		if (playerManager.isInControl)

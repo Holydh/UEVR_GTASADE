@@ -110,18 +110,9 @@ void CameraController::ProcessCameraMatrix(float delta) {
 void CameraController::UpdateCameraMatrix()
 {	
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateCameraMatrix()");
-
-	// Required for the camera weapon controls (to take photos ingame)
-	if (currentCameraMode != Camera  && previousCameraMode == Camera )
-	{
-		memoryManager->ToggleAllMemoryInstructions(false);
-	}
-	if (currentCameraMode == Camera  && previousCameraMode != Camera )
-		memoryManager->ToggleAllMemoryInstructions(true);
+		
 	if (currentCameraMode == Camera )
-	{
 		return;
-	}
 
 	// Write the modified matrix back to memory
 	int arrayMaxIndex = playerManager->isInVehicle ? 12 : 15; //let the game handle the ingame camera position when driving
