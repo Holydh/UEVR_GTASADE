@@ -489,6 +489,7 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 		RestoreMemory(sniperAimingVectorInstructionsAddresses);
 		RestoreMemory(carAimingVectorInstructionsAddresses);
 	}
+
 }
 
 	//Finds address from pointer offsets found in cheat engine

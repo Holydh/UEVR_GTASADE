@@ -46,8 +46,10 @@ public:
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
+
 		settingsManager.configFilePath = settingsManager.GetConfigFilePath();
 		API::get()->log_info("%s", settingsManager.configFilePath.c_str());
+		settingsManager.UpdateSettings();
 		
 		//Set up the memory addresses
 		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
@@ -76,14 +78,6 @@ public:
 		
 
 		// Handles the cutscenes and various points in which the camera should be freed from VR controls.
-		if (playerManager.isInControl && !playerManager.wasInControl)
-		{
-			if (settingsManager.debugMod) API::get()->log_info("playerIsInControl");
-			cameraController.camResetRequested = true;
-			memoryManager.ToggleAllMemoryInstructions(false);
-			memoryManager.InstallBreakpoints();
-			uevr::API::UObjectHook::set_disabled(false);
-		}
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
@@ -93,6 +87,17 @@ public:
 			uevr::API::UObjectHook::set_disabled(true);
 			playerManager.RepositionPlayerUObjectsHooked();
 			weaponManager.UnhookAndRepositionWeapon();
+			uevr::API::VR::set_decoupled_pitch_enabled(true); // force decoupled pitch during cutscenes
+		}
+		if (playerManager.isInControl && !playerManager.wasInControl)
+		{
+			if (settingsManager.debugMod) API::get()->log_info("playerIsInControl");
+			cameraController.camResetRequested = true;
+			memoryManager.ToggleAllMemoryInstructions(false);
+			memoryManager.InstallBreakpoints();
+			uevr::API::UObjectHook::set_disabled(false);
+			if (!settingsManager.decoupledPitch) // redisable decoupled pitch after cutscene if needed by player
+				uevr::API::VR::set_decoupled_pitch_enabled(false);
 		}
 
 		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
