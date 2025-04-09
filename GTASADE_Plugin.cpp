@@ -6,6 +6,7 @@
 #include "PlayerManager.h"
 #include "WeaponManager.h"
 #include "Utilities.h"
+//#include <chrono>
 
 using namespace uevr;
 
@@ -56,6 +57,7 @@ public:
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
+		/*auto start = std::chrono::high_resolution_clock::now();*/
 		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		//Fetch various states from memory
@@ -128,6 +130,10 @@ public:
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.previousCameraMode = cameraController.currentCameraMode;
 		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
+		//auto end = std::chrono::high_resolution_clock::now();
+		//auto duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		//API::get()->log_info("execution time : %lld micro seconds", duration_ms.count());
+		//Last test average = 85,150537634409 micro seconds
 	}
 
 
