@@ -39,7 +39,9 @@ public:
 		memoryManager.RemoveExceptionHandler();
 		memoryManager.ToggleAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
-		ToggleAllUObjectHooks(false);
+		uevr::API::UObjectHook::set_disabled(true);
+		playerManager.RepositionPlayerUObjectsHooked();
+		weaponManager.UnhookAndRepositionWeapon();
 	}
 
 	void on_initialize() override {
@@ -80,32 +82,32 @@ public:
 			cameraController.camResetRequested = true;
 			memoryManager.ToggleAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
-			ToggleAllUObjectHooks(true);
+			uevr::API::UObjectHook::set_disabled(false);
 		}
-		else
-			cameraController.camResetRequested = false;
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
 			memoryManager.ToggleAllMemoryInstructions(true);
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
-			ToggleAllUObjectHooks(false);
+			uevr::API::UObjectHook::set_disabled(true);
+			playerManager.RepositionPlayerUObjectsHooked();
+			weaponManager.UnhookAndRepositionWeapon();
 		}
 
-		// Toggles the game's original instructions when going in and out of a vehicle.
+		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
 		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
 			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
 			memoryManager.RestoreVehicleRelatedMemoryInstructions();
-		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped && cameraController.currentCameraMode != CameraController::Camera) || 
+		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) || 
 			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
 			memoryManager.NopVehicleRelatedMemoryInstructions();
 
-		// Required for the camera weapon controls (to take photos ingame)
-		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
-			memoryManager.ToggleAllMemoryInstructions(false);
+		// Toggles the game's original instructions for the camera weapon controls
 		if (cameraController.currentCameraMode == CameraController::Camera && cameraController.previousCameraMode != CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(true);
+		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
+			memoryManager.ToggleAllMemoryInstructions(false);
 	
 		// VR mod processing :
 		if (playerManager.isInControl)
@@ -147,19 +149,6 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
-	}
-
-	void ToggleAllUObjectHooks(bool enable)
-	{
-		if (enable)
-			uevr::API::UObjectHook::set_disabled(false);
-		else
-		{
-			uevr::API::UObjectHook::set_disabled(true);
-
-			playerManager.DisablePlayerUObjectsHook();
-			weaponManager.UnhookWeaponAndReposition();
-		}
 	}
 };
 

@@ -435,7 +435,7 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();
-		UnhookWeaponAndReposition();
+		UnhookAndRepositionWeapon();
 	}
 
 	if (!playerManager->isInVehicle && playerManager->wasInVehicle)
@@ -538,7 +538,7 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 
 	default:
 
-		UnhookWeaponAndReposition();
+		UnhookAndRepositionWeapon();
 		return;
 	}
 
@@ -643,7 +643,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 	}
 }
 
-void WeaponManager::UnhookWeaponAndReposition()
+void WeaponManager::UnhookAndRepositionWeapon()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("DisableMeleeWeaponsUObjectHooks()");
 

@@ -27,5 +27,5 @@ public:
 	bool shootFromCarInput = false;
 
 	void FetchPlayerUObjects();
-	void DisablePlayerUObjectsHook();
+	void RepositionPlayerUObjectsHooked();
 };

@@ -105,6 +105,8 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	upVectorUE = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[8])),
 		-*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[9])),
 		*(reinterpret_cast<float*>(memoryManager->cameraMatrixAddresses[10])));
+	
+	camResetRequested = false;
 }
 
 void CameraController::UpdateCameraMatrix()

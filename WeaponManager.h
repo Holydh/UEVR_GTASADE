@@ -148,6 +148,6 @@ public:
 	void ProcessAiming();
 	void ProcessWeaponVisibility();
 	void ProcessWeaponHandling(float delta);
-	void UnhookWeaponAndReposition();
+	void UnhookAndRepositionWeapon();
 	void HandleCameraWeaponAiming();
 };

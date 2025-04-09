@@ -20,7 +20,7 @@ void PlayerManager::FetchPlayerUObjects()
 	}
 }
 
-void PlayerManager::DisablePlayerUObjectsHook()
+void PlayerManager::RepositionPlayerUObjectsHooked()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("DisablePlayerUObjectsHook()");
 
