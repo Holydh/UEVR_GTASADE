@@ -46,7 +46,6 @@ public:
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
-
 		settingsManager.configFilePath = settingsManager.GetConfigFilePath();
 		API::get()->log_info("%s", settingsManager.configFilePath.c_str());
 		settingsManager.UpdateSettings();
@@ -62,32 +61,32 @@ public:
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
 		/*auto start = std::chrono::high_resolution_clock::now();*/
-		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		//Fetch various states from memory
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
 		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
-		playerManager.FetchPlayerUObjects();
-		bool weaponWheelDisplayed = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
+		playerManager.weaponWheelEnabled = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
 		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
 		MemoryManager::cameraMode = cameraController.currentCameraMode;
 
+		playerManager.FetchPlayerUObjects();
+
 		if (!cameraController.waterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
-		
 
-		// Handles the cutscenes and various points in which the camera should be freed from VR controls.
+		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
+			settingsManager.storedDecoupledPitch = settingsManager.decoupledPitch;
 			memoryManager.ToggleAllMemoryInstructions(true);
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
 			uevr::API::UObjectHook::set_disabled(true);
 			playerManager.RepositionPlayerUObjectsHooked();
 			weaponManager.UnhookAndRepositionWeapon();
-			uevr::API::VR::set_decoupled_pitch_enabled(true); // force decoupled pitch during cutscenes
+			uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
 		}
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
@@ -96,8 +95,7 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
 			uevr::API::UObjectHook::set_disabled(false);
-			if (!settingsManager.decoupledPitch) // redisable decoupled pitch after cutscene if needed by player
-				uevr::API::VR::set_decoupled_pitch_enabled(false);
+			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user value
 		}
 
 		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
@@ -120,7 +118,7 @@ public:
 			weaponManager.UpdateActualWeaponMesh();
 			if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
 			
-			if (!weaponWheelDisplayed)
+			if (!playerManager.weaponWheelEnabled)
 			{
 				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition(delta);
@@ -131,6 +129,8 @@ public:
 			weaponManager.ProcessWeaponHandling(delta);
 		}
 		weaponManager.ProcessWeaponVisibility();
+
+		settingsManager.UpdateSettingsIfModified(settingsManager.configFilePath);
 
 		// Keep previous states
 		playerManager.wasInControl = playerManager.isInControl;

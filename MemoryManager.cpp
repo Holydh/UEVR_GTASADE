@@ -419,14 +419,10 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
 	playerIsInControlAddress += baseAddressGameEXE;
-
 	playerIsInVehicleAddress += baseAddressGameEXE;
 	weaponWheelDisplayedAddress += baseAddressGameEXE;
-
 	cameraModeAddress += baseAddressGameEXE;
-
 	xAxisSpraysAimAddress += baseAddressGameEXE;
-
 	playerShootInstructionAddress += baseAddressGameEXE;
 	//cameraShootInstructionAddress += baseAddressGameEXE;
 	playerShootFromCarInputAddress += baseAddressGameEXE;

@@ -69,7 +69,9 @@ bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const st
 		size_t equalPos = fileContents.find('=', pos);
 		if (equalPos != std::string::npos)
 		{
-			std::string valueStr = fileContents.substr(equalPos + 1);
+			// Find the end of the line after the '='
+			size_t endOfLine = fileContents.find_first_of("\r\n", equalPos);
+			std::string valueStr = fileContents.substr(equalPos + 1, endOfLine - (equalPos + 1));
 
 			// Trim whitespace
 			valueStr.erase(0, valueStr.find_first_not_of(" \t\n\r"));
@@ -77,6 +79,8 @@ bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const st
 
 			// Convert to lowercase
 			std::transform(valueStr.begin(), valueStr.end(), valueStr.begin(), ::tolower);
+
+			uevr::API::get()->log_info("Extracted value: %s", valueStr.c_str());
 
 			if (valueStr == "true") return true;
 			if (valueStr == "false") return false;

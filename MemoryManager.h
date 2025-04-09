@@ -66,6 +66,7 @@ public:
 
 	static int cameraMode;
 	uintptr_t cameraModeAddress = 0x53E2580;
+	//uintptr_t isCutScenePlayingAddress = 0x53E254C;
 
 	uintptr_t playerIsInControlAddress = 0x53E8840;
 	uintptr_t playerIsInVehicleAddress = 0x51B39D4;

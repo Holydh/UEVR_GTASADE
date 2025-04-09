@@ -12,6 +12,7 @@ public:
 	bool debugMod = false;
 
 	bool decoupledPitch = false;
+	bool storedDecoupledPitch = false;
 	bool lerpPitch = false;
 	bool lerpRoll = false;
 

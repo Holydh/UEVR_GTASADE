@@ -25,6 +25,7 @@ public:
 	bool isInVehicle = false;
 	bool wasInVehicle = false;
 	bool shootFromCarInput = false;
+	bool weaponWheelEnabled = false;
 
 	void FetchPlayerUObjects();
 	void RepositionPlayerUObjectsHooked();
