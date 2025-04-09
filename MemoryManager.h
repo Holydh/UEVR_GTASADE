@@ -70,6 +70,7 @@ public:
 
 	uintptr_t playerIsInControlAddress = 0x53E8840;
 	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
+	uintptr_t vehicleTypeAddress = 0x5031278;
 	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
 	static uintptr_t playerShootInstructionAddress;
 	uintptr_t weaponWheelDisplayedAddress = 0x507C580;

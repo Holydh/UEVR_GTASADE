@@ -420,6 +420,7 @@ void MemoryManager::AdjustAddresses() {
 
 	playerIsInControlAddress += baseAddressGameEXE;
 	playerIsInVehicleAddress += baseAddressGameEXE;
+	vehicleTypeAddress += baseAddressGameEXE;
 	weaponWheelDisplayedAddress += baseAddressGameEXE;
 	cameraModeAddress += baseAddressGameEXE;
 	xAxisSpraysAimAddress += baseAddressGameEXE;

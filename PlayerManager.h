@@ -24,6 +24,14 @@ public:
 	bool wasInControl = false;
 	bool isInVehicle = false;
 	bool wasInVehicle = false;
+	enum VehicleType {
+		OnFoot = 4,
+		CarOrBoat = 10,
+		Bike = 13,
+		Helicopter = 16,
+		Plane = 19,
+	};
+	VehicleType vehicleType = OnFoot;
 	bool shootFromCarInput = false;
 	bool weaponWheelEnabled = false;
 
