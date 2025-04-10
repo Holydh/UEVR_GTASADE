@@ -81,7 +81,7 @@ public:
 	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
-	bool vehicleRelatedMemoryInstructionsNoped = false;
+	bool vehicleRelatedMemoryInstructionsNoped = true;
 	static bool isShooting;
 
 	void InstallBreakpoints();
