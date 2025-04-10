@@ -5,8 +5,9 @@ local debugMode = false
 local api = uevr.api
 
 -- Static variables
-local sniperRenderTargetResolution = {1024, 1024}
-local cameraRenderTargetResolution = {720, 1280}
+local sniperRenderTargetResolution = {1024, 1024} -- You can lower these values for better performance. Keep the aspect ratio.
+local cameraRenderTargetResolution = {720, 1280} -- Same here
+
 local emissive_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
 local cylinder_mesh_name = "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder"
 local red_dot_texture_name = "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC"
@@ -22,7 +23,6 @@ local KismetRenderingLibrary = nil
 local KismetMaterialLibrary = nil
 local KismetSystemLibrary = nil
 local actor_c = nil
-local static_mesh_component_c = nil
 local static_mesh_c = nil
 local texture2D_c = nil
 local scene_capture_component_c = nil
@@ -34,6 +34,7 @@ local cylinder_static_mesh = nil
 local emissive_material_amplifier = 2.0 
 
 -- Instance variables
+local weapon_mesh = nil
 local scope_actor = nil
 local scope_plane_component = nil
 local red_dot_plane_component = nil
@@ -138,21 +139,14 @@ local function init_static_objects()
     -- Initialize reusable objects
     reusable_hit_result = StructObject.new(hitresult_c)
     if not reusable_hit_result then return false end
-    --print(reusable_hit_result:get_full_name())
 
     zero_color = StructObject.new(flinearColor_c)
     if not zero_color then return false end
-    --print(zero_color:get_full_name())
     
     zero_transform = StructObject.new(ftransform_c)
     if not zero_transform then return false end
     zero_transform.Rotation.W = 1.0
     zero_transform.Scale3D = temp_vec3:set(1.0, 1.0, 1.0)
-
-    
-    -- Cylinder = find_required_object("StaticMesh /Engine/BasicShapes/Cylinder.Cylinder")
-    -- if not Cylinder then return false end
-    -- print(Cylinder:get_full_name())
 
     texture2D_c = find_required_object("Class /Script/Engine.Texture2D")
     if not texture2D_c then return false end
@@ -220,21 +214,6 @@ local function spawn_actor(world_context, actor_class, location, collision_metho
     return actor
 end
 
-local function get_scope_mesh(parent_mesh)
-    if not parent_mesh then return nil end
-
-    local child_components = parent_mesh.AttachChildren
-    if not child_components then return nil end
-
-    for _, component in ipairs(child_components) do
-        if component:is_a(static_mesh_component_c) and string.find(component:get_fname():to_string(), "scope") then
-            return component
-        end
-    end
-
-    return nil
-end
-
 
 local function get_equipped_weapon(playerController)
     if not playerController then return nil end
@@ -246,7 +225,7 @@ local function get_equipped_weapon(playerController)
             weapon = child
         end
     end
-    local weapon_mesh = nil
+    weapon_mesh = nil
     if weapon ~= nil then
         weapon_mesh = weapon.WeaponMesh
     end
@@ -362,8 +341,6 @@ local function spawn_scene_capture_component(world, owner, pos, fov, rt)
     scene_capture_component.TextureTarget = rt
     scene_capture_component:SetVisibility(false)
     scene_capture_component_mesh:SetVisibility(false)
-    --scene_capture_component:CaptureScene()
-    --print(scene_capture_component:get_full_name())
     print("scene_capture_component spawned")
 end
 
@@ -436,10 +413,6 @@ local function spawn_scope(game_engine, weaponMesh, isSniper)
     scene_capture_component.TextureTarget = rt
 end
 
-
-local weapon_mesh = nil
-local last_scope_state = false
-
 local function attach_components_to_weapon(weapon_mesh, isSniper)
     if not weapon_mesh then return end
     
@@ -449,13 +422,10 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
     else
         rotation = KismetMathLibrary:FindLookAtRotation(temp_vec3:set(13.8476, -11.6162, 1.72577),temp_vec3f:set(27.6432, -11.6162, 2.84382))
     end
+    --print("rotation x = " .. rotation.x .. " rotation y = " .. rotation.y ..  " rotation z = " .. rotation.z)
 
-    print("rotation x = " .. rotation.x .. " rotation y = " .. rotation.y ..  " rotation z = " .. rotation.z)
     -- Attach scene capture to weapon
     if scene_capture_component ~= nil and scene_capture_component_mesh ~=  nil then
-            
-        -- scene_capture:DetachFromParent(true, false)
-        -- "AimSocket"
         print("Attaching scene_capture_component to weapon:" .. weapon_mesh:get_fname():to_string())
         scene_capture_component_mesh:K2_AttachToComponent(
             weapon_mesh,
@@ -488,10 +458,8 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
         )
 
         if isSniper then
-            --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(60.0000 , 0.0000, 0.0000), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
         else
-            --scene_capture_component:K2_SetRelativeLocation(temp_vec3:set(27.6432, -11.6162, 2.84382), false, reusable_hit_result, false)
             scene_capture_component:SetVisibility(false)
         end
     end
@@ -512,13 +480,11 @@ local function attach_components_to_weapon(weapon_mesh, isSniper)
             true -- Weld simulated bodies
         )
 
-        --scope_plane_component:K2_SetRelativeRotation(temp_vec3:set(-90, 90, 90), false, reusable_hit_result, false)
         if isSniper then
             local test = temp_vec3:set(rotation.x + 90, rotation.y, rotation.z)
             scope_plane_component:K2_SetRelativeRotation(test, false, reusable_hit_result, false)
             scope_plane_component:K2_SetRelativeLocation(temp_vec3:set(5.91537, -2.75402, 13.1992), false, reusable_hit_result, false)
             scope_plane_component:SetWorldScale3D(temp_vec3:set(0.033, 0.033, 0.000001))
-            --scope_plane_component:SetWorldScale3D(temp_vec3:set(0.1, 0.1, 0.000001))
             red_dot_plane_component:K2_AttachToComponent(
                 scope_plane_component,
                 "gunflash",
@@ -603,7 +569,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             end
         end
         local playerController = api:get_player_controller()
-        local weapon_mesh = get_equipped_weapon(playerController)
+        weapon_mesh = get_equipped_weapon(playerController)
         if debugMode then print("check weapon_mesh") end
         if weapon_mesh then
             local weapon_changed = not current_weapon or 
@@ -696,4 +662,3 @@ uevr.sdk.callbacks.on_script_reset(function()
     reset_static_objects()
 end
 )
-
