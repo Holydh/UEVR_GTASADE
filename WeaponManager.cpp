@@ -8,7 +8,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 		return;
 
 	///////////////////////////////////////////////////////////////
-	// This code needs to be improved, replaced by a for loop with a check of it's class to fetch the right UObject
+	// This code needs to be improved, replaced by a for loop with a check of the object class to fetch the right UObject
 	// BUT, for some reasons, this game sometimes freaks out and add a GTAWeapon component to random props and attach them as a children 
 	// of the player character during a few frames. Making this method of fetch unreliable. This mean the player will end up with a bush,
 	// a tree, or random clothes in it's hand on top of the actual weapon.
@@ -83,13 +83,12 @@ void WeaponManager::UpdateActualWeaponMesh()
 	if (lastDot != std::wstring::npos) {
 		weaponName = weaponName.substr(lastDot + 1);
 	}
-	/*API::get()->log_info("%ls", weaponName.c_str());*/
+
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
 	if (it != weaponNameToIndex.end()) {
 		currentWeaponEquipped = static_cast<WeaponType>(it->second);
 	}
-	/*API::get()->log_info("%i", equippedWeaponIndex);*/
 }
 
 void WeaponManager::HideBulletTrace()
@@ -162,9 +161,8 @@ void WeaponManager::ProcessAiming()
 		//mesh alignement weapon offsets
 		switch (currentWeaponEquipped)
 		{
-			// All previous are melee weapons
-			// offsets taken from 3D models in Blender by taking 2 points aligned with the barrel. Units is centimeters. 
-			// Y axis is inversed in Blender. 
+			// Offsets taken from the game's 3D models in Blender by taking 2 points aligned with the barrel. Units is centimeters. 
+			// Y axis is inversed in Blender.
 			// We then add some slight offsets manually depending on the aiming tests done ingame.
 		case Pistol :
 			point1Offsets = { 2.82819, -2.52103, 9.92684 };
@@ -280,9 +278,7 @@ void WeaponManager::ProcessAiming()
 		{
 			Utilities::ParameterGetSocketLocation socketLocation_params;
 			socketLocation_params.inSocketName = uevr::API::FName(L"gunflash");
-
 			weaponMesh->call_function(L"GetSocketLocation", &socketLocation_params);
-			//API::get()->log_info("ForwardVector : x = %f, y = %f, z = %f", forwardVector_params.ForwardVector.x,  forwardVector_params.ForwardVector.y, forwardVector_params.ForwardVector.z);
 
 			point1Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point1Offsets);
 			point2Position = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, point2Offsets);
@@ -430,8 +426,8 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling()");
 
-	//Forces the weapon to get back in it's original position when entering a vehicle. No 6dof possible in cars, devs removed the "free aiming" cheat
-	//that was in the original game.
+	//Forces the weapon to get back in it's original position when entering a vehicle. No 6dof possible in cars for now, devs removed the 
+	// "free aiming in car" cheat that was in the original game. Would require more reverse engineering.
 	if (playerManager->isInVehicle && !playerManager->wasInVehicle)
 	{
 		UpdateActualWeaponMesh();
@@ -637,9 +633,6 @@ void WeaponManager::HandleCameraWeaponAiming()
 		setWorldRotation_params.bTeleport = true;
 		setWorldRotation_params.newRotation = lookAtRotationParams.outRotation;
 		weaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
-
-		//uevr::API::get()->log_info("position : x %f, y %f, z %f", cameraWpnPosition.x, cameraWpnPosition.y, cameraWpnPosition.z);
-		//uevr::API::get()->log_info("rotation : x %f, y %f, z %f", cameraWpnRotation.Pitch, cameraWpnRotation.Roll, cameraWpnRotation.Yaw);
 	}
 }
 
@@ -664,54 +657,3 @@ void WeaponManager::UnhookAndRepositionWeapon()
 	setRelativeRotation_params.newRotation = { 0.0f, 0.0f, 0.0f };
 	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
 }
-
-
-
-	//switch (equippedWeaponIndex)
-	//{
-	//	//case 0:  // Unarmed
-	//	//case 1:  // BrassKnuckles
-	//	//case 2:  // GolfClub
-	//	//case 3:  // NightStick
-	//	//case 4:  // Knife
-	//	//case 5:  // BaseballBat
-	//	//case 6:  // Shovel
-	//	//case 7:  // PoolCue
-	//	//case 8:  // Katana
-	//	//case 9:  // Chainsaw
-	//	//case 10: // Dildo1
-	//	//case 11: // Dildo2
-	//	//case 12: // Vibe1
-	//	//case 13: // Vibe2
-	//	//case 14: // Flowers
-	//	//case 15: // Cane
-	//	//case 16: // Grenade
-	//	//case 17: // Teargas
-	//	//case 18: // Molotov
-	//	//case 22: //Pistol colt 45
-	//	//case 23: // PistolSilenced
-	//	//case 24: // DesertEagle
-	//	//case 25: // Shotgun
-	//	//case 26: // Sawnoff
-	//	//case 27: // Spas12
-	//	//case 28: // MicroUzi
-	//	//case 29: // Mp5
-	//	//case 30: //AK47
-	//	//case 31: // M4
-	//	//case 32: // Tec9
-	//	//case 33: //Rifle cuntgun
-	//	//case 34: // Sniper
-	//	//case 35: // RocketLauncher
-	//	//case 36: // RocketLauncherHeatSeek
-	//	//case 37: // Flamethrower
-	//	//case 38: // Minigun
-	//	//case 39: // Satchel
-	//	//case 40: // Detonator
-	//	//case 41: // SprayCan
-	//	//case 42: // Extinguisher
-	//	//case 43: // Camera
-	//	//case 44: // NightVision
-	//	//case 45: // Infrared
-	//	//case 46: // Parachute
-	//default:
-	//}

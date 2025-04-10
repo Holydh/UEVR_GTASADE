@@ -19,13 +19,20 @@ private:
 	SettingsManager* const settingsManager;
 	PlayerManager* const playerManager;
 
+	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
+	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
+
+	float keepCameraHeightTime = 2.0f;
+	float keepCameraHeightTimer = 0.0f;
+	bool keepCameraHeight = false;
+
+	void UpdateCameraMatrix();
+
 public:
 	CameraController(MemoryManager* mm, SettingsManager* sm, PlayerManager* pm) : memoryManager(mm), settingsManager(sm), playerManager(pm) {}
 
 	float cameraMatrixValues[16] = { 0.0f };
-	glm::mat4 accumulatedJoystickRotation = glm::mat4(1.0f);
-	glm::mat4 baseHeadRotation = glm::mat4(1.0f);
-
+	
 	glm::fvec3 cameraPositionUE = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 forwardVectorUE = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rightVectorUE = { 0.0f, 0.0f, 0.0f };
@@ -102,15 +109,8 @@ public:
 	CameraMode currentCameraMode = None;
 	CameraMode previousCameraMode = None;
 	bool camResetRequested = false;
-	float keepCameraHeightTime = 2.0f;
-	float keepCameraHeightTimer = 0.0f;
-	bool keepCameraHeight = false;
-
-	bool waterViewFixed = false;
-
 
 	void ProcessCameraMatrix(float delta);
-	void UpdateCameraMatrix();
 	void ProcessHookedHeadPosition(float delta);
 	void FixUnderwaterView(bool enableFix);
 };

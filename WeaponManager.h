@@ -20,16 +20,11 @@ private:
 	MemoryManager* const memoryManager;
 	SettingsManager* const settingsManager;
 
-public:
-	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
-
 	//Shoot detection
 	bool isShooting = false;
-	int shootParticleCount = 0;
 	uevr::API::UObject* lastParticleShot = nullptr;
 
 	//Weapon infos
-	uevr::API::UObject* weapon = nullptr;
 	uevr::API::UObject* weaponMesh = nullptr;
 	uevr::API::UObject* torso = nullptr;
 	uevr::API::UObject* weaponStaticMesh = nullptr;
@@ -79,6 +74,25 @@ public:
 		{L"SM_irgoggles", 45},        // Infrared
 		{L"SM_gun_para", 46}        // Parachute
 	};
+
+	//aiming
+	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
+	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
+	std::unordered_set<int> camModsRequiringAimHandling = {5, 7, 8, 9, 15, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
+
+	//recoil
+	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
+	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
+	float recoilPositionRecoverySpeed = 10.0f;
+	float recoilRotationRecoverySpeed = 8.0f;
+
+	void HandleCameraWeaponAiming();
+
+public:
+	WeaponManager(PlayerManager* pm, CameraController* cc, MemoryManager* mm, SettingsManager* sm) : playerManager(pm), cameraController(cc), memoryManager(mm), settingsManager(sm) {};
 	enum WeaponType {
 		Unarmed = 0,
 		BrassKnuckles = 1,
@@ -127,20 +141,6 @@ public:
 	};
 	WeaponType currentWeaponEquipped = Unarmed;
 	WeaponType previousWeaponEquipped = Unarmed;
-
-	//aiming
-	glm::fvec3 crosshairOffset = { 0.0f, -1.0f, 2.0f };
-	glm::fvec3 calculatedAimForward = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 calculatedAimPosition = { 0.0f, 0.0f, 0.0f };
-	std::unordered_set<int> camModsRequiringAimHandling = {5, 7, 8, 9, 15, 34, 39, 40, 41, 42, 45, 51, 52, 53, 55, 65};
-
-	//recoil
-	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
-	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
-	float recoilPositionRecoverySpeed = 10.0f;
-	float recoilRotationRecoverySpeed = 8.0f;
 	
 	void UpdateActualWeaponMesh();
 	void HideBulletTrace();
@@ -149,5 +149,5 @@ public:
 	void ProcessWeaponVisibility();
 	void ProcessWeaponHandling(float delta);
 	void UnhookAndRepositionWeapon();
-	void HandleCameraWeaponAiming();
+
 };

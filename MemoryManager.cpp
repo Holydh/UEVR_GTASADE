@@ -197,52 +197,10 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 	{0x110CE7D, 1, 0x02}
 };
 
-
-
-//Retrieves original bytes to manually set them as a variables in the code. std::vector<std::pair<uintptr_t, size_t>>
-//void MemoryManager::GetAllBytes()
-//{
-//	WriteBytesToIniFile("aimingUpVectorInstructionsAddresses",aimingUpVectorInstructionsAddresses);
-//}
-//void MemoryManager::WriteBytesToIniFile(const char* header, const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
-//    // Open the file in append mode
-//    std::ofstream file("originalBytes.ini", std::ios::app);
-//    if (!file.is_open()) {
-//        std::cerr << "Failed to open file: originalBytes.ini\n";
-//        return;
-//    }
-//
-//    // Write the header
-//    file << "[" << header << "]\n";
-//
-//    for (const auto& [address, size] : addresses) {
-//        // Allocate a buffer to hold the bytes
-//        std::vector<uint8_t> bytes(size);
-//
-//        // Read the bytes from memory
-//        if (ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPVOID>(address + baseAddressGameEXE), bytes.data(), size, nullptr)) {
-//            // Write the address and size to the file
-//            file << "0x" << std::hex << address << ", " << size << ", 0x";
-//
-//            // Write the bytes in contiguous hexadecimal format
-//            for (size_t i = 0; i < size; ++i) {
-//                file << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bytes[i]);
-//            }
-//            file << "\n";
-//        } else {
-//            std::cerr << "Failed to read memory at address: 0x" << std::hex << address << "\n";
-//        }
-//    }
-//
-//    file.close();
-//    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
-//}
-
 uintptr_t MemoryManager::playerShootInstructionAddress = 0x11C6A7E;
 //uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // Take photo function address;
 
 bool MemoryManager::isShooting = false;
-int MemoryManager::cameraMode;
 
 std::array<uintptr_t, 16> MemoryManager::cameraMatrixAddresses{}; // x, y, z
 
@@ -315,7 +273,7 @@ void MemoryManager::InstallBreakpoints() {
 
 void MemoryManager::RemoveBreakpoints() {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("RemoveBreakpoints()");
- // Clear hardware breakpoints
+	// Clear hardware breakpoints
     CONTEXT ctx = { 0 };
     ctx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
 
@@ -376,13 +334,11 @@ void RestoreMemory(const std::vector<MemoryBlock>& memoryBlocks) {
 	}
 }
 
-// Public method to print the original bytes
-//void MemoryManager::PrintOriginalBytes() const {
-//    for (const auto& [offset, originalByte] : originalBytes) {
-//        std::cout << "Offset: 0x" << std::hex << offset
-//                  << ", Value: 0x" << static_cast<int>(originalByte.value) << "\n";
-//    }
-//}
+void MemoryManager::InitMemoryManager()
+{
+	baseAddressGameEXE = GetModuleBaseAddress(nullptr);
+	AdjustAddresses();
+}
 
 uintptr_t MemoryManager::GetModuleBaseAddress(LPCTSTR moduleName) {
 	HMODULE hModule = GetModuleHandle(moduleName);
@@ -414,7 +370,6 @@ void MemoryManager::AdjustAddresses() {
 
 	for (auto& address : MemoryManager::cameraMatrixAddresses) address += baseAddressGameEXE;
 	for (auto& address : aimForwardVectorAddresses) address += baseAddressGameEXE;
-	for (auto& address : aimUpVectorAddresses) address += baseAddressGameEXE;
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
 
@@ -489,21 +444,69 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 
 }
 
-	//Finds address from pointer offsets found in cheat engine
-	uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
-		uintptr_t addr = baseAddress;
+//Finds address from pointer offsets found in cheat engine
+uintptr_t FindDMAAddy(uintptr_t baseAddress, const std::vector<unsigned int>& offsets) {
+	uintptr_t addr = baseAddress;
 
-		for (size_t i = 0; i < offsets.size(); ++i) {
-			if (addr == 0) {
-				// If at any point the address is invalid, return 0
-				uevr::API::get()->log_error("%s", "Cant find gunflash socket address");
-				return 0;
-			}
-			// Dereference the pointer
-			addr = *reinterpret_cast<uintptr_t*>(addr);
-
-			// Add the offset
-			addr += offsets[i];
+	for (size_t i = 0; i < offsets.size(); ++i) {
+		if (addr == 0) {
+			// If at any point the address is invalid, return 0
+			uevr::API::get()->log_error("%s", "Cant find gunflash socket address");
+			return 0;
 		}
-		return addr;
+		// Dereference the pointer
+		addr = *reinterpret_cast<uintptr_t*>(addr);
+
+		// Add the offset
+		addr += offsets[i];
 	}
+	return addr;
+}
+
+	
+//Retrieves original bytes to manually set them as a variables in the code. std::vector<std::pair<uintptr_t, size_t>>
+//void MemoryManager::GetAllBytes()
+//{
+//	WriteBytesToIniFile("aimingUpVectorInstructionsAddresses",aimingUpVectorInstructionsAddresses);
+//}
+//void MemoryManager::WriteBytesToIniFile(const char* header, const std::vector<std::pair<uintptr_t, size_t>>& addresses) {
+//    // Open the file in append mode
+//    std::ofstream file("originalBytes.ini", std::ios::app);
+//    if (!file.is_open()) {
+//        std::cerr << "Failed to open file: originalBytes.ini\n";
+//        return;
+//    }
+//
+//    // Write the header
+//    file << "[" << header << "]\n";
+//
+//    for (const auto& [address, size] : addresses) {
+//        // Allocate a buffer to hold the bytes
+//        std::vector<uint8_t> bytes(size);
+//
+//        // Read the bytes from memory
+//        if (ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPVOID>(address + baseAddressGameEXE), bytes.data(), size, nullptr)) {
+//            // Write the address and size to the file
+//            file << "0x" << std::hex << address << ", " << size << ", 0x";
+//
+//            // Write the bytes in contiguous hexadecimal format
+//            for (size_t i = 0; i < size; ++i) {
+//                file << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(bytes[i]);
+//            }
+//            file << "\n";
+//        } else {
+//            std::cerr << "Failed to read memory at address: 0x" << std::hex << address << "\n";
+//        }
+//    }
+//
+//    file.close();
+//    std::cout << "Bytes appended to originalBytes.ini under header: " << header << "\n";
+//}
+// 
+// Print the original bytes
+//void MemoryManager::PrintOriginalBytes() const {
+//    for (const auto& [offset, originalByte] : originalBytes) {
+//        std::cout << "Offset: 0x" << std::hex << offset
+//                  << ", Value: 0x" << static_cast<int>(originalByte.value) << "\n";
+//    }
+//}

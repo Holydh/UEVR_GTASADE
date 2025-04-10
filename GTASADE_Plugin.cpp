@@ -35,76 +35,45 @@ public:
 	void on_dllmain() override {}
 
 	void on_dllmain_detach() override {
-		memoryManager.RemoveBreakpoints();
-		memoryManager.RemoveExceptionHandler();
-		memoryManager.ToggleAllMemoryInstructions(true);
-		cameraController.FixUnderwaterView(false);
-		uevr::API::UObjectHook::set_disabled(true);
-		playerManager.RepositionPlayerUObjectsHooked();
-		weaponManager.UnhookAndRepositionWeapon();
+		ChangePluginState(false);
 	}
 
 	void on_initialize() override {
 		API::get()->log_info("%s", "VR cpp mod initializing");
-		settingsManager.uevrConfigFilePath = settingsManager.GetConfigFilePath(true);
-		settingsManager.pluginConfigFilePath = settingsManager.GetConfigFilePath(false);
-		API::get()->log_info("%s", settingsManager.uevrConfigFilePath.c_str());
-		settingsManager.UpdateUevrSettings();
-		settingsManager.UpdatePluginSettings();
-		settingsManager.CacheSettings();
-		
-		//Set up the memory addresses
-		memoryManager.baseAddressGameEXE = memoryManager.GetModuleBaseAddress(nullptr);
-		memoryManager.AdjustAddresses();
-
+		settingsManager.InitSettingsManager();
+		memoryManager.InitMemoryManager();
 		Utilities::InitHelperClasses();
+
+		//Apply fixes
 		weaponManager.HideBulletTrace();
+		cameraController.FixUnderwaterView(true);
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		/*auto start = std::chrono::high_resolution_clock::now();*/
+		//auto start = std::chrono::high_resolution_clock::now(); // Profiling
 
-		//Fetch various states from memory
-		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
-		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
-		playerManager.vehicleType = *(reinterpret_cast<PlayerManager::VehicleType*>(memoryManager.vehicleTypeAddress));
-		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
-		playerManager.weaponWheelEnabled = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
-		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
-		MemoryManager::cameraMode = cameraController.currentCameraMode;
-
+		FetchRequiredValuesFromMemory();
 		playerManager.FetchPlayerUObjects();
-
-		if (!cameraController.waterViewFixed && playerManager.isInControl)
-			cameraController.FixUnderwaterView(true);
 
 		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
 			settingsManager.CacheSettings();
-			memoryManager.ToggleAllMemoryInstructions(true);
-			memoryManager.RemoveBreakpoints();
-			memoryManager.RemoveExceptionHandler();
-			uevr::API::UObjectHook::set_disabled(true);
-			playerManager.RepositionPlayerUObjectsHooked();
-			weaponManager.UnhookAndRepositionWeapon();
+			ChangePluginState(false);
 			if (settingsManager.autoDecoupledPitchDuringCutscenes)
 				uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
 		}
 		if (playerManager.isInControl && !playerManager.wasInControl)
 		{
 			if (settingsManager.debugMod) API::get()->log_info("playerIsInControl");
-			cameraController.camResetRequested = true;
-			memoryManager.ToggleAllMemoryInstructions(false);
-			memoryManager.InstallBreakpoints();
-			uevr::API::UObjectHook::set_disabled(false);
+			ChangePluginState(true);
 			if (settingsManager.autoDecoupledPitchDuringCutscenes)
 				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
 		}
 
-		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
+		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event using AimWeaponFromCar cam mode.
 		// Then sets UEVR settings according to the vehicle type
 		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
 			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
@@ -133,11 +102,11 @@ public:
 		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(false);
 	
-		// VR mod processing :
+		// plugin main loop :
 		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
-			if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
+			if (settingsManager.debugMod) uevr::API::get()->log_info("current Weapon Index Equipped %i", static_cast<int>(weaponManager.currentWeaponEquipped));
 			
 			if (!playerManager.weaponWheelEnabled)
 			{
@@ -150,19 +119,14 @@ public:
 			weaponManager.ProcessWeaponHandling(delta);
 		}
 		weaponManager.ProcessWeaponVisibility();
+		settingsManager.UpdateSettingsIfModified();
+		UpdatePreviousStates();
 
-		settingsManager.UpdateSettingsIfModified(settingsManager.uevrConfigFilePath, true);
-		settingsManager.UpdateSettingsIfModified(settingsManager.pluginConfigFilePath, false);
-
-		// Keep previous states
-		playerManager.wasInControl = playerManager.isInControl;
-		playerManager.wasInVehicle = playerManager.isInVehicle;
-		cameraController.previousCameraMode = cameraController.currentCameraMode;
-		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
-		//auto end = std::chrono::high_resolution_clock::now();
-		//auto duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-		//API::get()->log_info("execution time : %lld micro seconds", duration_ms.count());
-		//Last test average = 85,150537634409 micro seconds
+		// Profiling :
+		// auto end = std::chrono::high_resolution_clock::now();
+		// auto duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		// API::get()->log_info("execution time : %lld micro seconds", duration_ms.count());
+		// Last test average = 85,150537634409 micro seconds
 	}
 
 
@@ -176,6 +140,44 @@ public:
 
 	void on_post_slate_draw_window(UEVR_FSlateRHIRendererHandle renderer, UEVR_FViewportInfoHandle viewport_info) override {
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
+	}
+
+	void ChangePluginState(bool enable)
+	{
+		if (enable)
+		{
+			cameraController.camResetRequested = true;
+			memoryManager.ToggleAllMemoryInstructions(false);
+			memoryManager.InstallBreakpoints();
+			uevr::API::UObjectHook::set_disabled(false);
+		}
+		else
+		{
+			memoryManager.RemoveBreakpoints();
+			memoryManager.RemoveExceptionHandler();
+			memoryManager.ToggleAllMemoryInstructions(true);
+			uevr::API::UObjectHook::set_disabled(true);
+			playerManager.RepositionPlayerUObjectsHooked();
+			weaponManager.UnhookAndRepositionWeapon();
+		}
+	}
+
+	void FetchRequiredValuesFromMemory()
+	{
+		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
+		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
+		playerManager.vehicleType = *(reinterpret_cast<PlayerManager::VehicleType*>(memoryManager.vehicleTypeAddress));
+		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
+		playerManager.weaponWheelEnabled = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
+		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
+	}
+
+	void UpdatePreviousStates()
+	{
+		playerManager.wasInControl = playerManager.isInControl;
+		playerManager.wasInVehicle = playerManager.isInVehicle;
+		cameraController.previousCameraMode = cameraController.currentCameraMode;
+		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
 	}
 };
 

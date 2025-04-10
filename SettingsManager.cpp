@@ -1,11 +1,19 @@
 #include "SettingsManager.h"
 
+void SettingsManager::InitSettingsManager()
+{
+	GetAllConfigFilePaths();
+	uevr::API::get()->log_info("%s", uevrConfigFilePath.c_str());
+	UpdateUevrSettings();
+	UpdatePluginSettings();
+	CacheSettings();
+}
 
 void SettingsManager::UpdateUevrSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateUevrSettings()");
 
-	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 70.0f) * 10; //*10 because the base UEVR setting is too low as is 
+	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
@@ -37,7 +45,13 @@ void SettingsManager::CacheSettings()
 	storedLerpRoll = lerpRoll;
 }
 
-bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath, bool uevr)
+void SettingsManager::UpdateSettingsIfModified()
+{
+	CheckSettingsModificationAndUpdate(uevrConfigFilePath, true);
+	CheckSettingsModificationAndUpdate(pluginConfigFilePath, false);
+}
+
+bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& filePath, bool uevr)
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified()");
 
@@ -71,8 +85,6 @@ bool SettingsManager::UpdateSettingsIfModified(const std::string& filePath, bool
 	CloseHandle(hFile);
 	return false;  // No change
 }
-
-
 
 void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std::string& key, float value)
 {
@@ -108,7 +120,8 @@ void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std:
 
 			// Replace value
 			std::string newContents = before + (value ? "true" : "false") + after;
-			// Step 3: Write it back
+			
+			// Write it back
 			HANDLE hWriteFile = CreateFileA(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 			if (hWriteFile != INVALID_HANDLE_VALUE)
 			{
@@ -248,6 +261,12 @@ std::string GetDLLDirectory()
 	return "Unknown";
 }
 
+void SettingsManager::GetAllConfigFilePaths()
+{
+	uevrConfigFilePath = GetConfigFilePath(true);
+	pluginConfigFilePath = GetConfigFilePath(false);
+}
+
 std::string SettingsManager::GetConfigFilePath(bool uevr)
 {
 	if (debugMod) uevr::API::get()->log_info("GetConfigFilePath()");
@@ -266,5 +285,5 @@ std::string SettingsManager::GetConfigFilePath(bool uevr)
 		}
 	}
 
-	return fullPath + (uevr ? "config.txt" : "gtaVRplugin.txt"); // Append "config.txt"
+	return fullPath + (uevr ? uevrSettingsFileName : pluginSettingsFileName); // Append "config.txt" or "UEVR_GTASADE_config.txt"
 }

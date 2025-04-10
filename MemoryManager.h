@@ -34,54 +34,36 @@ struct MemoryBlock {
 class MemoryManager {
 private:
 	SettingsManager* const settingsManager;
+
+	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
+    void AdjustAddresses();
+	uintptr_t baseAddressGameEXE = NULL;
 	void* exceptionHandlerHandle = nullptr;  // Store the handler so we can remove it later
 
 public:
 	MemoryManager(SettingsManager* sm) : settingsManager(sm) {};
-
-	uintptr_t baseAddressGameEXE = NULL;
-
 	static std::array<uintptr_t, 16> cameraMatrixAddresses;
 
-	std::array<uintptr_t, 3> aimForwardVectorAddresses // x, y, z
-	{
-		0x53E2668, 0x53E266C, 0x53E2670
-	};
+	std::array<uintptr_t, 3> aimForwardVectorAddresses 	{ 0x53E2668, 0x53E266C, 0x53E2670 }; // x, y, z
 	uintptr_t xAxisSpraysAimAddress = 0x53E2558;
+	std::array<uintptr_t, 3> cameraPositionAddresses { 0x53E2674, 0x53E2678, 0x53E267C }; // x, y, z
+	std::array<uintptr_t, 3> playerHeadPositionAddresses { 0x58013D8, 0x58013DC, 0x58013E0 }; // x, y, z
 
-	std::array<uintptr_t, 3> aimUpVectorAddresses // x, y, z
-	{
-		0x53E268C, 0x53E2690, 0x53E2694
-	};
+	static uintptr_t playerShootInstructionAddress;
 
-	std::array<uintptr_t, 3> cameraPositionAddresses // x, y, z
-	{
-		0x53E2674, 0x53E2678, 0x53E267C
-	};
-
-	std::array<uintptr_t, 3> playerHeadPositionAddresses // x, y, z
-	{
-		0x58013D8, 0x58013DC, 0x58013E0
-	};
-
-	static int cameraMode;
 	uintptr_t cameraModeAddress = 0x53E2580;
-	//uintptr_t isCutScenePlayingAddress = 0x53E254C;
-
 	uintptr_t playerIsInControlAddress = 0x53E8840;
 	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
 	uintptr_t vehicleTypeAddress = 0x5031278;
 	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
-	static uintptr_t playerShootInstructionAddress;
 	uintptr_t weaponWheelDisplayedAddress = 0x507C580;
 
-	uintptr_t GetModuleBaseAddress(LPCTSTR moduleName);
-
-    void AdjustAddresses();
+	void InitMemoryManager();
 	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
 	bool vehicleRelatedMemoryInstructionsNoped = true;
+
 	static bool isShooting;
 
 	void InstallBreakpoints();

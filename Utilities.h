@@ -7,13 +7,11 @@
 class Utilities {
 private:
 
-
 public:
+	static uevr::API::UObject* KismetMathLibrary;
+	static void InitHelperClasses();
 	static glm::fvec3 OffsetLocalPositionFromWorld(glm::fvec3 worldPosition, glm::fvec3 forwardVector, glm::fvec3 upVector, glm::fvec3 rightVector, glm::fvec3 offsets);
 
-	static uevr::API::UObject* KismetMathLibrary;
-
-	static void InitHelperClasses();
 
 #pragma pack(push, 1)
 	struct FRotator {
@@ -56,7 +54,6 @@ public:
 #pragma pack(push, 1)
 	struct Parameter_K2_SetWorldOrRelativeLocation final
 	{
-	public:
 		glm::fvec3 newLocation;
 		bool bSweep;
 		uint8_t pad_D[3];
@@ -69,7 +66,6 @@ public:
 #pragma pack(push, 1)
 	struct Parameter_K2_SetWorldOrRelativeRotation final
 	{
-	public:
 		FRotator newRotation;
 		bool bSweep;
 		uint8_t pad_D[3];
