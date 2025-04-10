@@ -5,7 +5,7 @@ void SettingsManager::UpdateUevrSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateUevrSettings()");
 
-	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
+	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 70.0f) * 10; //*10 because the base UEVR setting is too low as is 
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
@@ -17,8 +17,8 @@ void SettingsManager::UpdateUevrSettings()
 void SettingsManager::UpdatePluginSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
-	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
-	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
+	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
+	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	uevr::API::get()->log_info("Plugin Settings Updated");
 }
 
@@ -228,7 +228,7 @@ float SettingsManager::GetFloatValueFromFile(const std::string& filePath, const 
 std::string GetDLLDirectory()
 {
 	char path[MAX_PATH];
-	HMODULE hModule = GetModuleHandleA("VRmod.dll"); // Get handle to the loaded DLL
+	HMODULE hModule = GetModuleHandleA("UEVR_GTASADE.dll"); // Get handle to the loaded DLL
 
 	if (hModule)
 	{
@@ -243,7 +243,7 @@ std::string GetDLLDirectory()
 		}
 	}
 	else
-		uevr::API::get()->log_info("Failed to get module handle for VRmod.dll");
+		uevr::API::get()->log_info("Failed to get module handle for UEVR_GTASADE.dll");
 
 	return "Unknown";
 }
@@ -254,7 +254,7 @@ std::string SettingsManager::GetConfigFilePath(bool uevr)
 
 	std::string fullPath = GetDLLDirectory();
 
-	// Remove "SanAndreas\plugins\VRmod.dll" part, leaving "SanAndreas"
+	// Remove "SanAndreas\plugins\UEVR_GTASADE.dll" part, leaving "SanAndreas"
 	size_t pos = fullPath.find_last_of("\\/");
 	if (pos != std::string::npos)
 	{
