@@ -113,4 +113,5 @@ public:
 	void ProcessCameraMatrix(float delta);
 	void ProcessHookedHeadPosition(float delta);
 	void FixUnderwaterView(bool enableFix);
+	bool underwaterViewFixed = false;
 };

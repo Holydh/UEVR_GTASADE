@@ -4,6 +4,7 @@ void SettingsManager::InitSettingsManager()
 {
 	GetAllConfigFilePaths();
 	uevr::API::get()->log_info("%s", uevrConfigFilePath.c_str());
+	uevr::API::get()->log_info("%s", pluginConfigFilePath.c_str());
 	UpdateUevrSettings();
 	UpdatePluginSettings();
 	CacheSettings();
@@ -19,7 +20,7 @@ void SettingsManager::UpdateUevrSettings()
 	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
 	lerpPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraPitch", true);
 	lerpRoll = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraRoll", true);
-	uevr::API::get()->log_info("UEVR Settings Updated");
+	if (debugMod) uevr::API::get()->log_info("UEVR Settings Updated");
 }
 
 void SettingsManager::UpdatePluginSettings()
@@ -27,11 +28,13 @@ void SettingsManager::UpdatePluginSettings()
 	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
-	uevr::API::get()->log_info("Plugin Settings Updated");
+	if (debugMod) uevr::API::get()->log_info("Plugin Settings Updated");
 }
 
 void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
 {
+	if (debugMod) uevr::API::get()->log_info("SetPitchAndLerpSettingsForFlight");
+
 	SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", enable ? storedDecoupledPitch : false);
 	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", enable ? storedLerpPitch : false);
 	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", enable ? storedLerpRoll : false);
@@ -40,6 +43,8 @@ void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
 
 void SettingsManager::CacheSettings()
 {
+	if (debugMod) uevr::API::get()->log_info("CacheSettings");
+
 	storedDecoupledPitch = decoupledPitch;
 	storedLerpPitch = lerpPitch;
 	storedLerpRoll = lerpRoll;
@@ -47,18 +52,44 @@ void SettingsManager::CacheSettings()
 
 void SettingsManager::UpdateSettingsIfModified()
 {
+	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified");
+
 	CheckSettingsModificationAndUpdate(uevrConfigFilePath, true);
 	CheckSettingsModificationAndUpdate(pluginConfigFilePath, false);
 }
 
 bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& filePath, bool uevr)
 {
-	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified()");
+	if (debugMod) uevr::API::get()->log_info("CheckSettingsModificationAndUpdate");
 
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		uevr::API::get()->log_info("%s", "Failed to open config.txt file");
+		if (uevr)
+		{
+			uevr::API::get()->log_info("File not found: %s", filePath.c_str());
+			return false;
+		}
+			
+		// File does not exist, create it with default values
+		uevr::API::get()->log_info("File not found: %s. Creating default config.", filePath.c_str());
+
+		std::string defaultContent =
+			"AutoDecoupledPitchDuringCutscenes=true\n"
+			"AutoPitchAndLerpSettingsForFlight=true\n";
+
+		HANDLE hCreateFile = CreateFileA(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hCreateFile != INVALID_HANDLE_VALUE)
+		{
+			DWORD bytesWritten;
+			WriteFile(hCreateFile, defaultContent.c_str(), static_cast<DWORD>(defaultContent.size()), &bytesWritten, NULL);
+			CloseHandle(hCreateFile);
+			uevr::API::get()->log_info("Default config created at: %s", filePath.c_str());
+		}
+		else
+		{
+			uevr::API::get()->log_info("Failed to create default config at: %s", filePath.c_str());
+		}
 		return false;
 	}
 
@@ -93,7 +124,7 @@ void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std:
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		uevr::API::get()->log_info("Failed to open config.txt file for reading");
+		uevr::API::get()->log_info("Failed to open %s for reading", filePath);
 		return;
 	}
 
@@ -132,7 +163,7 @@ void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std:
 			}
 			else
 			{
-				uevr::API::get()->log_info("Failed to open config.txt file for writing");
+				uevr::API::get()->log_info("Failed to open %s for writing", filePath);
 			}
 			return;
 		}
@@ -146,7 +177,7 @@ bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const st
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		uevr::API::get()->log_info("%s", "Failed to open config.txt file");
+		uevr::API::get()->log_info("Failed to open %s", filePath);
 		return defaultValue;
 	}
 
@@ -180,7 +211,7 @@ bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const st
 			// Convert to lowercase
 			std::transform(valueStr.begin(), valueStr.end(), valueStr.begin(), ::tolower);
 
-			uevr::API::get()->log_info("Extracted value: %s", valueStr.c_str());
+			if (debugMod) uevr::API::get()->log_info("Extracted value: %s", valueStr.c_str());
 
 			if (valueStr == "true") return true;
 			if (valueStr == "false") return false;
@@ -199,7 +230,7 @@ float SettingsManager::GetFloatValueFromFile(const std::string& filePath, const 
 	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		uevr::API::get()->log_info("%s", "Failed to open config.txt file");
+		uevr::API::get()->log_info("Failed to open %s", filePath);
 		return defaultValue;
 	}
 
@@ -263,6 +294,7 @@ std::string GetDLLDirectory()
 
 void SettingsManager::GetAllConfigFilePaths()
 {
+	if (debugMod) uevr::API::get()->log_info("GetAllConfigFilePaths");
 	uevrConfigFilePath = GetConfigFilePath(true);
 	pluginConfigFilePath = GetConfigFilePath(false);
 }

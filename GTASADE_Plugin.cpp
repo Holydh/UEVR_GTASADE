@@ -43,18 +43,17 @@ public:
 		settingsManager.InitSettingsManager();
 		memoryManager.InitMemoryManager();
 		Utilities::InitHelperClasses();
-
-		//Apply fixes
 		weaponManager.HideBulletTrace();
-		cameraController.FixUnderwaterView(true);
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
 		PLUGIN_LOG_ONCE("Pre Engine Tick: %f", delta);
-		//auto start = std::chrono::high_resolution_clock::now(); // Profiling
+		/*auto start = std::chrono::high_resolution_clock::now();*/
 
 		FetchRequiredValuesFromMemory();
 		playerManager.FetchPlayerUObjects();
+		if (!cameraController.underwaterViewFixed && playerManager.isInControl)
+			cameraController.FixUnderwaterView(true);
 
 		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
 		if (!playerManager.isInControl && playerManager.wasInControl)
@@ -73,7 +72,7 @@ public:
 				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
 		}
 
-		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event using AimWeaponFromCar cam mode.
+		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
 		// Then sets UEVR settings according to the vehicle type
 		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
 			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
@@ -102,11 +101,11 @@ public:
 		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(false);
 	
-		// plugin main loop :
+		// VR mod processing :
 		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
-			if (settingsManager.debugMod) uevr::API::get()->log_info("current Weapon Index Equipped %i", static_cast<int>(weaponManager.currentWeaponEquipped));
+			if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
 			
 			if (!playerManager.weaponWheelEnabled)
 			{
@@ -122,11 +121,10 @@ public:
 		settingsManager.UpdateSettingsIfModified();
 		UpdatePreviousStates();
 
-		// Profiling :
-		// auto end = std::chrono::high_resolution_clock::now();
-		// auto duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-		// API::get()->log_info("execution time : %lld micro seconds", duration_ms.count());
-		// Last test average = 85,150537634409 micro seconds
+		//auto end = std::chrono::high_resolution_clock::now();
+		//auto duration_ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		//API::get()->log_info("execution time : %lld micro seconds", duration_ms.count());
+		//Last test average = 85,150537634409 micro seconds
 	}
 
 
@@ -144,6 +142,8 @@ public:
 
 	void ChangePluginState(bool enable)
 	{
+		if (settingsManager.debugMod) API::get()->log_info("ChangePluginState");
+
 		if (enable)
 		{
 			cameraController.camResetRequested = true;
@@ -156,14 +156,16 @@ public:
 			memoryManager.RemoveBreakpoints();
 			memoryManager.RemoveExceptionHandler();
 			memoryManager.ToggleAllMemoryInstructions(true);
+			cameraController.FixUnderwaterView(false);
 			uevr::API::UObjectHook::set_disabled(true);
-			playerManager.RepositionPlayerUObjectsHooked();
+			playerManager.RepositionUnhookedUobjects();
 			weaponManager.UnhookAndRepositionWeapon();
 		}
 	}
 
 	void FetchRequiredValuesFromMemory()
 	{
+		if (settingsManager.debugMod) API::get()->log_info("FetchRequiredValuesFromMemory");
 		playerManager.isInControl = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInControlAddress)) == 0;
 		playerManager.isInVehicle = *(reinterpret_cast<uint8_t*>(memoryManager.playerIsInVehicleAddress)) > 0;
 		playerManager.vehicleType = *(reinterpret_cast<PlayerManager::VehicleType*>(memoryManager.vehicleTypeAddress));
@@ -174,6 +176,8 @@ public:
 
 	void UpdatePreviousStates()
 	{
+		if (settingsManager.debugMod) API::get()->log_info("UpdatePreviousStates");
+
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.previousCameraMode = cameraController.currentCameraMode;

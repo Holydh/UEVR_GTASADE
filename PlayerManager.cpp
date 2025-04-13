@@ -20,9 +20,9 @@ void PlayerManager::FetchPlayerUObjects()
 	}
 }
 
-void PlayerManager::RepositionPlayerUObjectsHooked()
+void PlayerManager::RepositionUnhookedUobjects()
 {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("DisablePlayerUObjectsHook()");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("RepositionUnhookedUobjects()");
 
 	if (playerHead == nullptr)
 		return;

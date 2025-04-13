@@ -24,9 +24,15 @@ void WeaponManager::UpdateActualWeaponMesh()
 
 	const auto& playerControllerChildren = playerManager->playerController->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"Children");
 	//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
+	const uevr::API::UObject* gta_BPplayerCharacter = nullptr;
 
-	if (playerControllerChildren.data[3]->is_a(gta_BPplayerCharacter_c))
-		torso = playerControllerChildren.data[3]->get_property<uevr::API::UObject*>(L"torso");
+	for (auto child : playerControllerChildren) {
+		if (gta_BPplayerCharacter == nullptr && child->is_a(gta_BPplayerCharacter_c)) {
+			gta_BPplayerCharacter = child;
+		}
+	}
+	if (gta_BPplayerCharacter != nullptr)
+		torso = gta_BPplayerCharacter->get_property<uevr::API::UObject*>(L"torso");
 	else
 	{
 		uevr::API::get()->log_info("gta_BPplayerCharacter not found.");

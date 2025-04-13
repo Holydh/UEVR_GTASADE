@@ -35,5 +35,5 @@ public:
 	bool weaponWheelEnabled = false;
 
 	void FetchPlayerUObjects();
-	void RepositionPlayerUObjectsHooked();
+	void RepositionUnhookedUobjects();
 };

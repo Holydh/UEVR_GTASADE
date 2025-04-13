@@ -173,5 +173,5 @@ void CameraController::FixUnderwaterView(bool enableFix)
 	const auto underwaterMaterial = uevr::API::get()->find_uobject(L"MaterialInstanceConstant /Game/Common/Materials/VGD/Instances/MI_Underwater_VGD.MI_Underwater_VGD");
 	//API::get()->log_info("underwaterMaterial : %ls", underwaterMaterial->get_full_name().c_str());
 	underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
-	uevr::API::get()->log_info("Underwater View Fixed");
+	underwaterViewFixed = enableFix;
 }
