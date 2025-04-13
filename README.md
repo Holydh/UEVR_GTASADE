@@ -49,8 +49,8 @@
  
 ## 🎮 Usage
 
-- The plugin activates **automatically** when UEVR is injected (press both joystick at the same time or "insert" key on keyboard to toggle UEVR menu).
-- You can adjust **rotation speed** in :
+The plugin activates **automatically** when UEVR is injected (press both joystick at the same time or "insert" key on keyboard to toggle UEVR menu).  
+You can adjust **rotation speed** in :
   `UEVR > Input > Aim Method > Speed`
 
 #### Camera Settings
@@ -102,66 +102,21 @@ You can also try using [**DLSS Swapper**](https://github.com/beeradmoore/dlss-sw
  
 ## 🎉 Have Fun!
 
-- The game should be playable from start to finish with the mod. If you encounter problems, please submit a github issue or report it on the [nexus mode page](https://github.com/praydog/UEVR-nightly/releases/tag/nightly-01042-9d6d66496524cdcfa6a022e79b40f1d87669efb4).
+The game should be playable from start to finish with the mod. If you encounter problems, please submit a github issue or report it on the [nexus mode page](https://github.com/praydog/UEVR-nightly/releases/tag/nightly-01042-9d6d66496524cdcfa6a022e79b40f1d87669efb4).
  <br>
  <br>
+
+ ## 🙏 Thanks to
+- Praydog for his universal UE VR injector.  
+- ⒹⒿ, Pande4360, markmon, Mutar and Ashok for sharing knowledge. 💪  
+- Mutar for his Stalker 2 Scope lua script and kind help troubleshooting.  
+- teddybear082 and Lord Beardsteak for the playtests and feedbacks.  
+ <br>
+ <br>
+
  
 Changelog V1.3
 - Auto handling of UEVR camera settings during cutscenes and in flying vehicles
 - Fix camera position not updating correctly under specific situations
 - Bullet traces attached to CJ animations are now hidden
 - Code & git cleanup for release
-
-Changelog V1.2
-- Fixed aggressive velocity of spawning of cars
-- Added another shoot detection method for recoil animations. Should fix all recoil issues
-- Rocket launcher aim fixed
-- Sniper scope and camera screen hooked into the original zoom function (you can now zoom in and out like usual)
-- Camera Screen now usable for missions requiring to take photos (although not in full 6dof)
-
-Changelog
-V1.16
-- Camera weapon controls added
-- Camera weapon screen added
-- Sniper aim fixed
-- Sniper scope added (Credits to Mutar for the initial script)
-- Attempt to fix bugged spawns of cars
-- All crosshairs now hidden via created texture mods
-
-V1.151
-- Better weapon mesh visibility handling. Night googles visibility not always toggled during cutscene fixed.
-- Thermal googles meshes hidden when not in cutscene
-- (for devs) Code cleaned up (wip) and completely restructured for clarity. I'll set the git to public soon.
-
-V1.15
-- Blurry underwater view fixed
-- Melee weapons unhooked from motion controllers for better usability (true VR melee won't be possible without better modding capabilities for this game)
-- All tattoos and some more clothes hidden when not in cutscene
-- Night Google mesh hidden
-
-V1.14
-- Fixed wrong shoot detection triggering the recoil when character ends reloading.
-- Aim from vehicle fixed. You can now use the right joystick to rotate the camera toward the direction you want to shoot (left, front, right)
-- Fixed a rare occurrence of the weapon not correctly detaching from motion controller when entering a vehicle
-
-V1.12
-- More reliable shoot and crouch detection (for recoil and crouch animation)
-- Improved VR crouch. It now follows CJ's head height
-- Weapon mesh position & rotation now reset to their original position during cutscenes and when driving, no more floating weapons.
-
-V1.1
-- Better Memory Management. Mod can now be enabled/disabled at runtime without crashing.
-- All spray weapons aiming fixed (spray can, fire extinguisher, flame thrower)
-- Rotation speed hooked to the UEVR settings. You can modify it anytime by moving the slide in UEVR > Input > Aim Method > Speed
-- no more Cleo dependency
-
-Initial Release V1.0 :
-- Homemade Camera controller added
-- Camera following vehicle rotation added
-- Cutscene camera handling added
-- 6dof weapon handling added
-- VR crouch handler added
-- Weapon visibility fixed
-- Weapon recoil added
-- Texture mod to remove all the crosshair added
-- Texture mod to reduce the size of the blinding vanilla muzzle flash added
