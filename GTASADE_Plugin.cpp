@@ -116,8 +116,8 @@ public:
 			}
 
 			weaponManager.ProcessWeaponHandling(delta);
+			weaponManager.ProcessWeaponVisibility();
 		}
-		weaponManager.ProcessWeaponVisibility();
 		settingsManager.UpdateSettingsIfModified();
 		UpdatePreviousStates();
 
