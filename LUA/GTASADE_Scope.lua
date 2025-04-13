@@ -5,9 +5,12 @@ local debugMode = false
 local api = uevr.api
 
 -- Static variables
-local sniperRenderTargetResolution = {1024, 1024} -- You can lower these values for better performance. Keep the aspect ratio.
-local cameraRenderTargetResolution = {720, 1280} -- Same here
 
+-- You can lower these values for better performance. Keep the aspect ratio to avoid stretching.
+local sniperRenderTargetResolution = {1024, 1024}
+-- default sniper values : {1024, 1024}
+local cameraRenderTargetResolution = {720, 1280}
+-- default camera values : {720, 1280}
 local emissive_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMaterial.EmissiveMeshMaterial"
 local cylinder_mesh_name = "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder"
 local red_dot_texture_name = "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC"
