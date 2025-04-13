@@ -12,6 +12,9 @@ local emissive_material_name = "Material /Engine/EngineMaterials/EmissiveMeshMat
 local cylinder_mesh_name = "StaticMesh /Engine/BasicShapes/Cylinder.Cylinder"
 local red_dot_texture_name = "Texture2D /Game/SanAndreas/Textures/gta3/Tilables/T_carpet_red_256_BC.T_carpet_red_256_BC"
 local plane_mesh_name = "StaticMesh /Engine/BasicShapes/Plane.Plane"
+local sniper_fname = "SM_sniper"
+local camera_fname = "SM_camera"
+local unarmed_fname ="unarmed"
 local ftransform_c = nil
 local flinearColor_c = nil
 local hitresult_c = nil
@@ -34,7 +37,6 @@ local cylinder_static_mesh = nil
 local emissive_material_amplifier = 2.0 
 
 -- Instance variables
-local weapon_mesh = nil
 local scope_actor = nil
 local scope_plane_component = nil
 local red_dot_plane_component = nil
@@ -51,6 +53,7 @@ local zero_transform = nil
 local isSniper = false
 local cylinder_initialized = false
 local cylinder_actor = nil
+local previous_weapon_fname = nil
 
 local function find_required_object(name)
     local obj = api:find_uobject(name)
@@ -225,7 +228,7 @@ local function get_equipped_weapon(playerController)
             weapon = child
         end
     end
-    weapon_mesh = nil
+    local weapon_mesh = nil
     if weapon ~= nil then
         weapon_mesh = weapon.WeaponMesh
     end
@@ -561,7 +564,6 @@ uevr.sdk.callbacks.on_pre_engine_tick(
                     red_dot_plane_component = nil
                     scene_capture_component = nil
                     actual_render_target = nil
-                    weapon_mesh = nil
                     reset_static_objects()
                     init_static_objects()
                 end
@@ -569,71 +571,64 @@ uevr.sdk.callbacks.on_pre_engine_tick(
             end
         end
         local playerController = api:get_player_controller()
-        weapon_mesh = get_equipped_weapon(playerController)
-        if debugMode then print("check weapon_mesh") end
-        if weapon_mesh then
-            local weapon_changed = not current_weapon or 
-            current_weapon.StaticMesh == nil or -- this one
-            weapon_mesh.StaticMesh == nil or
-            weapon_mesh.StaticMesh ~= current_weapon.StaticMesh or 
-            scope_plane_component ~= nil and scope_plane_component.AttachParent == nil
-            if debugMode then print("check weapon_mesh changed") end
-            if weapon_changed then
-                if debugMode then print(weapon_changed) end
-                if (red_dot_plane_component ~= nil) then
-                    red_dot_plane_component:K2_DestroyComponent(red_dot_plane_component)
-                    red_dot_plane_component = nil
-                end
-                if (scope_plane_component ~= nil) then
-                    scope_plane_component:K2_DestroyComponent(scope_plane_component)
-                    scope_plane_component = nil
-                end
-                if debugMode then print("Weapon changed") end
-                if debugMode then print("Previous weapon: " .. (current_weapon and current_weapon.StaticMesh:get_fname():to_string() or "none")) end
-                local currentWeaponString = weapon_mesh.StaticMesh:get_fname():to_string()
-                if debugMode then print("New weapon: " .. currentWeaponString) end
-                
-                -- Update current weapon reference
-                current_weapon = weapon_mesh
+        local weapon_mesh = get_equipped_weapon(playerController)
+        local current_weapon_fname = nil;
+        local weapon_changed = false;
 
-                if currentWeaponString == "SM_camera" or currentWeaponString == "SM_sniper" then
-                    isSniper = currentWeaponString == "SM_sniper"
-                    spawn_scope(engine, weapon_mesh, isSniper)
-                    attach_components_to_weapon(weapon_mesh, isSniper)
-                    switch_scope_state(true)
-                else
-                    switch_scope_state(false)
-                end
-             
-            end
-            if debugMode then print("check scene_capture_component") end
-            if scene_capture_component ~= nil then
-                if debugMode then print(scene_capture_component:get_full_name()) end
-                local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(cameraManager_c)
-                if debugMode then print("check game_camera_manager") end
-                if game_camera_manager ~= nil then
-                    local actualFov = game_camera_manager.CameraCachePrivate.POV.FOV
-                    if actualFov >= 70 then
-                        actualFov = 70
-                    end
-                    if debugMode then print("check if isSniper") end
-                    if isSniper then
-                        scene_capture_component.FOVAngle = mapRange(actualFov, 12, 70, 0.75, 2.6) --remap fov range for better VR use
-                    else
-                        scene_capture_component.FOVAngle = mapRange(actualFov, 3, 70, 3, 50) --remap fov range for better VR use
-                    end
-                end
-            end
-            if debugMode then print("after if scene_capture_component") end
+        if weapon_mesh ~= nil then
+            if debugMode then print(weapon_mesh:get_full_name()) end
+            current_weapon_fname = weapon_mesh.StaticMesh:get_fname():to_string()
+            weapon_changed = previous_weapon_fname ~= current_weapon_fname
         else
-            if debugMode then print("Weapon was removed/unequipped") end
-            -- Weapon was removed/unequipped
-            if current_weapon then
-                if debugMode then print("Weapon unequipped") end
-                current_weapon = nil
-                weapon_mesh = nil
+            current_weapon_fname = unarmed_fname
+            weapon_changed = previous_weapon_fname ~= current_weapon_fname;
+        end
+
+        if weapon_changed then
+            print("Weapon changed")
+            if (red_dot_plane_component ~= nil) then
+                red_dot_plane_component:K2_DestroyComponent(red_dot_plane_component)
+                red_dot_plane_component = nil
+            end
+            if (scope_plane_component ~= nil) then
+                scope_plane_component:K2_DestroyComponent(scope_plane_component)
+                scope_plane_component = nil
+            end
+            print("Previous weapon: " .. (previous_weapon_fname or "none"))
+            print("New weapon: " .. current_weapon_fname)
+
+            -- Update current weapon reference
+            current_weapon = weapon_mesh
+
+            isSniper = current_weapon_fname == sniper_fname
+            if current_weapon_fname == camera_fname or isSniper then
+                spawn_scope(engine, weapon_mesh, isSniper)
+                attach_components_to_weapon(weapon_mesh, isSniper)
+                switch_scope_state(true)
+            else
+                switch_scope_state(false)
+            end
+            previous_weapon_fname = current_weapon_fname
+        end
+        if debugMode then print("check scene_capture_component") end
+        if scene_capture_component ~= nil then
+            if debugMode then print(scene_capture_component:get_full_name()) end
+            local game_camera_manager = UEVR_UObjectHook.get_first_object_by_class(cameraManager_c)
+            if debugMode then print("check game_camera_manager") end
+            if game_camera_manager ~= nil then
+                local actualFov = game_camera_manager.CameraCachePrivate.POV.FOV
+                if actualFov >= 70 then
+                    actualFov = 70
+                end
+                if debugMode then print("check if isSniper") end
+                if isSniper then
+                    scene_capture_component.FOVAngle = mapRange(actualFov, 12, 70, 0.75, 2.6)     --remap fov range for better VR use
+                else
+                    scene_capture_component.FOVAngle = mapRange(actualFov, 3, 70, 3, 50)          --remap fov range for better VR use
+                end
             end
         end
+        if debugMode then print("after if scene_capture_component") end
     end
 )
 
@@ -658,7 +653,6 @@ uevr.sdk.callbacks.on_script_reset(function()
     end
     scene_capture_component_mesh = nil
     actual_render_target = nil
-    weapon_mesh = nil
     reset_static_objects()
 end
 )
