@@ -3,7 +3,19 @@
 > ⚠️ **Steam version only.** This mod does **not** work with the Epic Games Store version.
  <br>
 
-## ✨ Features
+## ✅ Features
+- VR Camera controller handling :
+  - All on foot movements including crouching
+  - All vehicle driving
+  - UEVR integration allowing various camera comfort tweaks
+  - Auto handling of UEVR camera settings for cutscenes (all fully rendered in 3D) and flying vehicles
+
+- 6dof weapon handling :
+  - Full motion controlled aiming for all ranged weapons even for scripted shooting sequences in vehicles as a passenger
+  - Specific recoil animation for every ranged weapons
+  - Corrected muzzle flash size for VR
+  - Functional Sniper Scope and Camera Screen with zoom in and out function hooked to the game allowing related missions to be completed in VR.
+ - Other various game fixes allowing for a full VR playthrough
 
  <br>
  
@@ -84,6 +96,7 @@ You can also try using [**DLSS Swapper**](https://github.com/beeradmoore/dlss-sw
 - Keep in mind GTA:SA is a **third-person** game :
   - Hold **Aim** before shooting (just like in the base game). If you try to shoot without aiming, you’ll need to **hold the shoot button** and wait for CJ's aiming animation to end before the shoot is allowed.
   - CJ must be **facing your target** for single-handed weapons. You **can’t shoot forward** while walking or running backwards.
+- Shooting from vehicle isn't 6DOF. Devs deleted the cheat code for free aiming in cars and I haven't found any way to enable it back. 6DOF aiming is enabled when in vehicle as a passenger during shooting scripted events though.
  <br>
  <br>
  
