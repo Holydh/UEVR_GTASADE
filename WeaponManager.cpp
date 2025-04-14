@@ -16,7 +16,6 @@ void WeaponManager::UpdateActualWeaponMesh()
 	const auto& playerControllerChildren = playerManager->playerController->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"Children");
 	//API::get()->log_info("children = %ls", children.data[4]->get_full_name().c_str());
 	const uevr::API::UObject* gta_BPplayerCharacter = nullptr;
-
 	for (auto child : playerControllerChildren) {
 		if (gta_BPplayerCharacter == nullptr && child->is_a(gta_BPplayerCharacter_c)) {
 			gta_BPplayerCharacter = child;
@@ -34,18 +33,17 @@ void WeaponManager::UpdateActualWeaponMesh()
 		return;
 	}
 	const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
-	if (torsoChildren.count == 0)
-	{
-		currentWeaponEquipped = Unarmed;
-		weaponMesh = nullptr;
-		weaponStaticMesh = nullptr;
-		return;
-	}
-	const auto& weaponRootChildren = torsoChildren.data[0]->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
+	uevr::API::UObject* weaponMeshFetch = nullptr;
 
-	if (weaponRootChildren.data[0]->is_a(gta_StaticMeshComponent_c))
+	for (auto child : torsoChildren) {
+		if (!child->is_a(gta_StaticMeshComponent_c)) {
+			weaponMeshFetch = child->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren").data[0];
+		}
+	}
+
+	if (weaponMeshFetch != nullptr && weaponMeshFetch->is_a(gta_StaticMeshComponent_c))
 	{
-		weaponMesh = weaponRootChildren.data[0];
+		weaponMesh = weaponMeshFetch;
 		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
 	}
 	else
@@ -74,8 +72,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	}
 
 	std::wstring weaponName = weaponStaticMesh->get_fname()->to_string();
-	uevr::API::get()->log_info("%ls", weaponName.c_str());
-
+	
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
 	if (it != weaponNameToIndex.end()) {
@@ -110,7 +107,6 @@ void WeaponManager::UpdateShootingState()
 
 void WeaponManager::ProcessAiming()
 {
-	uevr::API::get()->log_info("currentWeaponEquipped %i", currentWeaponEquipped);
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
 
 	if (cameraController->currentCameraMode == CameraController::Camera)
