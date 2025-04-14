@@ -36,7 +36,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 	uevr::API::UObject* weaponMeshFetch = nullptr;
 
 	for (auto child : torsoChildren) {
-		if (!child->is_a(gta_StaticMeshComponent_c)) {
+		if (weaponMeshFetch == nullptr && !child->is_a(gta_StaticMeshComponent_c)) {
 			weaponMeshFetch = child->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren").data[0];
 		}
 	}
