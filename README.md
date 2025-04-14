@@ -37,13 +37,11 @@
    - Option 1: Use the **"Import Config"** button in UEVR.
    - Option 2: Manually place the `SanAndreas` folder into:  
      `C:\Users\YourUsername\AppData\Roaming\UnrealVRMod`
-5. Launch the game.
-6. **Important:** Inject UEVR **while in the main menu** (before loading a save file).  
+5. **Important:** Launch the game and inject UEVR **while in the main menu** (before loading a save file).  
    > This is crucial for proper sniper scope behavior.
+6. Adjust graphical settings. Everything is set to the max by default, lower as needed.
 7. In the game's **Gameplay Settings**, set **Targeting** to `Free Aim`.
-8. Adjust graphical settings as needed:
-   - Disable **Ambient Occlusion** and **World Shadows** — they only render in one eye.
-9. Recommended **Gamepad Setting**:  
+8. Recommended **Gamepad Setting**:  
    Set to `Modern` for easier shooting while driving (left grip to shoot + right stick to rotate the camera changing the shoot direction).
  <br>
  
@@ -114,10 +112,3 @@ The game should be playable from start to finish with the mod. If you encounter 
 - teddybear082 and Lord Beardsteak for the playtests and feedbacks.  
  <br>
  <br>
-
- 
-Changelog V1.3
-- Auto handling of UEVR camera settings during cutscenes and in flying vehicles
-- Fix camera position not updating correctly under specific situations
-- Bullet traces attached to CJ animations are now hidden
-- Code & git cleanup for release
