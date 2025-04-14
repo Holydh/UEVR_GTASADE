@@ -79,13 +79,12 @@ Set the relevant values to `false`.
 
 ## 🚀 Performance
 
-The mod is highly optimized, averaging **0.08 ms per frame** (measured on 14700k), which makes it very lightweight.  
-
+This mod is fairly lightweight, averaging **0.08 ms per frame** (measured on 14700k).  
 However, the **camera screen** and **sniper scope** can be demanding on your GPU when active.  
 You can reduce their performance impact by adjusting their individual render resolutions by opening this file with a text editor :  
 `C:\Users\YourUsername\AppData\Roaming\UnrealVRMod\SanAndreas\scripts\GTASADE_Scope.lua`
 
-You can also try using [**DLSS Swapper**](https://github.com/beeradmoore/dlss-swapper) to upgrade to the latest **DLSS version**. In my tests, this noticeably reduced ghosting and improved overall performance.
+You can also try using [**DLSS Swapper**](https://github.com/beeradmoore/dlss-swapper) to upgrade to the latest **DLSS version**. This seems to noticeably reduce ghosting and improve performance a bit.
  <br>
  <br>
  
