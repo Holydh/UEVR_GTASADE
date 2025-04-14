@@ -73,13 +73,8 @@ void WeaponManager::UpdateActualWeaponMesh()
 		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
 	}
 
-	std::wstring weaponName = weaponStaticMesh->get_full_name();
-
-	// Extract only the weapon name from the full path
-	size_t lastDot = weaponName.find_last_of(L'.');
-	if (lastDot != std::wstring::npos) {
-		weaponName = weaponName.substr(lastDot + 1);
-	}
+	std::wstring weaponName = weaponStaticMesh->get_fname()->to_string();
+	uevr::API::get()->log_info("%ls", weaponName.c_str());
 
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
@@ -115,6 +110,7 @@ void WeaponManager::UpdateShootingState()
 
 void WeaponManager::ProcessAiming()
 {
+	uevr::API::get()->log_info("currentWeaponEquipped %i", currentWeaponEquipped);
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
 
 	if (cameraController->currentCameraMode == CameraController::Camera)
@@ -139,7 +135,7 @@ void WeaponManager::ProcessAiming()
 		*(reinterpret_cast<float*>(memoryManager->aimForwardVectorAddresses[2])) = cameraController->cameraMatrixValues[6];
 		return;
 	}
-
+	
 
 	if (weaponMesh != nullptr) {
 		Utilities::ParameterSingleVector3 forwardVector_params;
@@ -154,7 +150,7 @@ void WeaponManager::ProcessAiming()
 		bool socketAvailable = true;
 		bool sprayWeapon = false;
 		bool meleeWeapon = false;
-
+		
 		//mesh alignement weapon offsets
 		switch (currentWeaponEquipped)
 		{
@@ -235,7 +231,7 @@ void WeaponManager::ProcessAiming()
 			break;
 		case Minigun :
 			point1Offsets = { 48.1025 , -2.9978 , 14.3878 };
-			point2Offsets = { 86.6453 , 0.429413 - 0.5 , 35.9644 - 0.5 };
+			point2Offsets = { 86.6453 , 0.429413 /*- 0.5*/ , 35.9644 /*- 0.5 */};
 			break;
 		case SprayCan:
 			/*point1Offsets = { 2.82819, -2.52103, 9.92684 };

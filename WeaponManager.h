@@ -32,7 +32,7 @@ private:
 		{L"SM_unarmed", 0},           // Unarmed
 		{L"SM_brassknuckle", 1},    // BrassKnuckles
 		{L"SM_golfclub", 2},         // GolfClub
-		{L"SM_nightstick", 3},       // NightStick
+		{L"SM_nitestick", 3},       // NightStick
 		{L"SM_knifecur", 4},            // Knife
 		{L"SM_bat", 5},      // BaseballBat
 		{L"SM_shovel", 6},           // Shovel
@@ -64,7 +64,7 @@ private:
 		{L"SM_rocketla", 35},  // RocketLauncher
 		{L"SM_heatseek", 36},// RocketLauncherHeatSeek
 		{L"SM_flame", 37},    // Flamethrower
-		{L"SM_minigun", 38},         // Minigun
+		{L"SM_minigun2", 38},         // Minigun
 		{L"SM_satchel", 39},         // Satchel
 		{L"SM_detonator", 40},       // Detonator
 		{L"SM_spraycan", 41},        // SprayCan
