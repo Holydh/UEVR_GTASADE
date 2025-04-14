@@ -38,6 +38,7 @@ public:
 	bool storedLerpRoll = false;
 
 	float xAxisSensitivity = 125.0f;
+	float joystickDeadzone = 0.1f;
 
 	void InitSettingsManager();
 	void GetAllConfigFilePaths();

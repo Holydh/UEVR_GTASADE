@@ -13,8 +13,9 @@ void SettingsManager::InitSettingsManager()
 void SettingsManager::UpdateUevrSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateUevrSettings()");
-
+	
 	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
+	joystickDeadzone = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_JoystickDeadzone", 0.1f);
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);

@@ -45,8 +45,7 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	glm::mat4 deltaRotationMatrix = playerManager->isInVehicle && currentCameraMode != AimWeaponFromCar ? glm::inverse(accumulatedJoystickRotation) * headRotationMatrix : glm::inverse(accumulatedJoystickRotation) * baseHeadRotation;
 
 	// Joystick input to adjust the camera yaw rotation
-	const float DEADZONE = 0.1f;
-	if (abs(rightJoystick.x) > DEADZONE) {
+	if (abs(rightJoystick.x) > settingsManager->joystickDeadzone) {
 		joystickYaw = -rightJoystick.x * delta * settingsManager->xAxisSensitivity;
 	}
 
