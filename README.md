@@ -3,7 +3,7 @@ Build available here : [https://www.nexusmods.com/grandtheftautothetrilogy/mods/
 
  #### Thanks to
 - Praydog for his universal UE VR injector.  
-- ⒹⒿ, Pande4360, markmon, Mutar and Ashok for sharing knowledge. 💪  
+- ⒹⒿ, Pande4360, markmon, Mutar and Ashok for sharing knowledge.  
 - Mutar for his Stalker 2 Scope lua script and kind help troubleshooting.  
 - teddybear082 and Lord Beardsteak for the playtests and feedbacks.  
  <br>
