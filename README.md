@@ -97,6 +97,7 @@ You can also try using [**DLSS Swapper**](https://github.com/beeradmoore/dlss-sw
   - Hold **Aim** before shooting (just like in the base game). If you try to shoot without aiming, you’ll need to **hold the shoot button** and wait for CJ's aiming animation to end before the shoot is allowed.
   - CJ must be **facing your target** for single-handed weapons. You **can’t shoot forward** while walking or running backwards.
 - Shooting from vehicle isn't 6DOF. Devs deleted the cheat code for free aiming in cars and I haven't found any way to enable it back. 6DOF aiming is enabled when in vehicle as a passenger during shooting scripted events though.
+- Melee weapons and the camera can't be used with motion controls either due to how the game handles them.
  <br>
  <br>
  
