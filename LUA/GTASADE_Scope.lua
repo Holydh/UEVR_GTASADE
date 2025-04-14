@@ -581,7 +581,7 @@ uevr.sdk.callbacks.on_pre_engine_tick(
         if weapon_mesh ~= nil then
             if debugMode then print(weapon_mesh:get_full_name()) end
             current_weapon_fname = weapon_mesh.StaticMesh:get_fname():to_string()
-            weapon_changed = previous_weapon_fname ~= current_weapon_fname
+            weapon_changed = previous_weapon_fname ~= current_weapon_fname or weapon_mesh ~= current_weapon
         else
             current_weapon_fname = unarmed_fname
             weapon_changed = previous_weapon_fname ~= current_weapon_fname;
