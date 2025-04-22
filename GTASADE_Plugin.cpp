@@ -95,10 +95,10 @@ public:
 			}
 		}
 
-		if (playerManager.isInControl && playerManager.isInVehicle && !playerManager.wasInVehicle)
+		if (playerManager.isInVehicle && !playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(true);
 
-		if (playerManager.isInControl && !playerManager.isInVehicle && playerManager.wasInVehicle)
+		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(false);
 
 		// Toggles the game's original instructions for the camera weapon controls
