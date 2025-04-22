@@ -42,6 +42,13 @@ void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
 	uevr::API::VR::reload_config();
 }
 
+void SettingsManager::SetOrientationMethod(bool inVehicle)
+{
+	if (debugMod) uevr::API::get()->log_info("SetPitchAndLerpSettingsForFlight");
+	SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", (int)!inVehicle);
+	uevr::API::VR::reload_config();
+}
+
 void SettingsManager::CacheSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("CacheSettings");
@@ -118,7 +125,7 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 	return false;  // No change
 }
 
-void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std::string& key, float value)
+void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std::string& key, bool value)
 {
 	if (debugMod) uevr::API::get()->log_info("SetBoolValueToFile()");
 
@@ -171,7 +178,7 @@ void SettingsManager::SetBoolValueToFile(const std::string& filePath, const std:
 	}
 }
 
-bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const std::string& key, float defaultValue)
+bool SettingsManager::GetBoolValueFromFile(const std::string& filePath, const std::string& key, bool defaultValue)
 {
 	if (debugMod) uevr::API::get()->log_info("GetBoolValueFromFile()");
 
@@ -268,6 +275,59 @@ float SettingsManager::GetFloatValueFromFile(const std::string& filePath, const 
 	}
 
 	return defaultValue;  // Return default if the key is not found
+}
+
+void SettingsManager::SetIntValueToFile(const std::string& filePath, const std::string& key, int value)
+{
+	if (debugMod) uevr::API::get()->log_info("SetIntValueToFile()");
+
+	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+		uevr::API::get()->log_info("Failed to open %s for reading", filePath);
+		return;
+	}
+
+	DWORD bytesRead;
+	char buffer[1024];
+	std::string fileContents;
+
+	while (ReadFile(hFile, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+	{
+		buffer[bytesRead] = '\0';
+		fileContents.append(buffer);
+	}
+	CloseHandle(hFile);
+
+	size_t pos = fileContents.find(key);
+	if (pos != std::string::npos)
+	{
+		size_t equalPos = fileContents.find('=', pos);
+		if (equalPos != std::string::npos)
+		{
+			size_t endOfLine = fileContents.find_first_of("\r\n", equalPos);
+			std::string before = fileContents.substr(0, equalPos + 1);
+			std::string after = (endOfLine != std::string::npos) ? fileContents.substr(endOfLine) : "";
+
+			// Replace value
+			std::string newContents = before + std::to_string(value) + after;
+			
+			// Write it back
+			HANDLE hWriteFile = CreateFileA(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (hWriteFile != INVALID_HANDLE_VALUE)
+			{
+				DWORD bytesWritten;
+				WriteFile(hWriteFile, newContents.c_str(), static_cast<DWORD>(newContents.size()), &bytesWritten, NULL);
+				CloseHandle(hWriteFile);
+				uevr::API::get()->log_info("Updated %s to %s", key.c_str(), std::to_string(value));
+			}
+			else
+			{
+				uevr::API::get()->log_info("Failed to open %s for writing", filePath);
+			}
+			return;
+		}
+	}
 }
 
 std::string GetDLLDirectory()

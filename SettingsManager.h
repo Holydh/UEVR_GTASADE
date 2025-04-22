@@ -18,8 +18,9 @@ private:
 
 	//Would need some rework if lots of config values to read. Now it opens the config.txt file each time we call these :
 	float GetFloatValueFromFile(const std::string& filePath, const std::string& key, float defaultValue);
-	bool GetBoolValueFromFile(const std::string& filePath, const std::string& key, float defaultValue);
-	void SetBoolValueToFile(const std::string& filePath, const std::string& key, float defaultValue);
+	bool GetBoolValueFromFile(const std::string& filePath, const std::string& key, bool defaultValue);
+	void SetBoolValueToFile(const std::string& filePath, const std::string& key, bool defaultValue);
+	void SetIntValueToFile(const std::string& filePath, const std::string& key, int value);
 
 	void UpdateUevrSettings();
 	void UpdatePluginSettings();
@@ -46,4 +47,5 @@ public:
 
 	void CacheSettings(); // For situations where we need to modify UEVR config temporarily
 	void SetPitchAndLerpSettingsForFlight(bool enable);
+	void SetOrientationMethod(bool inVehicle);
 };
