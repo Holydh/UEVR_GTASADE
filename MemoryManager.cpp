@@ -128,17 +128,17 @@ std::vector<MemoryBlock> pitchAxisAimingInstructionsAddresses = {
 };
 std::vector<MemoryBlock> aimingForwardVectorInstructionsAddresses = {
 	{0x11090E8, 5, 0xf2410f1107},
-	{0xAE0410, 5, 0xf3440f1101},
+	//{0xAE0410, 5, 0xf3440f1101}, //cause aggressive spawning velocity of cars
 	{0x1109EA5, 5, 0xf2410f1107},
 	{0x1105AAC, 7, 0xf20f1189100100},
 	{0x1105AB3, 1, 0x00},
 	{0x1107E3B, 7, 0xf20f1187100100},
 	{0x1107E42, 1, 0x00},
 	{0x1108E75, 5, 0xf2410f1107},
-/*	{0xAE0406, 5, 0xf30f117104},*/ //cause aggressive spawning velocity of cars
+	//{0xAE0406, 5, 0xf30f117104}, //cause aggressive spawning velocity of cars
 	{0x11090ED, 3, 0x418947},
 	{0x11090F0, 1, 0x08},
-	{0xAE040B, 5, 0xf30f117908},
+	//{0xAE040B, 5, 0xf30f117908}, //cause aggressive spawning velocity of cars
 	{0x1109EAA, 3, 0x418947},
 	{0x1109EAD, 1, 0x08},
 	{0x1105AC9, 5, 0x8981180100},

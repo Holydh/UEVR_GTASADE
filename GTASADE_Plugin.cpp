@@ -95,9 +95,10 @@ public:
 			}
 		}
 
+		// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
+		// switches back to the game orientation method when driving a vehicle to prevent steer lock when looking around.
 		if (playerManager.isInVehicle && !playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(true);
-
 		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(false);
 
@@ -107,7 +108,7 @@ public:
 		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(false);
 	
-		// VR mod processing :
+		// Main VR functions :
 		if (playerManager.isInControl)
 		{
 			weaponManager.UpdateActualWeaponMesh();
