@@ -441,7 +441,7 @@ void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)
 		RestoreMemory(sniperAimingVectorInstructionsAddresses);
 		RestoreMemory(carAimingVectorInstructionsAddresses);
 	}
-
+	vehicleRelatedMemoryInstructionsNoped = !restoreInstructions;
 }
 
 //Finds address from pointer offsets found in cheat engine
