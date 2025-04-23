@@ -48,6 +48,7 @@ public:
 	uintptr_t xAxisSpraysAimAddress = 0x53E2558;
 	std::array<uintptr_t, 3> cameraPositionAddresses { 0x53E2674, 0x53E2678, 0x53E267C }; // x, y, z
 	std::array<uintptr_t, 3> playerHeadPositionAddresses { 0x58013D8, 0x58013DC, 0x58013E0 }; // x, y, z
+	std::array<uintptr_t, 3> playerPositionAddresses { 0x5067948, 0x506794C, 0x5067950 }; // x, y, z
 
 	static uintptr_t playerShootInstructionAddress;
 
@@ -60,6 +61,7 @@ public:
 
 	void InitMemoryManager();
 	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
+	void ToggleHeliCanonCameraModMemoryInstructions(bool enableOriginalInstructions);
 	void NopVehicleRelatedMemoryInstructions();
 	void RestoreVehicleRelatedMemoryInstructions();
 	bool vehicleRelatedMemoryInstructionsNoped = true;

@@ -372,6 +372,8 @@ void MemoryManager::AdjustAddresses() {
 	for (auto& address : aimForwardVectorAddresses) address += baseAddressGameEXE;
 	for (auto& address : cameraPositionAddresses) address += baseAddressGameEXE;
 	for (auto& address : playerHeadPositionAddresses) address += baseAddressGameEXE;
+	for (auto& address : playerPositionAddresses) address += baseAddressGameEXE;
+	
 
 	playerIsInControlAddress += baseAddressGameEXE;
 	playerIsInVehicleAddress += baseAddressGameEXE;
@@ -410,6 +412,22 @@ void MemoryManager::RestoreVehicleRelatedMemoryInstructions()
 	RestoreMemory(rocketLauncherAimingVectorInstructionsAddresses);
 	RestoreMemory(sniperAimingVectorInstructionsAddresses);
 	vehicleRelatedMemoryInstructionsNoped = false;
+}
+
+void MemoryManager::ToggleHeliCanonCameraModMemoryInstructions(bool restoreInstructions)
+{
+	if (!restoreInstructions)
+	{
+		NopMemory(matrixInstructionsRotationAddresses);
+		NopMemory(pitchAxisAimingInstructionsAddresses);
+		NopMemory(aimingForwardVectorInstructionsAddresses);
+	}
+	if (restoreInstructions)
+	{
+		RestoreMemory(matrixInstructionsRotationAddresses);
+		RestoreMemory(pitchAxisAimingInstructionsAddresses);
+		RestoreMemory(aimingForwardVectorInstructionsAddresses);
+	}
 }
 
 void MemoryManager::ToggleAllMemoryInstructions(bool restoreInstructions)

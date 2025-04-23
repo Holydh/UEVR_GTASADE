@@ -102,12 +102,17 @@ public:
 		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(false);
 
+		if (cameraController.currentCameraMode == CameraController::HelicannonFirstPerson && cameraController.previousCameraMode != CameraController::HelicannonFirstPerson)
+			memoryManager.ToggleHeliCanonCameraModMemoryInstructions(true);
+		if (cameraController.currentCameraMode != CameraController::HelicannonFirstPerson && cameraController.previousCameraMode == CameraController::HelicannonFirstPerson)
+			memoryManager.ToggleHeliCanonCameraModMemoryInstructions(false);
+
 		// Toggles the game's original instructions for the camera weapon controls
 		if (cameraController.currentCameraMode == CameraController::Camera && cameraController.previousCameraMode != CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(true);
 		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(false);
-	
+		
 		// Main VR functions :
 		if (playerManager.isInControl)
 		{
