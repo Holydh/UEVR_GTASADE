@@ -6,22 +6,13 @@
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="include">
-      <UniqueIdentifier>{9e49bb0f-a8ea-43bb-b9b1-cddaf74001ff}</UniqueIdentifier>
+      <UniqueIdentifier>{a0c9395c-0ebd-415d-8bcc-bd73333a05d3}</UniqueIdentifier>
     </Filter>
     <Filter Include="include\uevr">
-      <UniqueIdentifier>{ad4be0d9-7f7c-46d8-a75c-7d9e2988e1ac}</UniqueIdentifier>
+      <UniqueIdentifier>{e8330159-08c8-4c42-a718-572618ced6a3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\plugin\include\uevr\API.h">
-      <Filter>include\uevr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\plugin\include\uevr\API.hpp">
-      <Filter>include\uevr</Filter>
-    </ClInclude>
-    <ClInclude Include="..\plugin\include\uevr\Plugin.hpp">
-      <Filter>include\uevr</Filter>
-    </ClInclude>
     <ClInclude Include="MemoryManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -39,6 +30,15 @@
     </ClInclude>
     <ClInclude Include="WeaponManager.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\uevr\API.h">
+      <Filter>include\uevr</Filter>
+    </ClInclude>
+    <ClInclude Include="include\uevr\API.hpp">
+      <Filter>include\uevr</Filter>
+    </ClInclude>
+    <ClInclude Include="include\uevr\Plugin.hpp">
+      <Filter>include\uevr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

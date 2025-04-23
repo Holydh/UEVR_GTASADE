@@ -166,10 +166,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\plugin\include\uevr\API.h" />
-    <ClInclude Include="..\plugin\include\uevr\API.hpp" />
-    <ClInclude Include="..\plugin\include\uevr\Plugin.hpp" />
     <ClInclude Include="CameraController.h" />
+    <ClInclude Include="include\uevr\API.h" />
+    <ClInclude Include="include\uevr\API.hpp" />
+    <ClInclude Include="include\uevr\Plugin.hpp" />
     <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="SettingsManager.h" />
     <ClInclude Include="MemoryManager.h" />
