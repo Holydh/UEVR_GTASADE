@@ -34,6 +34,7 @@ public:
 
 	bool autoPitchAndLerpForFlight = false;
 	bool autoDecoupledPitchDuringCutscenes = false;
+	bool autoOrientationMode = false;
 	bool storedDecoupledPitch = false;
 	bool storedLerpPitch = false;
 	bool storedLerpRoll = false;

@@ -16,8 +16,6 @@ void SettingsManager::UpdateUevrSettings()
 	
 	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
 	joystickDeadzone = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_JoystickDeadzone", 0.1f);
-	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
-	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
 	lerpPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraPitch", true);
 	lerpRoll = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraRoll", true);
@@ -29,6 +27,7 @@ void SettingsManager::UpdatePluginSettings()
 	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
+	autoOrientationMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoOrientationMode", true);
 	if (debugMod) uevr::API::get()->log_info("Plugin Settings Updated");
 }
 
@@ -84,7 +83,8 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 
 		std::string defaultContent =
 			"AutoDecoupledPitchDuringCutscenes=true\n"
-			"AutoPitchAndLerpSettingsForFlight=true\n";
+			"AutoPitchAndLerpSettingsForFlight=true\n"
+			"AutoOrientationMode=true\n";
 
 		HANDLE hCreateFile = CreateFileA(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hCreateFile != INVALID_HANDLE_VALUE)
@@ -117,6 +117,7 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 				UpdatePluginSettings();
 			}
 			CloseHandle(hFile);
+			uevr::API::get()->log_error("setting file has been modified");
 			return true;  // File has been modified
 		}
 	}

@@ -44,6 +44,7 @@ public:
 		memoryManager.InitMemoryManager();
 		Utilities::InitHelperClasses();
 		weaponManager.HideBulletTrace();
+		settingsManager.SetOrientationMethod(!settingsManager.autoOrientationMode);
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -97,11 +98,12 @@ public:
 
 		// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
 		// switches back to the game orientation method when driving a vehicle to prevent steer lock when looking around.
-		if (playerManager.isInVehicle && !playerManager.wasInVehicle)
+		if (settingsManager.autoOrientationMode && playerManager.isInVehicle && !playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(true);
-		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
+		if (settingsManager.autoOrientationMode && !playerManager.isInVehicle && playerManager.wasInVehicle)
 			settingsManager.SetOrientationMethod(false);
 
+		// Fix for the bugged Camera in the mission Catalyst
 		if (cameraController.currentCameraMode == CameraController::HelicannonFirstPerson && cameraController.previousCameraMode != CameraController::HelicannonFirstPerson)
 			memoryManager.ToggleHeliCanonCameraModMemoryInstructions(true);
 		if (cameraController.currentCameraMode != CameraController::HelicannonFirstPerson && cameraController.previousCameraMode == CameraController::HelicannonFirstPerson)
