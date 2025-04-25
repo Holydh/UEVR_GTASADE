@@ -110,6 +110,9 @@ public:
 	CameraMode previousCameraMode = None;
 	bool camResetRequested = false;
 
+	//bool isCutscenePlaying = false;
+	//bool wasCutscenePlaying = false;
+
 	void ProcessCameraMatrix(float delta);
 	void ProcessHookedHeadPosition(float delta);
 	void FixUnderwaterView(bool enableFix);

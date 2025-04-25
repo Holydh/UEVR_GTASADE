@@ -78,7 +78,7 @@ void CameraController::ProcessCameraMatrix(float delta) {
 
 	// Letting the original code manage ingame camera position (not the uevr one) fixes the aim in car issue but 
 	// also keeps the original audio listener position. Attempt to mitigate it by disabling the overwrite only when shooting in car.
-	if (currentCameraMode == AimWeaponFromCar || currentCameraMode == HelicannonFirstPerson || !playerManager->isInVehicle || !playerManager->shootFromCarInput)
+	if (currentCameraMode == AimWeaponFromCar || !playerManager->isInVehicle || !playerManager->shootFromCarInput)
 	{
 		glm::fvec3 offsetedPosition = Utilities::OffsetLocalPositionFromWorld(socketLocation_params.outLocation, forwardVector_params.vec3Value, upVector_params.vec3Value, rightVector_params.vec3Value, glm::fvec3(49.5, 0.0, 0.0));
 
@@ -94,7 +94,7 @@ void CameraController::ProcessCameraMatrix(float delta) {
 	playerManager->actualPlayerPositionUE = socketLocation_params.outLocation;
 	playerManager->actualPlayerHeadPositionUE = glm::fvec3(playerManager->actualPlayerPositionUE.x, 
 		playerManager->actualPlayerPositionUE.y, 
-		(currentCameraMode == HelicannonFirstPerson ? *(reinterpret_cast<float*>(memoryManager->playerPositionAddresses[2])) : *(reinterpret_cast<float*>(memoryManager->playerHeadPositionAddresses[2]))) * 100);
+		(currentCameraMode == HelicannonFirstPerson ? *(reinterpret_cast<float*>(memoryManager->playerPositionAddresses[2])) + 0.5f : *(reinterpret_cast<float*>(memoryManager->playerHeadPositionAddresses[2]))) * 100);
 
 	cameraPositionUE = glm::fvec3(*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[0])) * 100,
 		-*(reinterpret_cast<float*>(memoryManager->cameraPositionAddresses[1])) * 100,

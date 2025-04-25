@@ -56,6 +56,10 @@ public:
 		if (!cameraController.underwaterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
 
+		// We need to fetch the weapon one last time after player lost control so the plugin can correctly reset the weapon position for cutscenes.
+		if (!playerManager.isInControl && playerManager.wasInControl)
+			weaponManager.UpdateActualWeaponMesh();
+
 		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
@@ -104,17 +108,17 @@ public:
 			settingsManager.SetOrientationMethod(false);
 
 		// Fix for the bugged Camera in the mission Catalyst
-		if (cameraController.currentCameraMode == CameraController::HelicannonFirstPerson && cameraController.previousCameraMode != CameraController::HelicannonFirstPerson)
-			memoryManager.ToggleHeliCanonCameraModMemoryInstructions(true);
-		if (cameraController.currentCameraMode != CameraController::HelicannonFirstPerson && cameraController.previousCameraMode == CameraController::HelicannonFirstPerson)
-			memoryManager.ToggleHeliCanonCameraModMemoryInstructions(false);
+		//if (cameraController.currentCameraMode == CameraController::HelicannonFirstPerson && cameraController.previousCameraMode != CameraController::HelicannonFirstPerson)
+		//	memoryManager.ToggleHeliCanonCameraModMemoryInstructions(true);
+		//if (cameraController.currentCameraMode != CameraController::HelicannonFirstPerson && cameraController.previousCameraMode == CameraController::HelicannonFirstPerson)
+		//	memoryManager.ToggleHeliCanonCameraModMemoryInstructions(false);
 
 		// Toggles the game's original instructions for the camera weapon controls
 		if (cameraController.currentCameraMode == CameraController::Camera && cameraController.previousCameraMode != CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(true);
 		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
 			memoryManager.ToggleAllMemoryInstructions(false);
-		
+
 		// Main VR functions :
 		if (playerManager.isInControl)
 		{
@@ -186,6 +190,7 @@ public:
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		playerManager.weaponWheelEnabled = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
 		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
+		//cameraController.isCutscenePlaying = *(reinterpret_cast<uint8_t*>(memoryManager.cutscenePlayingAddress)) > 0;
 	}
 
 	void UpdatePreviousStates()
@@ -195,6 +200,7 @@ public:
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
 		cameraController.previousCameraMode = cameraController.currentCameraMode;
+		//cameraController.wasCutscenePlaying = cameraController.isCutscenePlaying;
 		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
 	}
 };

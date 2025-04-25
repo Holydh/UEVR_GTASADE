@@ -198,6 +198,7 @@ std::vector<MemoryBlock> carAimingVectorInstructionsAddresses = {
 };
 
 uintptr_t MemoryManager::playerShootInstructionAddress = 0x11C6A7E;
+uintptr_t MemoryManager::playerShootCam45InstructionAddress = 0x112D6F0; //
 //uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // Take photo function address;
 
 bool MemoryManager::isShooting = false;
@@ -245,7 +246,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
     if (pException->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP) {  
         uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
-        if (instructionAddress == MemoryManager::playerShootInstructionAddress) {
+        if (instructionAddress == MemoryManager::playerShootInstructionAddress || instructionAddress == MemoryManager::playerShootCam45InstructionAddress) {
             MemoryManager::isShooting = true;
         }
 		
@@ -265,6 +266,7 @@ void MemoryManager::InstallBreakpoints() {
 
     // Set the breakpoints
     SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::playerShootInstructionAddress, &MemoryManager::isShooting);
+	SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::playerShootCam45InstructionAddress, &MemoryManager::isShooting);
 	//SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::cameraShootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler
@@ -282,9 +284,9 @@ void MemoryManager::RemoveBreakpoints() {
 
     // Remove breakpoints by clearing DR0, DR1, and their control bits
     ctx.Dr0 = 0;
-    //ctx.Dr1 = 0;
+    ctx.Dr1 = 0;
     ctx.Dr7 &= ~(1 << 0); // Clear enable bit for DR0
-    //ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
+    ctx.Dr7 &= ~(1 << 2); // Clear enable bit for DR1
 
     SetThreadContext(hThread, &ctx);
 
@@ -382,8 +384,10 @@ void MemoryManager::AdjustAddresses() {
 	cameraModeAddress += baseAddressGameEXE;
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 	playerShootInstructionAddress += baseAddressGameEXE;
+	playerShootCam45InstructionAddress += baseAddressGameEXE;
 	//cameraShootInstructionAddress += baseAddressGameEXE;
 	playerShootFromCarInputAddress += baseAddressGameEXE;
+	/*cutscenePlayingAddress += baseAddressGameEXE;*/
 }
 
 void MemoryManager::NopVehicleRelatedMemoryInstructions()

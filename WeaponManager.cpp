@@ -146,7 +146,9 @@ void WeaponManager::ProcessAiming()
 		bool socketAvailable = true;
 		bool sprayWeapon = false;
 		bool meleeWeapon = false;
-		
+		float offset = 0.0f;
+		bool firstPersonView = cameraController->currentCameraMode == CameraController::HelicannonFirstPerson;
+
 		//mesh alignement weapon offsets
 		switch (currentWeaponEquipped)
 		{
@@ -186,8 +188,9 @@ void WeaponManager::ProcessAiming()
 			point2Offsets = { 21.3778 , 0.000536 + 0.2, 21.2535 + 1 };
 			break;
 		case Ak47:
+			offset = firstPersonView ? 0.0f : -0.2f;
 			point1Offsets = { 3.8416 , -2.83908, 14.3539 };
-			point2Offsets = { 36.3719, 0.193737 - 0.2, 16.1544 - 0.2 };
+			point2Offsets = { 36.3719, 0.193737 + offset, 16.1544 + offset };
 			break;
 		case M4:
 			point1Offsets = { 5.85945 , -1.78476 , 15.1271 };
@@ -274,38 +277,41 @@ void WeaponManager::ProcessAiming()
 
 			aimingDirection = glm::normalize(point2Position - point1Position);
 
-			//The code below compensate for the over the shoulder camera offset. This game's crosshair is not centered.
+			//The code below compensate for the over the shoulder camera offset. When in 3rd person, this game's crosshair is not centered.
 			//The game calculate it's aiming vector with the camera direction. We move and align this camera with the gun mesh
 			//so the game can still use the camera values to calculate the shoot traces.
 			//Hacky but functional, if someday this game gets proper reverse engineered we should be able to do better.
-			glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
+			if (!firstPersonView)
+			{
+				glm::fvec3 projectedToFloorVector = glm::fvec3(aimingDirection.x, aimingDirection.y, 0.0);
 
-			// Safeguard: Normalize projectedToFloorVector only if valid
-			if (glm::length(projectedToFloorVector) > 0.0f) {
-				projectedToFloorVector = glm::normalize(projectedToFloorVector);
-			}
-			else {
-				projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
-			}
+				// Safeguard: Normalize projectedToFloorVector only if valid
+				if (glm::length(projectedToFloorVector) > 0.0f) {
+					projectedToFloorVector = glm::normalize(projectedToFloorVector);
+				}
+				else {
+					projectedToFloorVector = glm::fvec3(1.0f, 0.0f, 0.0f); // Fallback vector
+				}
 
-			glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
-			if (glm::length(yawRight) > 0.0f) {
-				yawRight = glm::normalize(yawRight);
-			}
-			else {
-				yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
-			}
+				glm::fvec3 yawRight = glm::cross(glm::fvec3(0.0f, 0.0f, 1.0f), projectedToFloorVector);
+				if (glm::length(yawRight) > 0.0f) {
+					yawRight = glm::normalize(yawRight);
+				}
+				else {
+					yawRight = glm::fvec3(0.0f, -1.0f, 0.0f); // Fallback vector if collinear
+				}
 
 
-			glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
-			if (glm::length(yawUp) > 0.0f) {
-				yawUp = glm::normalize(yawUp);
-			}
-			else {
-				yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
-			}
+				glm::fvec3 yawUp = glm::cross(yawRight, projectedToFloorVector);
+				if (glm::length(yawUp) > 0.0f) {
+					yawUp = glm::normalize(yawUp);
+				}
+				else {
+					yawUp = glm::fvec3(0.0f, 0.0f, 1.0f); // Fallback vector
+				}
 
-			point2Position = Utilities::OffsetLocalPositionFromWorld(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
+				point2Position = Utilities::OffsetLocalPositionFromWorld(point2Position, projectedToFloorVector, yawUp, yawRight, crosshairOffset);
+			}
 
 			// Safeguard: Recalculate aiming direction and normalize
 			aimingDirection = point2Position - point1Position;
@@ -431,7 +437,8 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
 		return;
 
-	bool shootDetectionFromMemory = false;
+	// If weapon equipped doesn't have a muzzle flash, we need to detect the shoot from memory. HelicannonFirstPerson cam mod never has muzzle flash.
+	bool shootDetectionFromMemory = cameraController->currentCameraMode == CameraController::HelicannonFirstPerson ? true : false;
 
 	glm::fvec3 positionRecoilForce = { 0.0f, 0.0f, 0.0f };
 	glm::fvec3 rotationRecoilForceEuler = { 0.0f, 0.0f, 0.0f };
@@ -485,6 +492,7 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
 		rotationRecoilForceEuler = { -0.02f, 0.0f, 0.0f };
 		shootDetectionFromMemory = true;
+
 		break;
 	case Sniper:
 		positionRecoilForce = { 0.0f, -0.005f, -2.0f };
@@ -627,7 +635,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 
 void WeaponManager::UnhookAndRepositionWeapon()
 {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("DisableMeleeWeaponsUObjectHooks()");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("UnhookAndRepositionWeapon()");
 
 	if (weaponMesh == nullptr)
 		return;

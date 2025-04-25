@@ -51,6 +51,7 @@ public:
 	std::array<uintptr_t, 3> playerPositionAddresses { 0x5067948, 0x506794C, 0x5067950 }; // x, y, z
 
 	static uintptr_t playerShootInstructionAddress;
+	static uintptr_t playerShootCam45InstructionAddress;
 
 	uintptr_t cameraModeAddress = 0x53E2580;
 	uintptr_t playerIsInControlAddress = 0x53E8840;
@@ -58,6 +59,7 @@ public:
 	uintptr_t vehicleTypeAddress = 0x5031278;
 	uintptr_t playerShootFromCarInputAddress = 0x50251A8;
 	uintptr_t weaponWheelDisplayedAddress = 0x507C580;
+	//uintptr_t cutscenePlayingAddress = 0x53E254C;
 
 	void InitMemoryManager();
 	void ToggleAllMemoryInstructions(bool enableOriginalInstructions);
