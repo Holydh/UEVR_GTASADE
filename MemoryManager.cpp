@@ -201,7 +201,7 @@ uintptr_t MemoryManager::playerShootInstructionAddress = 0x11C6A7E;
 uintptr_t MemoryManager::playerShootCam45InstructionAddress = 0x112D6F0; //
 //uintptr_t MemoryManager::cameraShootInstructionAddress = 0x13F4000; // Take photo function address;
 
-bool MemoryManager::isShooting = false;
+bool MemoryManager::FirstWeaponIsShooting = false;
 
 std::array<uintptr_t, 16> MemoryManager::cameraMatrixAddresses{}; // x, y, z
 
@@ -247,7 +247,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
         uintptr_t instructionAddress = (uintptr_t)pException->ExceptionRecord->ExceptionAddress;
 
         if (instructionAddress == MemoryManager::playerShootInstructionAddress || instructionAddress == MemoryManager::playerShootCam45InstructionAddress) {
-            MemoryManager::isShooting = true;
+			MemoryManager::FirstWeaponIsShooting = true;
         }
 		
 		// Set Resume Flag (RF) to prevent infinite breakpoint triggering
@@ -265,8 +265,8 @@ void MemoryManager::InstallBreakpoints() {
     HANDLE hThread = GetCurrentThread();
 
     // Set the breakpoints
-    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::playerShootInstructionAddress, &MemoryManager::isShooting);
-	SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::playerShootCam45InstructionAddress, &MemoryManager::isShooting);
+    SetHardwareBreakpoint(hThread, 0, (void*)MemoryManager::playerShootInstructionAddress, &MemoryManager::FirstWeaponIsShooting);
+	SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::playerShootCam45InstructionAddress, &MemoryManager::FirstWeaponIsShooting);
 	//SetHardwareBreakpoint(hThread, 1, (void*)MemoryManager::cameraShootInstructionAddress, &MemoryManager::isShooting);
 
     // Install exception handler

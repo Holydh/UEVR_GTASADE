@@ -21,13 +21,17 @@ private:
 	SettingsManager* const settingsManager;
 
 	//Shoot detection
-	bool isShooting = false;
-	uevr::API::UObject* lastParticleShot = nullptr;
+	bool firstWeaponIsShooting = false;
+	bool secondWeaponIsShooting = false;
+	uevr::API::UObject* firstWeaponLastParticleShot = nullptr;
+	uevr::API::UObject* secondWeaponLastParticleShot = nullptr;
 
 	//Weapon infos
-	uevr::API::UObject* weaponMesh = nullptr;
+	uevr::API::UObject* firstWeaponMesh = nullptr;
+	uevr::API::UObject* secondWeaponMesh = nullptr;
 	uevr::API::UObject* torso = nullptr;
-	uevr::API::UObject* weaponStaticMesh = nullptr;
+	uevr::API::UObject* firstWeaponStaticMesh = nullptr;
+	uevr::API::UObject* secondWeaponStaticMesh = nullptr;
 	const std::unordered_map<std::wstring, int> weaponNameToIndex = {
 		{L"SM_unarmed", 0},           // Unarmed
 		{L"SM_brassknuckle", 1},    // BrassKnuckles
@@ -84,11 +88,18 @@ private:
 	//recoil
 	glm::fvec3 defaultWeaponRotationEuler = { 0.4f, 0.0f, 0.0f };
 	glm::fvec3 defaultWeaponPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
-	glm::fvec3 currentWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentFirstWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentFirstWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentSecondWeaponRecoilPosition = { 0.0f, 0.0f, 0.0f };
+	glm::fvec3 currentSecondWeaponRecoilRotationEuler = { 0.0f, 0.0f, 0.0f };
+	struct WeaponRecoilState {
+	glm::fvec3* position;
+	glm::fvec3* rotation;
+	};
 	float recoilPositionRecoverySpeed = 10.0f;
 	float recoilRotationRecoverySpeed = 8.0f;
-
+	WeaponRecoilState GetRecoilState(uevr::API::UObject* weaponMesh);
+	void ApplyRecoil(uevr::API::UObject* weaponMesh, bool isShooting, const glm::fvec3& positionRecoilForce, const glm::fvec3& rotationRecoilForceEuler, float delta);
 	void HandleCameraWeaponAiming();
 
 public:
@@ -141,11 +152,13 @@ public:
 	};
 	WeaponType currentWeaponEquipped = Unarmed;
 	WeaponType previousWeaponEquipped = Unarmed;
+	bool firstWeaponShotDone = false;
 	
 	void UpdateActualWeaponMesh();
 	void HideBulletTrace();
-	void UpdateShootingState();
-	void ProcessAiming();
+	void UpdateShootingState(bool firstWeapon);
+	void ResetShootingState();
+	void ProcessAiming(bool firstWeapon);
 	void ProcessWeaponVisibility();
 	void ProcessWeaponHandling(float delta);
 	void UnhookAndRepositionWeapon();

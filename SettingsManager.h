@@ -32,6 +32,7 @@ private:
 public:
 	bool debugMod = false;
 
+	bool leftHandedMode = false;
 	bool autoPitchAndLerpForFlight = false;
 	bool autoDecoupledPitchDuringCutscenes = false;
 	bool autoOrientationMode = false;

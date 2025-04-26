@@ -60,6 +60,35 @@ public:
 		if (!playerManager.isInControl && playerManager.wasInControl)
 			weaponManager.UpdateActualWeaponMesh();
 
+		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
+		// Then sets UEVR settings according to the vehicle type
+		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
+			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
+		{
+			memoryManager.RestoreVehicleRelatedMemoryInstructions();
+			if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
+			{
+				settingsManager.CacheSettings();
+				settingsManager.SetPitchAndLerpSettingsForFlight(false);
+			}
+			if (settingsManager.leftHandedMode)
+				API::get()->dispatch_lua_event("playerIsInVehicle", "true");
+			weaponManager.ResetShootingState();
+		}
+		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
+			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
+		{
+			memoryManager.NopVehicleRelatedMemoryInstructions();
+			if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
+			{
+				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
+				settingsManager.SetPitchAndLerpSettingsForFlight(true);
+			}
+			if (settingsManager.leftHandedMode)
+				API::get()->dispatch_lua_event("playerIsInVehicle", "false");
+			weaponManager.ResetShootingState();
+		}
+
 		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
 		if (!playerManager.isInControl && playerManager.wasInControl)
 		{
@@ -75,29 +104,6 @@ public:
 			ChangePluginState(true);
 			if (settingsManager.autoDecoupledPitchDuringCutscenes)
 				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
-		}
-
-		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
-		// Then sets UEVR settings according to the vehicle type
-		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
-			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
-			memoryManager.RestoreVehicleRelatedMemoryInstructions();
-			if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
-			{
-				settingsManager.CacheSettings();
-				settingsManager.SetPitchAndLerpSettingsForFlight(false);
-			}
-		}
-		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
-			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
-			memoryManager.NopVehicleRelatedMemoryInstructions();
-			if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
-			{
-				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
-				settingsManager.SetPitchAndLerpSettingsForFlight(true);
-			}
 		}
 
 		// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
@@ -129,8 +135,8 @@ public:
 			{
 				cameraController.ProcessCameraMatrix(delta);
 				cameraController.ProcessHookedHeadPosition(delta);
-				weaponManager.UpdateShootingState();
-				weaponManager.ProcessAiming();
+				weaponManager.UpdateShootingState(!weaponManager.firstWeaponShotDone);
+				weaponManager.ProcessAiming(!weaponManager.firstWeaponShotDone);
 			}
 
 			weaponManager.ProcessWeaponHandling(delta);
@@ -168,6 +174,7 @@ public:
 			memoryManager.ToggleAllMemoryInstructions(false);
 			memoryManager.InstallBreakpoints();
 			uevr::API::UObjectHook::set_disabled(false);
+			weaponManager.ResetShootingState();
 		}
 		else
 		{

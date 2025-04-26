@@ -25,6 +25,8 @@ void SettingsManager::UpdateUevrSettings()
 void SettingsManager::UpdatePluginSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
+	leftHandedMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "LeftHandedMode", false);
+	uevr::API::get()->dispatch_lua_event("playerIsLeftHanded", leftHandedMode ? "true" : "false");
 	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
 	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
 	autoOrientationMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoOrientationMode", true);
@@ -82,6 +84,7 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 		uevr::API::get()->log_info("File not found: %s. Creating default config.", filePath.c_str());
 
 		std::string defaultContent =
+			"LeftHandedMode=false\n"
 			"AutoDecoupledPitchDuringCutscenes=true\n"
 			"AutoPitchAndLerpSettingsForFlight=true\n"
 			"AutoOrientationMode=true\n";

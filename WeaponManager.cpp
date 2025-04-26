@@ -28,56 +28,98 @@ void WeaponManager::UpdateActualWeaponMesh()
 		uevr::API::get()->log_info("gta_BPplayerCharacter not found.");
 		torso = nullptr;
 		currentWeaponEquipped = Unarmed;
-		weaponMesh = nullptr;
-		weaponStaticMesh = nullptr;
+		firstWeaponMesh = nullptr;
+		firstWeaponStaticMesh = nullptr;
+		secondWeaponMesh = nullptr;
+		secondWeaponStaticMesh = nullptr;
 		return;
 	}
 	const auto& torsoChildren = torso->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
-	uevr::API::UObject* weaponMeshFetch = nullptr;
+	uevr::API::UObject* firstWeaponMeshFetch = nullptr;
+	uevr::API::UObject* secondWeaponMeshFetch = nullptr;
 
 	for (auto child : torsoChildren) {
-		if (weaponMeshFetch == nullptr && !child->is_a(gta_StaticMeshComponent_c)) {
-			weaponMeshFetch = child->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren").data[0];
+		// If dual wield, fetch second weapon
+		if (firstWeaponMeshFetch != nullptr && !child->is_a(gta_StaticMeshComponent_c)) {
+			secondWeaponMeshFetch = child->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren").data[0];
+		}
+		if (firstWeaponMeshFetch == nullptr && !child->is_a(gta_StaticMeshComponent_c)) {
+			firstWeaponMeshFetch = child->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren").data[0];
 		}
 	}
 
-	if (weaponMeshFetch != nullptr && weaponMeshFetch->is_a(gta_StaticMeshComponent_c))
+	if (firstWeaponMeshFetch != nullptr && firstWeaponMeshFetch->is_a(gta_StaticMeshComponent_c))
 	{
-		weaponMesh = weaponMeshFetch;
-		weaponStaticMesh = weaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
+		firstWeaponMesh = firstWeaponMeshFetch;
+		firstWeaponStaticMesh = firstWeaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
 	}
 	else
 	{
 		currentWeaponEquipped = Unarmed;
-		weaponMesh = nullptr;
-		weaponStaticMesh = nullptr;
+		firstWeaponMesh = nullptr;
+		firstWeaponStaticMesh = nullptr;
 		return;
 	}
 
+	if (secondWeaponMeshFetch != nullptr && secondWeaponMeshFetch->is_a(gta_StaticMeshComponent_c))
+	{
+		secondWeaponMesh = secondWeaponMeshFetch;
+		secondWeaponStaticMesh = secondWeaponMesh->get_property<uevr::API::UObject*>(L"StaticMesh");
+	}
+	else
+	{
+		secondWeaponMesh = nullptr;
+		secondWeaponStaticMesh = nullptr;
+	}
 
 	if (cameraController->currentCameraMode != CameraController::Camera  && (!playerManager->isInVehicle || 
 		cameraController->currentCameraMode == CameraController::AimWeaponFromCar ))
 	{
-		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+		auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(firstWeaponMesh);
 		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
 		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
 		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-		motionState->set_hand(1);
+		motionState->set_hand(settingsManager->leftHandedMode ? 0 : 1);
 		motionState->set_permanent(true);
+		if (secondWeaponMesh != nullptr)
+		{
+			auto motionState = uevr::API::UObjectHook::get_or_add_motion_controller_state(secondWeaponMesh);
+			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
+			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
+			motionState->set_hand(settingsManager->leftHandedMode ? 1 : 0);
+			motionState->set_permanent(true);
+		}
 	}
 	if ((cameraController->currentCameraMode != CameraController::Camera  && playerManager->isInVehicle && !playerManager->wasInVehicle) && 
 		cameraController->currentCameraMode != CameraController::AimWeaponFromCar)
 	{
-		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+		uevr::API::UObjectHook::remove_motion_controller_state(firstWeaponMesh);
+		if (secondWeaponMesh != nullptr)
+			uevr::API::UObjectHook::remove_motion_controller_state(secondWeaponMesh);
 	}
 
-	std::wstring weaponName = weaponStaticMesh->get_fname()->to_string();
+	std::wstring weaponName = firstWeaponStaticMesh->get_fname()->to_string();
 	
 	// Look up the weapon in the map
 	auto it = weaponNameToIndex.find(weaponName);
 	if (it != weaponNameToIndex.end()) {
 		currentWeaponEquipped = static_cast<WeaponType>(it->second);
 	}
+
+	if (previousWeaponEquipped != currentWeaponEquipped)
+	{
+		ResetShootingState();
+	}
+}
+
+void WeaponManager::ResetShootingState()
+{
+	firstWeaponIsShooting = false;
+	secondWeaponIsShooting = false;
+	firstWeaponShotDone = false;
+	firstWeaponLastParticleShot = nullptr;
+	secondWeaponLastParticleShot = nullptr;
 }
 
 void WeaponManager::HideBulletTrace()
@@ -87,8 +129,11 @@ void WeaponManager::HideBulletTrace()
 	bulletTraceProceduralMeshComponent->set_bool_property(L"bVisible", false);
 }
 
-void WeaponManager::UpdateShootingState()
+void WeaponManager::UpdateShootingState(bool firstWeapon)
 {
+	uevr::API::UObject* weaponMesh = firstWeapon ? firstWeaponMesh : secondWeaponMesh;
+	auto& lastParticleShot = firstWeapon ? firstWeaponLastParticleShot : secondWeaponLastParticleShot;
+
 	if (!weaponMesh)
 		return;
 
@@ -101,13 +146,32 @@ void WeaponManager::UpdateShootingState()
 	if (actualParticleShot != lastParticleShot)
 	{
 		lastParticleShot = actualParticleShot;
-		isShooting = true;
+		if (!secondWeaponMesh)
+		{
+			firstWeaponIsShooting = true;
+			return;
+		}
+
+		//dual wield
+		if (firstWeapon)
+		{
+			firstWeaponIsShooting = true;
+			firstWeaponShotDone = true;
+		}
+		else
+		{
+			secondWeaponIsShooting = true;
+			firstWeaponShotDone = false;
+		}
 	}
 }
 
-void WeaponManager::ProcessAiming()
+void WeaponManager::ProcessAiming(bool firstWeapon)
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UpdateAimingVectors()");
+
+	if (!firstWeapon && !secondWeaponMesh)
+		return;
 
 	if (cameraController->currentCameraMode == CameraController::Camera)
 	{
@@ -132,6 +196,7 @@ void WeaponManager::ProcessAiming()
 		return;
 	}
 	
+	uevr::API::UObject* weaponMesh = firstWeapon ? firstWeaponMesh : secondWeaponMesh;
 
 	if (weaponMesh != nullptr) {
 		Utilities::ParameterSingleVector3 forwardVector_params;
@@ -391,7 +456,7 @@ void WeaponManager::ProcessWeaponVisibility()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("HandleWeaponVisibility()");
 
-	if (weaponMesh == nullptr)
+	if (firstWeaponMesh == nullptr)
 		return;
 
 	bool hideWeapon = false;
@@ -413,13 +478,13 @@ void WeaponManager::ProcessWeaponVisibility()
 
 	Utilities::ParameterSingleBool setOwnerNoSee_params;
 	setOwnerNoSee_params.boolValue = playerManager->isInControl ? hideWeapon : false; //Enable visibility when in cutscenes
-	weaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
-	weaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.boolValue);
+	firstWeaponMesh->call_function(L"SetOwnerNoSee", &setOwnerNoSee_params);
+	firstWeaponMesh->set_bool_property(L"bVisible", !setOwnerNoSee_params.boolValue);
 }
 
 void WeaponManager::ProcessWeaponHandling(float delta)
 {
-	if (settingsManager->debugMod) uevr::API::get()->log_info("WeaponHandling()");
+	if (settingsManager->debugMod) uevr::API::get()->log_info("ProcessWeaponHandling()");
 
 	//Forces the weapon to get back in it's original position when entering a vehicle. No 6dof possible in cars for now, devs removed the 
 	// "free aiming in car" cheat that was in the original game. Would require more reverse engineering.
@@ -434,7 +499,7 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 		UpdateActualWeaponMesh();
 	}
 
-	if (weaponMesh == nullptr || (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
+	if (firstWeaponMesh == nullptr || (playerManager->isInVehicle && cameraController->currentCameraMode != CameraController::AimWeaponFromCar)) //check a shooting on car scenario before deleting
 		return;
 
 	// If weapon equipped doesn't have a muzzle flash, we need to detect the shoot from memory. HelicannonFirstPerson cam mod never has muzzle flash.
@@ -536,43 +601,62 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 	}
 
 	if (shootDetectionFromMemory)
-		isShooting = currentWeaponEquipped == previousWeaponEquipped ? memoryManager->isShooting : false;
+	{
+		firstWeaponIsShooting = currentWeaponEquipped == previousWeaponEquipped ? memoryManager->FirstWeaponIsShooting : false;
+	}
 	
+	ApplyRecoil(firstWeaponMesh, firstWeaponIsShooting, positionRecoilForce, rotationRecoilForceEuler, delta);
+	if (secondWeaponMesh)
+		ApplyRecoil(secondWeaponMesh, secondWeaponIsShooting, positionRecoilForce, rotationRecoilForceEuler, delta);
 
-	//Apply Recoil
+	memoryManager->FirstWeaponIsShooting = false;
+	firstWeaponIsShooting = false;
+	secondWeaponIsShooting = false;
+}
+
+void WeaponManager::ApplyRecoil(uevr::API::UObject* weaponMesh, bool isShooting, const glm::fvec3& positionRecoilForce, const glm::fvec3& rotationRecoilForceEuler, float delta)
+{
 	auto motionState = uevr::API::UObjectHook::get_motion_controller_state(weaponMesh);
-	
+	auto [recoilPosPtr, recoilRotPtr] = GetRecoilState(weaponMesh);
+	auto& recoilPos = *recoilPosPtr;
+	auto& recoilRot = *recoilRotPtr;
+
 	if (isShooting)
 	{
-		// use the UEVR uobject attached offset : 
-		currentWeaponRecoilPosition += positionRecoilForce;
-		currentWeaponRecoilRotationEuler += rotationRecoilForceEuler;
-		UEVR_Vector3f recoilPosition = { currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z };
-		glm::fquat weaponRecoilRotationQuat = glm::fquat(currentWeaponRecoilRotationEuler);
-		UEVR_Quaternionf recoilRotation = { weaponRecoilRotationQuat.w, weaponRecoilRotationQuat.x, weaponRecoilRotationQuat.y, weaponRecoilRotationQuat.z };
-		motionState->set_location_offset(&recoilPosition);
-		motionState->set_rotation_offset(&recoilRotation);
+		recoilPos += positionRecoilForce;
+		recoilRot += rotationRecoilForceEuler;
+
+		glm::fquat rotQuat = glm::fquat(recoilRot);
+		UEVR_Vector3f pos = { recoilPos.x, recoilPos.y, recoilPos.z };
+		UEVR_Quaternionf rot = { rotQuat.w, rotQuat.x, rotQuat.y, rotQuat.z };
+
+		motionState->set_location_offset(&pos);
+		motionState->set_rotation_offset(&rot);
 		motionState->set_permanent(true);
 	}
 	else
 	{
 		// Smoothly return position to base
-		currentWeaponRecoilPosition = glm::mix(currentWeaponRecoilPosition, defaultWeaponPosition, delta * recoilPositionRecoverySpeed);
-		UEVR_Vector3f recoveredPositionFromRecoil = { currentWeaponRecoilPosition.x, currentWeaponRecoilPosition.y, currentWeaponRecoilPosition.z };
-		motionState->set_location_offset(&recoveredPositionFromRecoil);
+		recoilPos = glm::mix(recoilPos, defaultWeaponPosition, delta * recoilPositionRecoverySpeed);
 
-		// Convert Euler angles (radians) to quaternions for smooth rotation recovery
-		glm::fquat weaponRecoilRotationQuat = glm::fquat(currentWeaponRecoilRotationEuler);
-		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
+		glm::fquat currentQuat = glm::fquat(recoilRot);
+		glm::fquat targetQuat = glm::fquat(defaultWeaponRotationEuler);
+		glm::fquat smoothedQuat = glm::slerp(currentQuat, targetQuat, delta * recoilRotationRecoverySpeed);
+		recoilRot = glm::eulerAngles(smoothedQuat);
 
-		// Smoothly interpolate between current rotation and default rotation
-		glm::fquat smoothedWeaponRotationQuat = glm::slerp(weaponRecoilRotationQuat, defaultWeaponRotationQuat, delta * recoilRotationRecoverySpeed);
-		currentWeaponRecoilRotationEuler = glm::eulerAngles(smoothedWeaponRotationQuat);
-		UEVR_Quaternionf recoveredRotationFromRecoil = { smoothedWeaponRotationQuat.w, smoothedWeaponRotationQuat.x, smoothedWeaponRotationQuat.y, smoothedWeaponRotationQuat.z };
-		motionState->set_rotation_offset(&recoveredRotationFromRecoil);
+		UEVR_Vector3f pos = { recoilPos.x, recoilPos.y, recoilPos.z };
+		UEVR_Quaternionf rot = { smoothedQuat.w, smoothedQuat.x, smoothedQuat.y, smoothedQuat.z };
+
+		motionState->set_location_offset(&pos);
+		motionState->set_rotation_offset(&rot);
 	}
-	memoryManager->isShooting = false;
-	isShooting = false;
+}
+
+WeaponManager::WeaponRecoilState WeaponManager::GetRecoilState(uevr::API::UObject* weaponMesh) {
+	if (weaponMesh == firstWeaponMesh)
+		return { &currentFirstWeaponRecoilPosition, &currentFirstWeaponRecoilRotationEuler };
+	else
+		return { &currentSecondWeaponRecoilPosition, &currentSecondWeaponRecoilRotationEuler };
 }
 
 void WeaponManager::HandleCameraWeaponAiming()
@@ -585,17 +669,17 @@ void WeaponManager::HandleCameraWeaponAiming()
 	// detaching the weaponMesh from motion controls
 	if (cameraController->currentCameraMode == CameraController::Camera  && cameraController->previousCameraMode != CameraController::Camera )
 	{
-		uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+		uevr::API::UObjectHook::remove_motion_controller_state(firstWeaponMesh);
 
 		Utilities::ParameterDetachFromParent detachFromParent_params;
 		detachFromParent_params.maintainWorldPosition = true;
 		detachFromParent_params.callModify = false;
-		weaponMesh->call_function(L"DetachFromParent", &detachFromParent_params);
+		firstWeaponMesh->call_function(L"DetachFromParent", &detachFromParent_params);
 	}
 
 	if (cameraController->currentCameraMode != CameraController::Camera  && cameraController->previousCameraMode == CameraController::Camera )
 	{
-		uevr::API::UObjectHook::get_or_add_motion_controller_state(weaponMesh);
+		uevr::API::UObjectHook::get_or_add_motion_controller_state(firstWeaponMesh);
 	}
 
 	// Manually sets the camera Mesh to a position in front of the player.
@@ -616,7 +700,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 		setWorldLocation_params.bSweep = false;
 		setWorldLocation_params.bTeleport = true;
 		setWorldLocation_params.newLocation = weaponPoint1;
-		weaponMesh->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
+		firstWeaponMesh->call_function(L"K2_SetWorldLocation", &setWorldLocation_params);
 
 		// FindLookAtRotation from Point1 to Point2
 		Utilities::ParameterFindLookAtRotation lookAtRotationParams;
@@ -629,7 +713,7 @@ void WeaponManager::HandleCameraWeaponAiming()
 		setWorldRotation_params.bSweep = false;
 		setWorldRotation_params.bTeleport = true;
 		setWorldRotation_params.newRotation = lookAtRotationParams.outRotation;
-		weaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
+		firstWeaponMesh->call_function(L"K2_SetWorldRotation", &setWorldRotation_params);
 	}
 }
 
@@ -637,20 +721,27 @@ void WeaponManager::UnhookAndRepositionWeapon()
 {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("UnhookAndRepositionWeapon()");
 
-	if (weaponMesh == nullptr)
+	if (firstWeaponMesh == nullptr)
 		return;
-	uevr::API::UObjectHook::remove_motion_controller_state(weaponMesh);
+	uevr::API::UObjectHook::remove_motion_controller_state(firstWeaponMesh);
 
 	//Reset weapon position and rotation for melee weapons
 	Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 	setRelativeLocation_params.bSweep = false;
 	setRelativeLocation_params.bTeleport = true;
 	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
-	weaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+	firstWeaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 
 	Utilities::Parameter_K2_SetWorldOrRelativeRotation setRelativeRotation_params{};
 	setRelativeRotation_params.bSweep = false;
 	setRelativeRotation_params.bTeleport = true;
 	setRelativeRotation_params.newRotation = { 0.0f, 0.0f, 0.0f };
-	weaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeLocation_params);
+	firstWeaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeRotation_params);
+
+	if (secondWeaponMesh == nullptr)
+		return;
+
+	uevr::API::UObjectHook::remove_motion_controller_state(secondWeaponMesh);
+	secondWeaponMesh->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
+	secondWeaponMesh->call_function(L"K2_SetRelativeRotation", &setRelativeRotation_params);
 }

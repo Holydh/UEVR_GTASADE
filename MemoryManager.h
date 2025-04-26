@@ -68,7 +68,7 @@ public:
 	void RestoreVehicleRelatedMemoryInstructions();
 	bool vehicleRelatedMemoryInstructionsNoped = true;
 
-	static bool isShooting;
+	static bool FirstWeaponIsShooting;
 
 	void InstallBreakpoints();
 	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
