@@ -75,7 +75,7 @@ public:
 				API::get()->dispatch_lua_event("playerIsInVehicle", "true");
 			weaponManager.ResetShootingState();
 		}
-		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
+		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped && !cameraController.currentCameraMode == CameraController::Camera) ||
 			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
 		{
 			memoryManager.NopVehicleRelatedMemoryInstructions();
