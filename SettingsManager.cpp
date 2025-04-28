@@ -45,6 +45,8 @@ void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
 
 void SettingsManager::SetOrientationMethod(bool inVehicle)
 {
+	// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
+// switches back to the game orientation method when driving a vehicle to prevent steer lock when looking around.
 	if (debugMod) uevr::API::get()->log_info("SetPitchAndLerpSettingsForFlight");
 	SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", (int)!inVehicle);
 	uevr::API::VR::reload_config();

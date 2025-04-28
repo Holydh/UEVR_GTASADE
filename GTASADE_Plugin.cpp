@@ -35,7 +35,7 @@ public:
 	void on_dllmain() override {}
 
 	void on_dllmain_detach() override {
-		ChangePluginState(false);
+		ManagePluginState(false);
 	}
 
 	void on_initialize() override {
@@ -56,74 +56,7 @@ public:
 		if (!cameraController.underwaterViewFixed && playerManager.isInControl)
 			cameraController.FixUnderwaterView(true);
 
-		// We need to fetch the weapon one last time after player lost control so the plugin can correctly reset the weapon position for cutscenes.
-		if (!playerManager.isInControl && playerManager.wasInControl)
-			weaponManager.UpdateActualWeaponMesh();
-
-		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
-		// Then sets UEVR settings according to the vehicle type
-		if ((playerManager.isInControl && playerManager.isInVehicle && memoryManager.vehicleRelatedMemoryInstructionsNoped) ||
-			(playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar && memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
-			memoryManager.RestoreVehicleRelatedMemoryInstructions();
-			if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
-			{
-				settingsManager.CacheSettings();
-				settingsManager.SetPitchAndLerpSettingsForFlight(false);
-			}
-			if (settingsManager.leftHandedMode)
-				API::get()->dispatch_lua_event("playerIsInVehicle", "true");
-			weaponManager.ResetShootingState();
-		}
-		if ((playerManager.isInControl && !playerManager.isInVehicle && !memoryManager.vehicleRelatedMemoryInstructionsNoped && !cameraController.currentCameraMode == CameraController::Camera) ||
-			(playerManager.isInVehicle && cameraController.currentCameraMode == CameraController::AimWeaponFromCar && !memoryManager.vehicleRelatedMemoryInstructionsNoped))
-		{
-			memoryManager.NopVehicleRelatedMemoryInstructions();
-			if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
-			{
-				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
-				settingsManager.SetPitchAndLerpSettingsForFlight(true);
-			}
-			if (settingsManager.leftHandedMode)
-				API::get()->dispatch_lua_event("playerIsInVehicle", "false");
-			weaponManager.ResetShootingState();
-		}
-
-		// Handles the VR mod state during cutscenes and various points in which the camera should be freed from VR controls.
-		if (!playerManager.isInControl && playerManager.wasInControl)
-		{
-			if (settingsManager.debugMod) API::get()->log_info("player NOT InControl");
-			settingsManager.CacheSettings();
-			ChangePluginState(false);
-			if (settingsManager.autoDecoupledPitchDuringCutscenes)
-				uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
-		}
-		if (playerManager.isInControl && !playerManager.wasInControl)
-		{
-			if (settingsManager.debugMod) API::get()->log_info("playerIsInControl");
-			ChangePluginState(true);
-			if (settingsManager.autoDecoupledPitchDuringCutscenes)
-				uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
-		}
-
-		// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
-		// switches back to the game orientation method when driving a vehicle to prevent steer lock when looking around.
-		if (settingsManager.autoOrientationMode && playerManager.isInVehicle && !playerManager.wasInVehicle)
-			settingsManager.SetOrientationMethod(true);
-		if (settingsManager.autoOrientationMode && !playerManager.isInVehicle && playerManager.wasInVehicle)
-			settingsManager.SetOrientationMethod(false);
-
-		// Fix for the bugged Camera in the mission Catalyst
-		//if (cameraController.currentCameraMode == CameraController::HelicannonFirstPerson && cameraController.previousCameraMode != CameraController::HelicannonFirstPerson)
-		//	memoryManager.ToggleHeliCanonCameraModMemoryInstructions(true);
-		//if (cameraController.currentCameraMode != CameraController::HelicannonFirstPerson && cameraController.previousCameraMode == CameraController::HelicannonFirstPerson)
-		//	memoryManager.ToggleHeliCanonCameraModMemoryInstructions(false);
-
-		// Toggles the game's original instructions for the camera weapon controls
-		if (cameraController.currentCameraMode == CameraController::Camera && cameraController.previousCameraMode != CameraController::Camera)
-			memoryManager.ToggleAllMemoryInstructions(true);
-		if (cameraController.currentCameraMode != CameraController::Camera && cameraController.previousCameraMode == CameraController::Camera)
-			memoryManager.ToggleAllMemoryInstructions(false);
+		ManagePluginState(true);
 
 		// Main VR functions :
 		if (playerManager.isInControl)
@@ -164,28 +97,34 @@ public:
 		PLUGIN_LOG_ONCE("Post Slate Draw Window");
 	}
 
-	void ChangePluginState(bool enable)
+	void ManagePluginState(bool enableVR)
 	{
-		if (settingsManager.debugMod) API::get()->log_info("ChangePluginState");
+		if (settingsManager.debugMod) API::get()->log_info("ManagePluginState");
 
-		if (enable)
+		if (pluginStateApplied != NoControls && !playerManager.isInControl || !enableVR)
 		{
-			cameraController.camResetRequested = true;
-			memoryManager.ToggleAllMemoryInstructions(false);
-			memoryManager.InstallBreakpoints();
-			uevr::API::UObjectHook::set_disabled(false);
-			weaponManager.ResetShootingState();
+			ApplyNoControlsState();
+			return;
 		}
-		else
-		{
-			memoryManager.RemoveBreakpoints();
-			memoryManager.RemoveExceptionHandler();
-			memoryManager.ToggleAllMemoryInstructions(true);
-			cameraController.FixUnderwaterView(false);
-			uevr::API::UObjectHook::set_disabled(true);
-			playerManager.RepositionUnhookedUobjects();
-			weaponManager.UnhookAndRepositionWeapon();
-		}
+
+		// We need to fetch the weapon one last time after player lost control so the plugin can correctly reset the weapon position for cutscenes.
+		if (!playerManager.isInControl && playerManager.wasInControl)
+			weaponManager.UpdateActualWeaponMesh();
+
+		if (pluginStateApplied != OnFoot && playerManager.isInControl && (!playerManager.isInVehicle || cameraController.currentCameraMode == CameraController::AimWeaponFromCar) && 
+			cameraController.currentCameraMode != CameraController::Camera)
+			ApplyOnFootState();
+
+		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
+		// Then sets UEVR settings according to the vehicle type
+		if (pluginStateApplied != Driving && playerManager.isInControl && playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar)
+			ApplyDrivingState();
+		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
+			ApplyOutOfDrivingState();
+		
+		// Toggles the game's original instructions for the camera weapon controls
+		if (pluginStateApplied != CameraWeapon && cameraController.currentCameraMode == CameraController::Camera)
+			ApplyCameraWeaponState();
 	}
 
 	void FetchRequiredValuesFromMemory()
@@ -209,6 +148,84 @@ public:
 		cameraController.previousCameraMode = cameraController.currentCameraMode;
 		//cameraController.wasCutscenePlaying = cameraController.isCutscenePlaying;
 		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
+	}
+
+	enum PluginState {
+		NoControls = 0,
+		OnFoot = 1,
+		Driving = 2,
+		CameraWeapon = 3
+	};
+
+	PluginState pluginStateApplied = NoControls;
+	PluginState previousPluginState = NoControls;
+
+	void ApplyOnFootState()
+	{
+		cameraController.camResetRequested = true;
+		memoryManager.ToggleAllMemoryInstructions(false);
+		memoryManager.InstallBreakpoints();
+		uevr::API::UObjectHook::set_disabled(false);
+		weaponManager.ResetShootingState();
+		if (settingsManager.autoDecoupledPitchDuringCutscenes)
+			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
+		pluginStateApplied = OnFoot;
+		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = OnFoot");
+	}
+
+	void ApplyDrivingState()
+	{
+		memoryManager.RestoreVehicleRelatedMemoryInstructions();
+		if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
+		{
+			settingsManager.CacheSettings();
+			settingsManager.SetPitchAndLerpSettingsForFlight(false);
+		}
+		if (settingsManager.leftHandedMode)
+			API::get()->dispatch_lua_event("playerIsInVehicle", "true");
+		weaponManager.ResetShootingState();
+		if (settingsManager.autoOrientationMode)
+			settingsManager.SetOrientationMethod(true);
+		pluginStateApplied = Driving;
+		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = Driving");
+	}
+
+	void ApplyOutOfDrivingState()
+	{
+		if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
+		{
+			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
+			settingsManager.SetPitchAndLerpSettingsForFlight(true);
+		}
+		if (settingsManager.leftHandedMode)
+			API::get()->dispatch_lua_event("playerIsInVehicle", "false");
+		weaponManager.ResetShootingState();
+		if (settingsManager.autoOrientationMode)
+			settingsManager.SetOrientationMethod(false);
+		API::get()->log_error("pluginStateApplied = OutOfDriving");
+	}
+
+	void ApplyCameraWeaponState()
+	{
+		memoryManager.ToggleAllMemoryInstructions(true);
+		pluginStateApplied = CameraWeapon;
+		API::get()->log_error("pluginStateApplied = Camera");
+	}
+
+	void ApplyNoControlsState()
+	{
+		settingsManager.CacheSettings();
+		memoryManager.RemoveBreakpoints();
+		memoryManager.RemoveExceptionHandler();
+		memoryManager.ToggleAllMemoryInstructions(true);
+		cameraController.FixUnderwaterView(false);
+		uevr::API::UObjectHook::set_disabled(true);
+		playerManager.RepositionUnhookedUobjects();
+		weaponManager.UnhookAndRepositionWeapon();
+		if (settingsManager.autoDecoupledPitchDuringCutscenes)
+			uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
+		pluginStateApplied = NoControls;
+		API::get()->log_error("pluginStateApplied = NoControls");
 	}
 };
 
