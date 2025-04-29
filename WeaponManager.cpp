@@ -132,20 +132,49 @@ void WeaponManager::HideBulletTrace()
 void WeaponManager::UpdateShootingState(bool firstWeapon)
 {
 	uevr::API::UObject* weaponMesh = firstWeapon ? firstWeaponMesh : secondWeaponMesh;
-	auto& lastParticleShot = firstWeapon ? firstWeaponLastParticleShot : secondWeaponLastParticleShot;
+	std::vector<uevr::API::UObject*>& previousParticles = firstWeapon ? firstWeaponPreviousParticles : secondWeaponPreviousParticles;
 
 	if (!weaponMesh)
 		return;
 
 	const auto& childrenParticle = weaponMesh->get_property<uevr::API::TArray<uevr::API::UObject*>>(L"AttachChildren");
+	int particleCount = childrenParticle.count;
+	//uevr::API::get()->log_info("particle count %s = %i", firstWeapon ? "first weapon : " : "second weapon : ", particleCount);
+	//uevr::API::get()->log_info("previousParticleCount %s = %i", firstWeapon ? "first weapon : " : "second weapon : ", previousParticleCount);
 
-	if (childrenParticle.count <= 0)
-		return;
+	bool newParticleDetected = false;
 
-	auto actualParticleShot = childrenParticle.data[childrenParticle.count-1];
-	if (actualParticleShot != lastParticleShot)
+    for (size_t i = 0; i < childrenParticle.count; ++i)
+    {
+        auto particle = childrenParticle.data[i];
+		uevr::API::get()->log_info("childrenParticle.data[i] = %ls", childrenParticle.data[i]->get_fname()->to_string().c_str());
+        // check if this particle is in the previousParticles
+        if (std::find(previousParticles.begin(), previousParticles.end(), particle) == previousParticles.end())
+        {
+            newParticleDetected = true;
+			/*uevr::API::get()->log_info("childrenParticle.data[i] = %ls", childrenParticle.data[i]->get_fname()->to_string().c_str());*/
+            break;
+        }
+    }
+
+    // Cache the current particles for next frame
+    previousParticles.clear();
+    for (size_t i = 0; i < childrenParticle.count; ++i)
+        previousParticles.push_back(childrenParticle.data[i]);
+	
+	uevr::API::get()->log_info("firstWeaponShotDone = %i", firstWeaponShotDone);
+
+	// A false positive detection sometimes happens the frame after a detection. Resetting and returning here
+	// allows to discard it. No weapon can shoot on two consecutive frames anyway.
+	if (firstWeaponIsShooting || secondWeaponIsShooting)
 	{
-		lastParticleShot = actualParticleShot;
+		firstWeaponIsShooting = false;
+		secondWeaponIsShooting = false;
+		return;
+	}
+
+	if (newParticleDetected)
+	{
 		if (!secondWeaponMesh)
 		{
 			firstWeaponIsShooting = true;
@@ -610,8 +639,6 @@ void WeaponManager::ProcessWeaponHandling(float delta)
 		ApplyRecoil(secondWeaponMesh, secondWeaponIsShooting, positionRecoilForce, rotationRecoilForceEuler, delta);
 
 	memoryManager->FirstWeaponIsShooting = false;
-	firstWeaponIsShooting = false;
-	secondWeaponIsShooting = false;
 }
 
 void WeaponManager::ApplyRecoil(uevr::API::UObject* weaponMesh, bool isShooting, const glm::fvec3& positionRecoilForce, const glm::fvec3& rotationRecoilForceEuler, float delta)

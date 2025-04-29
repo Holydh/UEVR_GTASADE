@@ -139,6 +139,7 @@ void CameraController::ProcessHookedHeadPosition(float delta)
 		Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 		setRelativeLocation_params.bSweep = false;
 		setRelativeLocation_params.bTeleport = true;
+		// check vehicleType == 13 to offset the bikes camera position 
 		setRelativeLocation_params.newLocation = playerManager->vehicleType == 13 && playerManager->isInVehicle ? playerManager->defaultPlayerHeadLocalPositionUE + playerManager->defaultBikeLocalOffsetUE : playerManager->defaultPlayerHeadLocalPositionUE;
 		playerManager->playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 

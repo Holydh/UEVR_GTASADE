@@ -25,6 +25,8 @@ private:
 	bool secondWeaponIsShooting = false;
 	uevr::API::UObject* firstWeaponLastParticleShot = nullptr;
 	uevr::API::UObject* secondWeaponLastParticleShot = nullptr;
+	std::vector<uevr::API::UObject*> firstWeaponPreviousParticles;
+	std::vector<uevr::API::UObject*> secondWeaponPreviousParticles;
 
 	//Weapon infos
 	uevr::API::UObject* firstWeaponMesh = nullptr;
