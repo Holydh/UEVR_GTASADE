@@ -134,14 +134,14 @@ void CameraController::ProcessHookedHeadPosition(float delta)
 		keepCameraHeight = true ;
 
 	//Workaround : Forces the VR camera height when player is in his garage.
-	if (playerManager->isInVehicle || currentCameraMode == Fixed  || keepCameraHeight)
+	if (playerManager->isInVehicle || currentCameraMode == Fixed || keepCameraHeight)
 	{
 		Utilities::Parameter_K2_SetWorldOrRelativeLocation setRelativeLocation_params{};
 		setRelativeLocation_params.bSweep = false;
 		setRelativeLocation_params.bTeleport = true;
-		setRelativeLocation_params.newLocation = playerManager->defaultPlayerHeadLocalPositionUE;
+		setRelativeLocation_params.newLocation = playerManager->vehicleType == 13 && playerManager->isInVehicle ? playerManager->defaultPlayerHeadLocalPositionUE + playerManager->defaultBikeLocalOffsetUE : playerManager->defaultPlayerHeadLocalPositionUE;
 		playerManager->playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
-		
+
 		keepCameraHeightTimer += keepCameraHeight ? delta : 0.0f;
 		if (keepCameraHeightTimer >= keepCameraHeightTime)
 		{

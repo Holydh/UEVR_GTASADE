@@ -260,8 +260,12 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* pException) {
     return EXCEPTION_CONTINUE_SEARCH; // Let other handlers process it if it's not our breakpoint
 }
 
+bool MemoryManager::breakpointsInstalled = false;
+
 void MemoryManager::InstallBreakpoints() {
 	if (settingsManager->debugMod) uevr::API::get()->log_info("InstallBreakpoints()");
+	if (breakpointsInstalled)
+		return;
     HANDLE hThread = GetCurrentThread();
 
     // Set the breakpoints
@@ -271,6 +275,7 @@ void MemoryManager::InstallBreakpoints() {
 
     // Install exception handler
     exceptionHandlerHandle = AddVectoredExceptionHandler(1, ExceptionHandler);
+	breakpointsInstalled = true;
 }
 
 void MemoryManager::RemoveBreakpoints() {
@@ -295,6 +300,7 @@ void MemoryManager::RemoveBreakpoints() {
         RemoveVectoredExceptionHandler(exceptionHandlerHandle);
         exceptionHandlerHandle = nullptr;  // Prevent accidental double removal
     }
+	breakpointsInstalled = false;
 }
 
 void MemoryManager::RemoveExceptionHandler() {
@@ -382,6 +388,8 @@ void MemoryManager::AdjustAddresses() {
 	vehicleTypeAddress += baseAddressGameEXE;
 	weaponWheelDisplayedAddress += baseAddressGameEXE;
 	cameraModeAddress += baseAddressGameEXE;
+	vehicleCameraModeAddress += baseAddressGameEXE;
+	onFootCameraModeAddress += baseAddressGameEXE;
 	xAxisSpraysAimAddress += baseAddressGameEXE;
 	playerShootInstructionAddress += baseAddressGameEXE;
 	playerShootCam45InstructionAddress += baseAddressGameEXE;

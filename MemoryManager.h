@@ -54,6 +54,8 @@ public:
 	static uintptr_t playerShootCam45InstructionAddress;
 
 	uintptr_t cameraModeAddress = 0x53E2580;
+	uintptr_t vehicleCameraModeAddress = 0x53E24A0;
+	uintptr_t onFootCameraModeAddress = 0x53E2490;
 	uintptr_t playerIsInControlAddress = 0x53E8840;
 	uintptr_t playerIsInVehicleAddress = 0x51B39D4;
 	uintptr_t vehicleTypeAddress = 0x5031278;
@@ -74,6 +76,7 @@ public:
 	bool SetHardwareBreakpoint(HANDLE hThread, int index, void* address, bool* flag);
 	void RemoveBreakpoints();
 	void RemoveExceptionHandler();
+	static bool breakpointsInstalled;
 
 	//void GetAllBytes();
 	//void WriteBytesToIniFile(const char* header, const std::vector<std::pair<uintptr_t, size_t>>& addresses);

@@ -723,6 +723,9 @@ void WeaponManager::UnhookAndRepositionWeapon()
 
 	if (firstWeaponMesh == nullptr)
 		return;
+	if (!uevr::API::UObjectHook::get_motion_controller_state(firstWeaponMesh))
+		return;
+
 	uevr::API::UObjectHook::remove_motion_controller_state(firstWeaponMesh);
 
 	//Reset weapon position and rotation for melee weapons

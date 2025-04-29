@@ -110,6 +110,23 @@ public:
 	CameraMode previousCameraMode = None;
 	bool camResetRequested = false;
 
+	enum class VehicleCameraMode {
+		Road = 0,
+		Close = 1,
+		Normal = 2,
+		Far = 3,
+		Cinematic = 4
+	};
+	VehicleCameraMode currentVehicleCameraMode = VehicleCameraMode::Close;
+
+	enum class OnFootCameraMode {
+		Close = 0,
+		Normal = 1,
+		Far = 2,
+	};
+	OnFootCameraMode currentOnFootCameraMode = OnFootCameraMode::Close;
+		
+
 	//bool isCutscenePlaying = false;
 	//bool wasCutscenePlaying = false;
 

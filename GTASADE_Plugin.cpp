@@ -59,7 +59,7 @@ public:
 		ManagePluginState(true);
 
 		// Main VR functions :
-		if (playerManager.isInControl)
+		if (pluginStateApplied != VRdisabled)
 		{
 			weaponManager.UpdateActualWeaponMesh();
 			if (settingsManager.debugMod) uevr::API::get()->log_info("equippedWeaponIndex");
@@ -101,26 +101,37 @@ public:
 	{
 		if (settingsManager.debugMod) API::get()->log_info("ManagePluginState");
 
-		if (pluginStateApplied != NoControls && !playerManager.isInControl || !enableVR)
-		{
-			ApplyNoControlsState();
-			return;
-		}
-
 		// We need to fetch the weapon one last time after player lost control so the plugin can correctly reset the weapon position for cutscenes.
 		if (!playerManager.isInControl && playerManager.wasInControl)
 			weaponManager.UpdateActualWeaponMesh();
 
+		bool viewRequiresDisabledVR = playerManager.isInControl && 
+			(!playerManager.isInVehicle && cameraController.currentOnFootCameraMode != CameraController::OnFootCameraMode::Close) ||
+			(playerManager.isInVehicle && cameraController.currentVehicleCameraMode != CameraController::VehicleCameraMode::Close);
+
+		if (pluginStateApplied != VRdisabled && (!playerManager.isInControl || viewRequiresDisabledVR || !enableVR))
+		{
+			ApplyVRdisabledState();
+			return;
+		}
+
+		if (viewRequiresDisabledVR || !enableVR)
+			return;
+
+		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
+			ApplyOutOfDrivingState();
+
 		if (pluginStateApplied != OnFoot && playerManager.isInControl && (!playerManager.isInVehicle || cameraController.currentCameraMode == CameraController::AimWeaponFromCar) && 
 			cameraController.currentCameraMode != CameraController::Camera)
-			ApplyOnFootState();
+			ApplyBaseState();
 
 		// Toggles the game's original instructions when going in or out of a vehicle if there's no scripted event with AimWeaponFromCar camera.
 		// Then sets UEVR settings according to the vehicle type
 		if (pluginStateApplied != Driving && playerManager.isInControl && playerManager.isInVehicle && cameraController.currentCameraMode != CameraController::AimWeaponFromCar)
+		{
+			ApplyBaseState();
 			ApplyDrivingState();
-		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
-			ApplyOutOfDrivingState();
+		}
 		
 		// Toggles the game's original instructions for the camera weapon controls
 		if (pluginStateApplied != CameraWeapon && cameraController.currentCameraMode == CameraController::Camera)
@@ -136,6 +147,8 @@ public:
 		playerManager.shootFromCarInput = *(reinterpret_cast<int*>(memoryManager.playerShootFromCarInputAddress)) == 3;
 		playerManager.weaponWheelEnabled = *(reinterpret_cast<int*>(memoryManager.weaponWheelDisplayedAddress)) > 30;
 		cameraController.currentCameraMode = *(reinterpret_cast<CameraController::CameraMode*>(memoryManager.cameraModeAddress));
+		cameraController.currentOnFootCameraMode = *(reinterpret_cast<CameraController::OnFootCameraMode*>(memoryManager.onFootCameraModeAddress));
+		cameraController.currentVehicleCameraMode = *(reinterpret_cast<CameraController::VehicleCameraMode*>(memoryManager.vehicleCameraModeAddress));
 		//cameraController.isCutscenePlaying = *(reinterpret_cast<uint8_t*>(memoryManager.cutscenePlayingAddress)) > 0;
 	}
 
@@ -151,16 +164,16 @@ public:
 	}
 
 	enum PluginState {
-		NoControls = 0,
-		OnFoot = 1,
-		Driving = 2,
-		CameraWeapon = 3
+		Uninitialized = 0,
+		VRdisabled = 1,
+		OnFoot = 2,
+		Driving = 3,
+		CameraWeapon = 4
 	};
 
-	PluginState pluginStateApplied = NoControls;
-	PluginState previousPluginState = NoControls;
+	PluginState pluginStateApplied = Uninitialized;
 
-	void ApplyOnFootState()
+	void ApplyBaseState()
 	{
 		cameraController.camResetRequested = true;
 		memoryManager.ToggleAllMemoryInstructions(false);
@@ -186,6 +199,7 @@ public:
 		weaponManager.ResetShootingState();
 		if (settingsManager.autoOrientationMode)
 			settingsManager.SetOrientationMethod(true);
+		weaponManager.UnhookAndRepositionWeapon();
 		pluginStateApplied = Driving;
 		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = Driving");
 	}
@@ -212,11 +226,10 @@ public:
 		API::get()->log_error("pluginStateApplied = Camera");
 	}
 
-	void ApplyNoControlsState()
+	void ApplyVRdisabledState()
 	{
 		settingsManager.CacheSettings();
 		memoryManager.RemoveBreakpoints();
-		memoryManager.RemoveExceptionHandler();
 		memoryManager.ToggleAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
 		uevr::API::UObjectHook::set_disabled(true);
@@ -224,7 +237,7 @@ public:
 		weaponManager.UnhookAndRepositionWeapon();
 		if (settingsManager.autoDecoupledPitchDuringCutscenes)
 			uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
-		pluginStateApplied = NoControls;
+		pluginStateApplied = VRdisabled;
 		API::get()->log_error("pluginStateApplied = NoControls");
 	}
 };
