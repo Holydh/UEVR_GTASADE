@@ -5,68 +5,138 @@ void SettingsManager::InitSettingsManager()
 	GetAllConfigFilePaths();
 	uevr::API::get()->log_info("%s", uevrConfigFilePath.c_str());
 	uevr::API::get()->log_info("%s", pluginConfigFilePath.c_str());
-	UpdateUevrSettings();
-	UpdatePluginSettings();
-	CacheSettings();
+	FetchUevrSettings(false);
+	FetchPluginSettings();
 }
 
-void SettingsManager::UpdateUevrSettings()
+void SettingsManager::FetchUevrSettings(bool writeToPlugin)
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateUevrSettings()");
 	
 	xAxisSensitivity = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_AimSpeed", 125.0f) * 10; //*10 because the base UEVR setting is too low as is 
 	joystickDeadzone = SettingsManager::GetFloatValueFromFile(uevrConfigFilePath, "VR_JoystickDeadzone", 0.1f);
-	decoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
-	lerpPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraPitch", true);
-	lerpRoll = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraRoll", true);
+	uevr_DecoupledPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
+	uevr_LerpPitch = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraPitch", true);
+	uevr_LerpRoll = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraRoll", true);
+	uevr_LerpYaw = SettingsManager::GetBoolValueFromFile(uevrConfigFilePath, "VR_LerpCameraYaw", false);
+
+	if (writeToPlugin)
+		WriteChangedSettingsToPluginConfigFile();
 	if (debugMod) uevr::API::get()->log_info("UEVR Settings Updated");
 }
 
-void SettingsManager::UpdatePluginSettings()
+void SettingsManager::WriteChangedSettingsToPluginConfigFile()
+{
+	switch (cameraModeSettings)
+	{
+	case OnFoot:
+		SetBoolValueToFile(pluginConfigFilePath, "OnFoot_DecoupledPitch", uevr_DecoupledPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "OnFoot_LerpPitch", uevr_LerpPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "OnFoot_LerpRoll", uevr_LerpRoll);
+		SetBoolValueToFile(pluginConfigFilePath, "OnFoot_LerpYaw", uevr_LerpYaw);
+		break;
+	case DrivingCar:
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingCar_DecoupledPitch", uevr_DecoupledPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingCar_LerpPitch", uevr_LerpPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingCar_LerpRoll", uevr_LerpRoll);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingCar_LerpYaw", uevr_LerpYaw);
+		break;
+	case DrivingBike:
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingBike_DecoupledPitch", uevr_DecoupledPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingBike_LerpPitch", uevr_LerpPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingBike_LerpRoll", uevr_LerpRoll);
+		SetBoolValueToFile(pluginConfigFilePath, "DrivingBike_LerpYaw", uevr_LerpYaw);
+		break;
+	case Flying:
+		SetBoolValueToFile(pluginConfigFilePath, "Flying_DecoupledPitch", uevr_DecoupledPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "Flying_LerpPitch", uevr_LerpPitch);
+		SetBoolValueToFile(pluginConfigFilePath, "Flying_LerpRoll", uevr_LerpRoll);
+		SetBoolValueToFile(pluginConfigFilePath, "Flying_LerpYaw", uevr_LerpYaw);
+		break;
+	}
+}
+
+void SettingsManager::FetchPluginSettings()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
+
 	leftHandedMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "LeftHandedMode", false);
 	uevr::API::get()->dispatch_lua_event("playerIsLeftHanded", leftHandedMode ? "true" : "false");
-	autoDecoupledPitchDuringCutscenes = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoDecoupledPitchDuringCutscenes", true);
-	autoPitchAndLerpForFlight = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoPitchAndLerpSettingsForFlight", true);
-	autoOrientationMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "AutoOrientationMode", true);
+
+	onFoot_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_DecoupledPitch", true);
+	onFoot_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpPitch", true);
+	onFoot_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpRoll", true);
+	onFoot_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpYaw", true);
+	drivingCar_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_DecoupledPitch", true);
+	drivingCar_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpPitch", true);
+	drivingCar_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpRoll", true);
+	drivingCar_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpYaw", true);
+	drivingBike_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_DecoupledPitch", true);
+	drivingBike_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpPitch", true);
+	drivingBike_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpRoll", true);
+	drivingBike_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpYaw", true);
+	flying_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_DecoupledPitch", true);
+	flying_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpPitch", true);
+	flying_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpRoll", true);
+	flying_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpYaw", true);
 	if (debugMod) uevr::API::get()->log_info("Plugin Settings Updated");
 }
 
-void SettingsManager::SetPitchAndLerpSettingsForFlight(bool enable)
+void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings modeSettings)
 {
-	if (debugMod) uevr::API::get()->log_info("SetPitchAndLerpSettingsForFlight");
-
-	SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", enable ? storedDecoupledPitch : false);
-	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", enable ? storedLerpPitch : false);
-	SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", enable ? storedLerpRoll : false);
+	cameraModeSettings = modeSettings;
+	switch (cameraModeSettings)
+	{
+	case Cutscene:
+		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", true);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", false);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", false);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", false);
+		break;
+	case OnFoot:
+		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", onFoot_DecoupledPitch);
+		SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", 1);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", onFoot_LerpPitch);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", onFoot_LerpRoll);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", onFoot_LerpYaw);
+		break;
+	case DrivingCar:
+		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", drivingCar_DecoupledPitch);
+		SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", 0);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", drivingCar_LerpPitch);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", drivingCar_LerpRoll);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", drivingCar_LerpYaw);
+		break;
+	case DrivingBike:
+		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", drivingBike_DecoupledPitch);
+		SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", 0);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", drivingBike_LerpPitch);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", drivingBike_LerpRoll);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", drivingBike_LerpYaw);
+		break;
+	case Flying:
+		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", flying_DecoupledPitch);
+		SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", 0);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", flying_LerpPitch);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", flying_LerpRoll);
+		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", flying_LerpYaw);
+		break;
+	}
 	uevr::API::VR::reload_config();
+	uevrConfigWroteByPlugin = true;
 }
 
-void SettingsManager::SetOrientationMethod(bool inVehicle)
-{
-	// Auto Orientation method, allows CJ's walking direction to be relative to the hmd orientation when on foot, 
-// switches back to the game orientation method when driving a vehicle to prevent steer lock when looking around.
-	if (debugMod) uevr::API::get()->log_info("SetPitchAndLerpSettingsForFlight");
-	SetIntValueToFile(uevrConfigFilePath, "VR_MovementOrientation", (int)!inVehicle);
-	uevr::API::VR::reload_config();
-}
-
-void SettingsManager::CacheSettings()
-{
-	if (debugMod) uevr::API::get()->log_info("CacheSettings");
-
-	storedDecoupledPitch = decoupledPitch;
-	storedLerpPitch = lerpPitch;
-	storedLerpRoll = lerpRoll;
-}
-
-void SettingsManager::UpdateSettingsIfModified()
+void SettingsManager::UpdateSettingsIfModifiedByPlayer()
 {
 	if (debugMod) uevr::API::get()->log_info("UpdateSettingsIfModified");
 
-	CheckSettingsModificationAndUpdate(uevrConfigFilePath, true);
 	CheckSettingsModificationAndUpdate(pluginConfigFilePath, false);
+	if (uevrConfigWroteByPlugin) //Skip uevr config check if plugin write this frame
+	{
+		uevrConfigWroteByPlugin = false;
+		return;
+	}
+	CheckSettingsModificationAndUpdate(uevrConfigFilePath, true);
 }
 
 bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& filePath, bool uevr)
@@ -87,9 +157,22 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 
 		std::string defaultContent =
 			"LeftHandedMode=false\n"
-			"AutoDecoupledPitchDuringCutscenes=true\n"
-			"AutoPitchAndLerpSettingsForFlight=true\n"
-			"AutoOrientationMode=true\n";
+			"OnFoot_DecoupledPitch=true\n"
+			"OnFoot_LerpPitch=false\n"
+			"OnFoot_LerpRoll=false\n"
+			"OnFoot_LerpYaw=false\n"
+			"DrivingCar_DecoupledPitch=false\n"
+			"DrivingCar_LerpPitch=true\n"
+			"DrivingCar_LerpRoll=true\n"
+			"DrivingCar_LerpYaw=false\n"
+			"DrivingBike_DecoupledPitch=true\n"
+			"DrivingBike_LerpPitch=false\n"
+			"DrivingBike_LerpRoll=false\n"
+			"DrivingBike_LerpYaw=false\n"
+			"Flying_DecoupledPitch=false\n"
+			"Flying_LerpPitch=true\n"
+			"Flying_LerpRoll=true\n"
+			"Flying_LerpYaw=true\n";
 
 		HANDLE hCreateFile = CreateFileA(filePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (hCreateFile != INVALID_HANDLE_VALUE)
@@ -114,12 +197,12 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 			if (uevr)
 			{
 				uevrLastWriteTime = currentWriteTime;  // Update last write time
-				UpdateUevrSettings();
+				FetchUevrSettings(true);
 			}
 			else
 			{
 				pluginLastWriteTime = currentWriteTime; 
-				UpdatePluginSettings();
+				FetchPluginSettings();
 			}
 			CloseHandle(hFile);
 			uevr::API::get()->log_error("setting file has been modified");

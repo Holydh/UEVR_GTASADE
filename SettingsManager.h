@@ -5,6 +5,27 @@
 #include "uevr/API.hpp"
 
 class SettingsManager {
+public:
+	bool debugMod = false;
+
+	bool leftHandedMode = false;
+
+	float xAxisSensitivity = 125.0f;
+	float joystickDeadzone = 0.1f;
+
+	enum CameraModeSettings {
+		Cutscene = 0,
+		OnFoot = 1,
+		DrivingCar = 2,
+		DrivingBike = 3,
+		Flying = 4
+	};
+
+	void InitSettingsManager();
+	void GetAllConfigFilePaths();
+	void UpdateSettingsIfModifiedByPlayer();
+	void ApplyCameraSettings(CameraModeSettings cameraModeSettings);
+
 private:
 	bool CheckSettingsModificationAndUpdate(const std::string& filePath, bool uevr);
 	std::string GetConfigFilePath(bool uevr);
@@ -13,6 +34,7 @@ private:
 
 	std::string uevrConfigFilePath;
 	FILETIME uevrLastWriteTime;
+	bool uevrConfigWroteByPlugin = false;
 	std::string pluginConfigFilePath;
 	FILETIME pluginLastWriteTime;
 
@@ -22,32 +44,34 @@ private:
 	void SetBoolValueToFile(const std::string& filePath, const std::string& key, bool defaultValue);
 	void SetIntValueToFile(const std::string& filePath, const std::string& key, int value);
 
-	void UpdateUevrSettings();
-	void UpdatePluginSettings();
+	void FetchUevrSettings(bool writeToPlugin);
+	void FetchPluginSettings();
+	void WriteChangedSettingsToPluginConfigFile();
 
-	bool decoupledPitch = false;
-	bool lerpPitch = false;
-	bool lerpRoll = false;
+	bool uevr_DecoupledPitch = false;
+	bool uevr_LerpPitch = false;
+	bool uevr_LerpRoll = false;
+	bool uevr_LerpYaw = false;
 
-public:
-	bool debugMod = false;
+	bool onFoot_DecoupledPitch = false;
+	bool onFoot_LerpPitch = false;
+	bool onFoot_LerpRoll = false;
+	bool onFoot_LerpYaw = false;
 
-	bool leftHandedMode = false;
-	bool autoPitchAndLerpForFlight = false;
-	bool autoDecoupledPitchDuringCutscenes = false;
-	bool autoOrientationMode = false;
-	bool storedDecoupledPitch = false;
-	bool storedLerpPitch = false;
-	bool storedLerpRoll = false;
+	bool drivingCar_DecoupledPitch = false;
+	bool drivingCar_LerpPitch = false;
+	bool drivingCar_LerpRoll = false;
+	bool drivingCar_LerpYaw = false;
+		 
+	bool drivingBike_DecoupledPitch = false;
+	bool drivingBike_LerpPitch = false;
+	bool drivingBike_LerpRoll = false;
+	bool drivingBike_LerpYaw = false;
 
-	float xAxisSensitivity = 125.0f;
-	float joystickDeadzone = 0.1f;
+	bool flying_DecoupledPitch = false;
+	bool flying_LerpPitch = false;
+	bool flying_LerpRoll = false;
+	bool flying_LerpYaw = false;
 
-	void InitSettingsManager();
-	void GetAllConfigFilePaths();
-	void UpdateSettingsIfModified();
-
-	void CacheSettings(); // For situations where we need to modify UEVR config temporarily
-	void SetPitchAndLerpSettingsForFlight(bool enable);
-	void SetOrientationMethod(bool inVehicle);
+	CameraModeSettings cameraModeSettings = CameraModeSettings::Cutscene;
 };

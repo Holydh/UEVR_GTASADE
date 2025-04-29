@@ -44,7 +44,6 @@ public:
 		memoryManager.InitMemoryManager();
 		Utilities::InitHelperClasses();
 		weaponManager.HideBulletTrace();
-		settingsManager.SetOrientationMethod(!settingsManager.autoOrientationMode);
 	}
 
 	void on_pre_engine_tick(API::UGameEngine* engine, float delta) override {
@@ -75,7 +74,7 @@ public:
 			weaponManager.ProcessWeaponHandling(delta);
 			weaponManager.ProcessWeaponVisibility();
 		}
-		settingsManager.UpdateSettingsIfModified();
+		settingsManager.UpdateSettingsIfModifiedByPlayer();
 		UpdatePreviousStates();
 
 		//auto end = std::chrono::high_resolution_clock::now();
@@ -180,8 +179,7 @@ public:
 		memoryManager.InstallBreakpoints();
 		uevr::API::UObjectHook::set_disabled(false);
 		weaponManager.ResetShootingState();
-		if (settingsManager.autoDecoupledPitchDuringCutscenes)
-			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch); // reset decoupled pitch after cutscenes to user preset
+		settingsManager.ApplyCameraSettings(SettingsManager::OnFoot);
 		pluginStateApplied = OnFoot;
 		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = OnFoot");
 	}
@@ -189,16 +187,21 @@ public:
 	void ApplyDrivingState()
 	{
 		memoryManager.RestoreVehicleRelatedMemoryInstructions();
-		if (settingsManager.autoPitchAndLerpForFlight && playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
+		if (playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
 		{
-			settingsManager.CacheSettings();
-			settingsManager.SetPitchAndLerpSettingsForFlight(false);
+			settingsManager.ApplyCameraSettings(SettingsManager::Flying);
+		}
+		if (playerManager.vehicleType == PlayerManager::CarOrBoat)
+		{
+			settingsManager.ApplyCameraSettings(SettingsManager::DrivingCar);
+		}
+		if (playerManager.vehicleType == PlayerManager::Bike)
+		{
+			settingsManager.ApplyCameraSettings(SettingsManager::DrivingBike);
 		}
 		if (settingsManager.leftHandedMode)
 			API::get()->dispatch_lua_event("playerIsInVehicle", "true");
 		weaponManager.ResetShootingState();
-		if (settingsManager.autoOrientationMode)
-			settingsManager.SetOrientationMethod(true);
 		weaponManager.UnhookAndRepositionWeapon();
 		pluginStateApplied = Driving;
 		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = Driving");
@@ -206,16 +209,9 @@ public:
 
 	void ApplyOutOfDrivingState()
 	{
-		if (settingsManager.autoPitchAndLerpForFlight)  // reset the setting to user preset
-		{
-			uevr::API::VR::set_decoupled_pitch_enabled(settingsManager.storedDecoupledPitch);
-			settingsManager.SetPitchAndLerpSettingsForFlight(true);
-		}
 		if (settingsManager.leftHandedMode)
 			API::get()->dispatch_lua_event("playerIsInVehicle", "false");
 		weaponManager.ResetShootingState();
-		if (settingsManager.autoOrientationMode)
-			settingsManager.SetOrientationMethod(false);
 		API::get()->log_error("pluginStateApplied = OutOfDriving");
 	}
 
@@ -228,15 +224,13 @@ public:
 
 	void ApplyVRdisabledState()
 	{
-		settingsManager.CacheSettings();
 		memoryManager.RemoveBreakpoints();
 		memoryManager.ToggleAllMemoryInstructions(true);
 		cameraController.FixUnderwaterView(false);
 		uevr::API::UObjectHook::set_disabled(true);
 		playerManager.RepositionUnhookedUobjects();
 		weaponManager.UnhookAndRepositionWeapon();
-		if (settingsManager.autoDecoupledPitchDuringCutscenes)
-			uevr::API::VR::set_decoupled_pitch_enabled(true); // Force decoupled pitch during cutscenes
+		settingsManager.ApplyCameraSettings(SettingsManager::Cutscene);
 		pluginStateApplied = VRdisabled;
 		API::get()->log_error("pluginStateApplied = NoControls");
 	}
