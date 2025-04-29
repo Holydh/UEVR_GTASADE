@@ -187,17 +187,18 @@ public:
 	void ApplyDrivingState()
 	{
 		memoryManager.RestoreVehicleRelatedMemoryInstructions();
-		if (playerManager.vehicleType == PlayerManager::Plane || playerManager.vehicleType == PlayerManager::Helicopter)
+		switch (playerManager.vehicleType)
 		{
+		case PlayerManager::Plane:
+		case PlayerManager::Helicopter:
 			settingsManager.ApplyCameraSettings(SettingsManager::Flying);
-		}
-		if (playerManager.vehicleType == PlayerManager::CarOrBoat)
-		{
+			break;
+		case PlayerManager::CarOrBoat:
 			settingsManager.ApplyCameraSettings(SettingsManager::DrivingCar);
-		}
-		if (playerManager.vehicleType == PlayerManager::Bike)
-		{
+			break;
+		case PlayerManager::Bike:
 			settingsManager.ApplyCameraSettings(SettingsManager::DrivingBike);
+			break;
 		}
 		if (settingsManager.leftHandedMode)
 			API::get()->dispatch_lua_event("playerIsInVehicle", "true");
