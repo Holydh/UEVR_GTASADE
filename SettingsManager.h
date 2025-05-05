@@ -8,7 +8,13 @@ class SettingsManager {
 public:
 	bool debugMod = false;
 
-	bool leftHandedMode = false;
+	enum LeftHandedMode {
+		Disabled = 0,
+		TriggerSwap = 1,
+		AllInputsSwap = 2
+	};
+	LeftHandedMode leftHandedMode = Disabled;
+	bool leftHandedOnlyWhileOnFoot = true;
 
 	float xAxisSensitivity = 125.0f;
 	float joystickDeadzone = 0.1f;
@@ -41,7 +47,8 @@ private:
 	//Would need some rework if lots of config values to read. Now it opens the config.txt file each time we call these :
 	float GetFloatValueFromFile(const std::string& filePath, const std::string& key, float defaultValue);
 	bool GetBoolValueFromFile(const std::string& filePath, const std::string& key, bool defaultValue);
-	void SetBoolValueToFile(const std::string& filePath, const std::string& key, bool defaultValue);
+	void SetBoolValueToFile(const std::string& filePath, const std::string& key, bool value);
+	int GetIntValueFromFile(const std::string& filePath, const std::string& key, int defaultValue);
 	void SetIntValueToFile(const std::string& filePath, const std::string& key, int value);
 
 	void FetchUevrSettings(bool writeToPlugin);

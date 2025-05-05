@@ -79,7 +79,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 		glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
 		UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
 		motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-		motionState->set_hand(settingsManager->leftHandedMode ? 0 : 1);
+		motionState->set_hand(settingsManager->leftHandedMode != SettingsManager::Disabled ? 0 : 1);
 		motionState->set_permanent(true);
 		if (secondWeaponMesh != nullptr)
 		{
@@ -87,7 +87,7 @@ void WeaponManager::UpdateActualWeaponMesh()
 			glm::fquat defaultWeaponRotationQuat = glm::fquat(defaultWeaponRotationEuler);
 			UEVR_Quaternionf defaultWeaponRotationQuat_UEVR = { defaultWeaponRotationQuat.w , defaultWeaponRotationQuat.x, defaultWeaponRotationQuat.y, defaultWeaponRotationQuat.z };
 			motionState->set_rotation_offset(&defaultWeaponRotationQuat_UEVR);
-			motionState->set_hand(settingsManager->leftHandedMode ? 1 : 0);
+			motionState->set_hand(settingsManager->leftHandedMode != SettingsManager::Disabled ? 1 : 0);
 			motionState->set_permanent(true);
 		}
 	}
@@ -147,7 +147,6 @@ void WeaponManager::UpdateShootingState(bool firstWeapon)
     for (size_t i = 0; i < childrenParticle.count; ++i)
     {
         auto particle = childrenParticle.data[i];
-		uevr::API::get()->log_info("childrenParticle.data[i] = %ls", childrenParticle.data[i]->get_fname()->to_string().c_str());
         // check if this particle is in the previousParticles
         if (std::find(previousParticles.begin(), previousParticles.end(), particle) == previousParticles.end())
         {
@@ -161,8 +160,6 @@ void WeaponManager::UpdateShootingState(bool firstWeapon)
     previousParticles.clear();
     for (size_t i = 0; i < childrenParticle.count; ++i)
         previousParticles.push_back(childrenParticle.data[i]);
-	
-	uevr::API::get()->log_info("firstWeaponShotDone = %i", firstWeaponShotDone);
 
 	// A false positive detection sometimes happens the frame after a detection. Resetting and returning here
 	// allows to discard it. No weapon can shoot on two consecutive frames anyway.

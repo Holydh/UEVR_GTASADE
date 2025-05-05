@@ -25,6 +25,34 @@ void SettingsManager::FetchUevrSettings(bool writeToPlugin)
 	if (debugMod) uevr::API::get()->log_info("UEVR Settings Updated");
 }
 
+void SettingsManager::FetchPluginSettings()
+{
+	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
+
+	leftHandedMode = (LeftHandedMode)SettingsManager::GetIntValueFromFile(pluginConfigFilePath, "LeftHandedMode", 0);
+	uevr::API::get()->dispatch_lua_event("playerIsLeftHanded", std::to_string(leftHandedMode));
+	leftHandedOnlyWhileOnFoot = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "LeftHandedOnlyWhileOnFoot", true);
+	uevr::API::get()->dispatch_lua_event("leftHandedOnlyWhileOnFoot", leftHandedOnlyWhileOnFoot ? "true" : "false");
+
+	onFoot_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_DecoupledPitch", true);
+	onFoot_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpPitch", true);
+	onFoot_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpRoll", true);
+	onFoot_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpYaw", true);
+	drivingCar_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_DecoupledPitch", true);
+	drivingCar_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpPitch", true);
+	drivingCar_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpRoll", true);
+	drivingCar_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpYaw", true);
+	drivingBike_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_DecoupledPitch", true);
+	drivingBike_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpPitch", true);
+	drivingBike_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpRoll", true);
+	drivingBike_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpYaw", true);
+	flying_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_DecoupledPitch", true);
+	flying_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpPitch", true);
+	flying_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpRoll", true);
+	flying_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpYaw", true);
+	if (debugMod) uevr::API::get()->log_info("Plugin Settings Updated");
+}
+
 void SettingsManager::WriteChangedSettingsToPluginConfigFile()
 {
 	switch (cameraModeSettings)
@@ -56,32 +84,6 @@ void SettingsManager::WriteChangedSettingsToPluginConfigFile()
 	}
 }
 
-void SettingsManager::FetchPluginSettings()
-{
-	if (debugMod) uevr::API::get()->log_info("UpdatePluginSettings()");
-
-	leftHandedMode = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "LeftHandedMode", false);
-	uevr::API::get()->dispatch_lua_event("playerIsLeftHanded", leftHandedMode ? "true" : "false");
-
-	onFoot_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_DecoupledPitch", true);
-	onFoot_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpPitch", true);
-	onFoot_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpRoll", true);
-	onFoot_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "OnFoot_LerpYaw", true);
-	drivingCar_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_DecoupledPitch", true);
-	drivingCar_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpPitch", true);
-	drivingCar_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpRoll", true);
-	drivingCar_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingCar_LerpYaw", true);
-	drivingBike_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_DecoupledPitch", true);
-	drivingBike_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpPitch", true);
-	drivingBike_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpRoll", true);
-	drivingBike_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "DrivingBike_LerpYaw", true);
-	flying_DecoupledPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_DecoupledPitch", true);
-	flying_LerpPitch = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpPitch", true);
-	flying_LerpRoll = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpRoll", true);
-	flying_LerpYaw = SettingsManager::GetBoolValueFromFile(pluginConfigFilePath, "Flying_LerpYaw", true);
-	if (debugMod) uevr::API::get()->log_info("Plugin Settings Updated");
-}
-
 void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings modeSettings)
 {
 	cameraModeSettings = modeSettings;
@@ -92,6 +94,7 @@ void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings mo
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", false);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", false);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", false);
+		if (leftHandedMode == AllInputsSwap) SetBoolValueToFile(uevrConfigFilePath, "VR_SwapControllerInputs", leftHandedOnlyWhileOnFoot ? false : true );
 		break;
 	case OnFoot:
 		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", onFoot_DecoupledPitch);
@@ -99,6 +102,7 @@ void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings mo
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", onFoot_LerpPitch);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", onFoot_LerpRoll);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", onFoot_LerpYaw);
+		if (leftHandedMode == AllInputsSwap) SetBoolValueToFile(uevrConfigFilePath, "VR_SwapControllerInputs", true);
 		break;
 	case DrivingCar:
 		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", drivingCar_DecoupledPitch);
@@ -106,6 +110,7 @@ void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings mo
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", drivingCar_LerpPitch);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", drivingCar_LerpRoll);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", drivingCar_LerpYaw);
+		if (leftHandedMode == AllInputsSwap) SetBoolValueToFile(uevrConfigFilePath, "VR_SwapControllerInputs", leftHandedOnlyWhileOnFoot ? false : true );
 		break;
 	case DrivingBike:
 		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", drivingBike_DecoupledPitch);
@@ -113,6 +118,7 @@ void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings mo
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", drivingBike_LerpPitch);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", drivingBike_LerpRoll);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", drivingBike_LerpYaw);
+		if (leftHandedMode == AllInputsSwap) SetBoolValueToFile(uevrConfigFilePath, "VR_SwapControllerInputs", leftHandedOnlyWhileOnFoot ? false : true );
 		break;
 	case Flying:
 		SetBoolValueToFile(uevrConfigFilePath, "VR_DecoupledPitch", flying_DecoupledPitch);
@@ -120,6 +126,7 @@ void SettingsManager::ApplyCameraSettings(SettingsManager::CameraModeSettings mo
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraPitch", flying_LerpPitch);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraRoll", flying_LerpRoll);
 		SetBoolValueToFile(uevrConfigFilePath, "VR_LerpCameraYaw", flying_LerpYaw);
+		if (leftHandedMode == AllInputsSwap) SetBoolValueToFile(uevrConfigFilePath, "VR_SwapControllerInputs", leftHandedOnlyWhileOnFoot ? false : true );
 		break;
 	}
 	uevr::API::VR::reload_config();
@@ -156,7 +163,11 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 		uevr::API::get()->log_info("File not found: %s. Creating default config.", filePath.c_str());
 
 		std::string defaultContent =
-			"LeftHandedMode=false\n"
+			"[Left Handed Mode :] -- 0 = disabled, 1 = Triggers Swap, 2 = Full inputs Swap\n"
+			"LeftHandedMode=0\n"
+			"LeftHandedOnlyWhileOnFoot=true\n"
+			"\n"
+			"[Camera Settings :]\n"
 			"OnFoot_DecoupledPitch=true\n"
 			"OnFoot_LerpPitch=false\n"
 			"OnFoot_LerpRoll=false\n"
@@ -417,6 +428,52 @@ void SettingsManager::SetIntValueToFile(const std::string& filePath, const std::
 			return;
 		}
 	}
+}
+
+int SettingsManager::GetIntValueFromFile(const std::string& filePath, const std::string& key, int defaultValue)
+{
+	if (debugMod) uevr::API::get()->log_info("GetFloatValueFromFile()");
+
+	HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+		uevr::API::get()->log_info("Failed to open %s", filePath);
+		return defaultValue;
+	}
+
+	DWORD bytesRead;
+	char buffer[1024];  // Buffer to read the file content
+	std::string fileContents;
+
+	// Read the file into memory
+	while (ReadFile(hFile, buffer, sizeof(buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+	{
+		buffer[bytesRead] = '\0'; // Null terminate the string
+		fileContents.append(buffer);
+	}
+	CloseHandle(hFile);
+
+	// Look for the key in the file contents
+	size_t pos = fileContents.find(key);
+	if (pos != std::string::npos)
+	{
+		size_t equalPos = fileContents.find('=', pos);
+		if (equalPos != std::string::npos)
+		{
+			std::string valueStr = fileContents.substr(equalPos + 1);
+			try
+			{
+				return std::stoi(valueStr); // Convert the string to float
+			}
+			catch (const std::invalid_argument&)
+			{
+				uevr::API::get()->log_info("Error: Invalid int value for key: %s", key.c_str());
+				return defaultValue;
+			}
+		}
+	}
+
+	return defaultValue;  // Return default if the key is not found
 }
 
 std::string GetDLLDirectory()

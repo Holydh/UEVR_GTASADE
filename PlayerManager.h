@@ -32,6 +32,8 @@ public:
 		Plane = 19,
 	};
 	VehicleType vehicleType = OnFoot;
+	VehicleType previousVehicleType = OnFoot;
+	std::string VehicleTypeToString(VehicleType type);
 	bool shootFromCarInput = false;
 	bool weaponWheelEnabled = false;
 

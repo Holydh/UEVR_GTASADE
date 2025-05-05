@@ -33,3 +33,14 @@ void PlayerManager::RepositionUnhookedUobjects()
 	setRelativeLocation_params.newLocation = glm::fvec3(0.0f, 0.0f, 0.0f);
 	playerHead->call_function(L"K2_SetRelativeLocation", &setRelativeLocation_params);
 }
+
+std::string PlayerManager::VehicleTypeToString(VehicleType type) {
+	switch (type) {
+	case OnFoot:      return "OnFoot";
+	case CarOrBoat:   return "CarOrBoat";
+	case Bike:        return "Bike";
+	case Helicopter:  return "Helicopter";
+	case Plane:       return "Plane";
+	default:          return "OnFoot";
+	}
+};

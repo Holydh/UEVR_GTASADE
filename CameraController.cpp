@@ -178,3 +178,23 @@ void CameraController::FixUnderwaterView(bool enableFix)
 	underwaterMaterial->set_bool_property(L"bHasStaticPermutationResource", enableFix);
 	underwaterViewFixed = enableFix;
 }
+
+std::string CameraController::VehicleCameraModeToString(VehicleCameraMode cameraMode)
+{
+	switch (cameraMode) {
+	case VehicleCameraMode::Road:			return "Road";
+	case VehicleCameraMode::Close:			return "FPS";
+	case VehicleCameraMode::Normal:			return "Normal";
+	case VehicleCameraMode::Far:			return "Far";
+	case VehicleCameraMode::Cinematic:		return "Cinematic";
+	}
+}
+
+std::string CameraController::OnFootCameraModeToString(OnFootCameraMode cameraMode)
+{
+	switch (cameraMode) {
+	case OnFootCameraMode::Close:			return "FPS";
+	case OnFootCameraMode::Normal:			return "Normal";
+	case OnFootCameraMode::Far:			return "Far";
+	}
+}

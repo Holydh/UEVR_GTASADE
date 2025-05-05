@@ -118,6 +118,8 @@ public:
 		Cinematic = 4
 	};
 	VehicleCameraMode currentVehicleCameraMode = VehicleCameraMode::Close;
+	VehicleCameraMode previousVehicleCameraMode = VehicleCameraMode::Close;
+	std::string VehicleCameraModeToString(VehicleCameraMode cameraMode);
 
 	enum class OnFootCameraMode {
 		Close = 0,
@@ -125,7 +127,8 @@ public:
 		Far = 2,
 	};
 	OnFootCameraMode currentOnFootCameraMode = OnFootCameraMode::Close;
-		
+	OnFootCameraMode previousOnFootCameraMode = OnFootCameraMode::Close;
+	std::string OnFootCameraModeToString(OnFootCameraMode cameraMode);
 
 	//bool isCutscenePlaying = false;
 	//bool wasCutscenePlaying = false;

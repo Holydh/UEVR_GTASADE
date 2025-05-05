@@ -74,6 +74,7 @@ public:
 			weaponManager.ProcessWeaponHandling(delta);
 			weaponManager.ProcessWeaponVisibility();
 		}
+		SendStatesToLua();
 		settingsManager.UpdateSettingsIfModifiedByPlayer();
 		UpdatePreviousStates();
 
@@ -117,9 +118,6 @@ public:
 		if (viewRequiresDisabledVR || !enableVR)
 			return;
 
-		if (!playerManager.isInVehicle && playerManager.wasInVehicle)
-			ApplyOutOfDrivingState();
-
 		if (pluginStateApplied != OnFoot && playerManager.isInControl && (!playerManager.isInVehicle || cameraController.currentCameraMode == CameraController::AimWeaponFromCar) && 
 			cameraController.currentCameraMode != CameraController::Camera)
 			ApplyBaseState();
@@ -157,7 +155,10 @@ public:
 
 		playerManager.wasInControl = playerManager.isInControl;
 		playerManager.wasInVehicle = playerManager.isInVehicle;
+		playerManager.previousVehicleType = playerManager.vehicleType;
 		cameraController.previousCameraMode = cameraController.currentCameraMode;
+		cameraController.previousOnFootCameraMode = cameraController.currentOnFootCameraMode;
+		cameraController.previousVehicleCameraMode = cameraController.currentVehicleCameraMode;
 		//cameraController.wasCutscenePlaying = cameraController.isCutscenePlaying;
 		weaponManager.previousWeaponEquipped = weaponManager.currentWeaponEquipped;
 	}
@@ -181,7 +182,7 @@ public:
 		weaponManager.ResetShootingState();
 		settingsManager.ApplyCameraSettings(SettingsManager::OnFoot);
 		pluginStateApplied = OnFoot;
-		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = OnFoot");
+		if (settingsManager.debugMod) API::get()->log_info("pluginStateApplied = OnFoot");
 	}
 
 	void ApplyDrivingState()
@@ -200,20 +201,9 @@ public:
 			settingsManager.ApplyCameraSettings(SettingsManager::DrivingBike);
 			break;
 		}
-		if (settingsManager.leftHandedMode)
-			API::get()->dispatch_lua_event("playerIsInVehicle", "true");
-		weaponManager.ResetShootingState();
 		weaponManager.UnhookAndRepositionWeapon();
 		pluginStateApplied = Driving;
 		/*if (settingsManager.debugMod) */API::get()->log_error("pluginStateApplied = Driving");
-	}
-
-	void ApplyOutOfDrivingState()
-	{
-		if (settingsManager.leftHandedMode)
-			API::get()->dispatch_lua_event("playerIsInVehicle", "false");
-		weaponManager.ResetShootingState();
-		API::get()->log_error("pluginStateApplied = OutOfDriving");
 	}
 
 	void ApplyCameraWeaponState()
@@ -234,6 +224,16 @@ public:
 		settingsManager.ApplyCameraSettings(SettingsManager::Cutscene);
 		pluginStateApplied = VRdisabled;
 		API::get()->log_error("pluginStateApplied = NoControls");
+	}
+
+	void SendStatesToLua()
+	{
+		if (playerManager.vehicleType != playerManager.previousVehicleType)
+			API::get()->dispatch_lua_event("playerState", playerManager.VehicleTypeToString(playerManager.vehicleType));
+		if (cameraController.previousOnFootCameraMode != cameraController.currentOnFootCameraMode)
+			API::get()->dispatch_lua_event("onFootCameraMode", cameraController.VehicleCameraModeToString(cameraController.currentVehicleCameraMode));
+		if (cameraController.previousVehicleCameraMode != cameraController.currentVehicleCameraMode)
+			API::get()->dispatch_lua_event("vehicleCameraMode", cameraController.VehicleCameraModeToString(cameraController.currentVehicleCameraMode));
 	}
 };
 
