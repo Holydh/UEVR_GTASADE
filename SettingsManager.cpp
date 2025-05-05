@@ -163,11 +163,11 @@ bool SettingsManager::CheckSettingsModificationAndUpdate(const std::string& file
 		uevr::API::get()->log_info("File not found: %s. Creating default config.", filePath.c_str());
 
 		std::string defaultContent =
-			"[Left Handed Mode :] -- 0 = disabled, 1 = Triggers Swap, 2 = Full inputs Swap\n"
+			"[Left Handed Mode :] -- Must be configured here. 0 = disabled, 1 = Triggers Swap, 2 = Full inputs Swap\n"
 			"LeftHandedMode=0\n"
 			"LeftHandedOnlyWhileOnFoot=true\n"
 			"\n"
-			"[Camera Settings :]\n"
+			"[Camera Settings :] -- Can be set directly ingame from uevr menu. The plugin will auto save each camera configuration for each vehicle type here\n"
 			"OnFoot_DecoupledPitch=true\n"
 			"OnFoot_LerpPitch=false\n"
 			"OnFoot_LerpRoll=false\n"
